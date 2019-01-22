@@ -696,65 +696,71 @@ class GoB_export(bpy.types.Operator):
             if matslot.material:
                 GoBmat = matslot
                 break
-        if GoBmat:
-            for texslot in GoBmat.material.texture_slots:
-                if texslot:
-                    if texslot.texture:
-                        if texslot.texture.type == 'IMAGE' and texslot.texture_coords == 'UV' and texslot.texture.image:
-                            if texslot.use_map_color_diffuse:diff=texslot
-                            if texslot.use_map_displacement:disp=texslot
-                            if texslot.use_map_normal:nm=texslot
-        formatRender = scn.render.image_settings.file_format
-        scn.render.image_settings.file_format = 'BMP'
-        if diff:
-            name = diff.texture.image.filepath.replace('\\','/')
-            name = name.rsplit('/')[-1]
-            name = name.rsplit('.')[0]
-            if len(name) > 5:
-                if name[-5:] == "_TXTR":
-                    name = path + '/GoZProjects/Default/' + name + '.bmp'
-                else:
-                    name = path + '/GoZProjects/Default/' + name + '_TXTR.bmp'
-            diff.texture.image.save_render(name)
-            print(name)
-            name = name.encode('utf8')
-            fic.write(pack('<4B',0xc9,0xaf,0x00,0x00))
-            fic.write(pack('<I',len(name)+16))
-            fic.write(pack('<Q',1))
-            fic.write(pack('%ss'%len(name),name))
-        if disp:
-            name = disp.texture.image.filepath.replace('\\','/')
-            name = name.rsplit('/')[-1]
-            name = name.rsplit('.')[0]
-            if len(name) > 3:
-                if name[-3:] == "_DM":
-                    name = path + '/GoZProjects/Default/' + name + '.bmp'
-                else:
-                    name = path + '/GoZProjects/Default/' + name + '_DM.bmp'
-            disp.texture.image.save_render(name)
-            print(name)
-            name = name.encode('utf8')
-            fic.write(pack('<4B',0xd9,0xd6,0x00,0x00))
-            fic.write(pack('<I',len(name)+16))
-            fic.write(pack('<Q',1))
-            fic.write(pack('%ss'%len(name),name))
-        if nm:
-            name = nm.texture.image.filepath.replace('\\','/')
-            name = name.rsplit('/')[-1]
-            name = name.rsplit('.')[0]
-            if len(name) > 3:
-                if name[-3:] == "_NM":
-                    name = path + '/GoZProjects/Default/' + name + '.bmp'
-                else:
-                    name = path + '/GoZProjects/Default/' + name + '_NM.bmp'
-            nm.texture.image.save_render(name)
-            print(name)
-            name = name.encode('utf8')
-            fic.write(pack('<4B',0x51,0xc3,0x00,0x00))
-            fic.write(pack('<I',len(name)+16))
-            fic.write(pack('<Q',1))
-            fic.write(pack('%ss'%len(name),name))
-        # fin
+
+        try:    #see if we find textures
+            if GoBmat:
+                for texslot in GoBmat.material.texture_slots:
+                    if texslot:
+                        if texslot.texture:
+                                if texslot.texture.type == 'IMAGE' and texslot.texture_coords == 'UV' and texslot.texture.image:
+                                    if texslot.use_map_color_diffuse:diff=texslot
+                                    if texslot.use_map_displacement:disp=texslot
+                                    if texslot.use_map_normal:nm=texslot
+            formatRender = scn.render.image_settings.file_format
+            scn.render.image_settings.file_format = 'BMP'
+            if diff:
+                name = diff.texture.image.filepath.replace('\\','/')
+                name = name.rsplit('/')[-1]
+                name = name.rsplit('.')[0]
+                if len(name) > 5:
+                    if name[-5:] == "_TXTR":
+                        name = path + '/GoZProjects/Default/' + name + '.bmp'
+                    else:
+                        name = path + '/GoZProjects/Default/' + name + '_TXTR.bmp'
+                diff.texture.image.save_render(name)
+                print(name)
+                name = name.encode('utf8')
+                fic.write(pack('<4B',0xc9,0xaf,0x00,0x00))
+                fic.write(pack('<I',len(name)+16))
+                fic.write(pack('<Q',1))
+                fic.write(pack('%ss'%len(name),name))
+            if disp:
+                name = disp.texture.image.filepath.replace('\\','/')
+                name = name.rsplit('/')[-1]
+                name = name.rsplit('.')[0]
+                if len(name) > 3:
+                    if name[-3:] == "_DM":
+                        name = path + '/GoZProjects/Default/' + name + '.bmp'
+                    else:
+                        name = path + '/GoZProjects/Default/' + name + '_DM.bmp'
+                disp.texture.image.save_render(name)
+                print(name)
+                name = name.encode('utf8')
+                fic.write(pack('<4B',0xd9,0xd6,0x00,0x00))
+                fic.write(pack('<I',len(name)+16))
+                fic.write(pack('<Q',1))
+                fic.write(pack('%ss'%len(name),name))
+            if nm:
+                name = nm.texture.image.filepath.replace('\\','/')
+                name = name.rsplit('/')[-1]
+                name = name.rsplit('.')[0]
+                if len(name) > 3:
+                    if name[-3:] == "_NM":
+                        name = path + '/GoZProjects/Default/' + name + '.bmp'
+                    else:
+                        name = path + '/GoZProjects/Default/' + name + '_NM.bmp'
+                nm.texture.image.save_render(name)
+                print(name)
+                name = name.encode('utf8')
+                fic.write(pack('<4B',0x51,0xc3,0x00,0x00))
+                fic.write(pack('<I',len(name)+16))
+                fic.write(pack('<Q',1))
+                fic.write(pack('%ss'%len(name),name))
+            # fin
+        except:
+            # continue without textures
+            pass
+
         scn.render.image_settings.file_format = formatRender
         fic.write(pack('16x'))
         fic.close()
