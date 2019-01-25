@@ -697,7 +697,7 @@ class GoB_export(bpy.types.Operator):
                 GoBmat = matslot
                 break
 
-        try:    #see if we find textures
+        try:
             if GoBmat:
                 for texslot in GoBmat.material.texture_slots:
                     if texslot:
@@ -758,7 +758,7 @@ class GoB_export(bpy.types.Operator):
                 fic.write(pack('%ss'%len(name),name))
             # fin
         except:
-            # continue without textures
+            # continue even when no textures are found
             pass
 
         scn.render.image_settings.file_format = formatRender
