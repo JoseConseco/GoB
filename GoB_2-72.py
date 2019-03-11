@@ -44,6 +44,7 @@ else:PATHGOZ = False
 
 autoload = 0.8 # Check GoZ export every 0.8 seconds
 importToggle = False
+verbose = False
 objectList = []
 varTime = time.time() - 240.0 
     
@@ -144,6 +145,7 @@ class GoB_import(bpy.types.Operator):
         diff = False
         disp = False
         nmp = False
+        mode = 'OBJECT'
         utag = 0
         vertsData = []
         facesData = []
@@ -160,6 +162,14 @@ class GoB_import(bpy.types.Operator):
         objName = objName[8:].decode('utf-8')
         me = bpy.data.meshes.new(objName)
         tag = fic.read(4)
+
+        # set the objects to OBJECT mode to ensure the update and save the current mode to restore after gozit
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+            mode = 'EDIT'
+        else:
+            mode = 'OBJECT'
+
         while tag:
             if tag == b'\x89\x13\x00\x00':
                 cnt = unpack('<L',fic.read(4))[0] - 8
@@ -503,8 +513,14 @@ class GoB_import(bpy.types.Operator):
                 mtex.normal_factor = 1.
                 mtex.normal_map_space = 'TANGENT'
             me.materials.append(objMat)
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.object.mode_set(mode='OBJECT')
+
+        # restore the object mode that was active before gozit
+        if mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='EDIT')
+        else:
+            bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
+            bpy.ops.object.mode_set(mode='OBJECT')
+
         return
 
     def execute(self, context):
@@ -524,8 +540,8 @@ class GoB_import(bpy.types.Operator):
             varTime = ficTime
         else:
             if importToggle:
-                self.report({'INFO'},"Nothing to update")
-                print("Nothing to update")
+                if verbose == True:
+                    self.report({'INFO'},"Nothing to update")
                 return{'CANCELLED'}
         if len(objectList) == 0:
             self.report({'INFO'}, message="No update")
