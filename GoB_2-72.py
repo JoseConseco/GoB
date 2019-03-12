@@ -514,25 +514,16 @@ class GoB_import(bpy.types.Operator):
                 mtex.normal_map_space = 'TANGENT'
             me.materials.append(objMat)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> update for linked objects
         # restore the object mode that was active before gozit
         if mode == 'EDIT':
             bpy.ops.object.mode_set(mode='EDIT')
         else:
-<<<<<<< HEAD
-            bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
-            bpy.ops.object.mode_set(mode='OBJECT')
-=======
             if bpy.context.object.library:
                 bpy.ops.object.mode_set(mode='OBJECT')
             else:
                 bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
                 bpy.ops.object.mode_set(mode='OBJECT')
-
->>>>>>> update for linked objects
 
         return
 
