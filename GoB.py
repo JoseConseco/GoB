@@ -324,6 +324,7 @@ class GoB_import(bpy.types.Operator):
                     fic.seek(cnt,1)
                 tag = fic.read(4)
             fic.close()
+            bpy.ops.object.select_all(action='DESELECT')
             ob.select = True
             scn.objects.active = ob
             GoBmat = False
@@ -484,6 +485,7 @@ class GoB_import(bpy.types.Operator):
                     fic.seek(cnt,1)
                 tag = fic.read(4)
             fic.close()
+            bpy.ops.object.select_all(action='DESELECT')
             ob.select = True
             scn.objects.active = ob
             objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
