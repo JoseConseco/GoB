@@ -544,7 +544,7 @@ class GoB_import(bpy.types.Operator):
             varTime = ficTime
         else:
             if importToggle:
-                if verbose == True:
+                if verbose:
                     self.report({'INFO'},"Nothing to update")
                 return{'CANCELLED'}
         if len(objectList) == 0:
