@@ -584,11 +584,7 @@ class GoB_export(bpy.types.Operator):
                 ob.select = False
                 scn.objects.active = new_ob
 
-            else:
-                #bpy.ops.object.convert(target='MESH')   # TODO: this will apply modifiers, why is this here?
-                pass
-
-        me = ob.to_mesh(scn,False,'PREVIEW')
+        me = ob.to_mesh(scn,True,'RENDER')
         mat_transform = mathutils.Matrix([
                                 (1.,0., 0.,0.),
                                 (0.,0.,-1.,0.),
