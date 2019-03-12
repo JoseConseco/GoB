@@ -514,12 +514,16 @@ class GoB_import(bpy.types.Operator):
                 mtex.normal_map_space = 'TANGENT'
             me.materials.append(objMat)
 
+
         # restore the object mode that was active before gozit
         if mode == 'EDIT':
             bpy.ops.object.mode_set(mode='EDIT')
         else:
-            bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
-            bpy.ops.object.mode_set(mode='OBJECT')
+            if bpy.context.object.library:
+                bpy.ops.object.mode_set(mode='OBJECT')
+            else:
+                bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
+                bpy.ops.object.mode_set(mode='OBJECT')
 
         return
 
@@ -540,7 +544,7 @@ class GoB_import(bpy.types.Operator):
             varTime = ficTime
         else:
             if importToggle:
-                if verbose == True:
+                if verbose:
                     self.report({'INFO'},"Nothing to update")
                 return{'CANCELLED'}
         if len(objectList) == 0:
@@ -571,7 +575,18 @@ class GoB_export(bpy.types.Operator):
     def exportGoZ(self, path,scn,ob,pathImport):
         import random
         if bpy.context.object.type=='MESH':
-            bpy.ops.object.convert(target='MESH')
+            # create mesh if object is linked
+            if bpy.context.object.library:
+                new_ob = ob.copy()
+                new_ob.data = ob.data.copy()
+                scn.objects.link(new_ob)
+                new_ob.select = True
+                ob.select = False
+                scn.objects.active = new_ob
+
+            else:
+                #bpy.ops.object.convert(target='MESH')   # TODO: this will apply modifiers, why is this here?
+                pass
 
         me = ob.to_mesh(scn,False,'PREVIEW')
         mat_transform = mathutils.Matrix([
@@ -792,7 +807,10 @@ class GoB_export(bpy.types.Operator):
             if obj.type == 'MESH' and obj.select:
                 obj.name = obj.name.replace('.','_')
                 obj.name = obj.name.replace(' ','_')
-                bpy.ops.object.mode_set(mode='OBJECT')
+                if bpy.context.object.library:
+                    pass
+                else:
+                    bpy.ops.object.mode_set(mode='OBJECT')
                 self.exportGoZ(
                     PATHGOZ, scn, obj,
                     '{0}/GoZProjects/Default'.format(PATHGOZ))
