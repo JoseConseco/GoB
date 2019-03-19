@@ -45,6 +45,4 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
-*.pyc
-*.json
-/gob_updater
+__init__.py
