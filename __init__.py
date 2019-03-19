@@ -16,17 +16,18 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+
 bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like for Blender",
     "author": "ODe",
-    "version": (2, 0, 1),
-    "blender": (2, 80, 0),
+    "version": (2, 72),
+    "blender": (2, 72, 0),
     "location": "At the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-                "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
+		"2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
     "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-                "127419-GoB-an-unofficial-GoZ-for-Blender",
+		"127419-GoB-an-unofficial-GoZ-for-Blender",
     "category": "Import-Export"}
 
 
@@ -39,22 +40,17 @@ else:
 import bpy
 
 
-
-classes = (
-    GoB.GoB_OT_import,
-    GoB.GoB_OT_export,
-    GoB.GoBPreferences,
-    GoB.GoB_OT_ModalTimerOperator
-    )
+classes = (GoB.GoB_import,
+           GoB.GoB_export,
+           GoB.INFO_HT_header,
+           GoB.INFO_MT_editor_menus,
+           GoB.GoB_ModalTimerOperator,
+           )
 
 
 def register():
     [bpy.utils.register_class(c) for c in classes]
-    bpy.types.TOPBAR_HT_upper_bar.append(GoB.draw_goz)
 
 
 def unregister():
     [bpy.utils.unregister_class(c) for c in classes]
-    bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz)
-
-
