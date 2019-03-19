@@ -20,18 +20,6 @@ import bpy, mathutils, bl_ui, time, os
 from struct import pack,unpack
 from copy import deepcopy
 
-bl_info = {
-    "name": "GoB",
-    "description": "An unofficial GOZ-like for Blender",
-    "author": "ODe",
-    "version": (2, 72),
-    "blender": (2, 72, 0),
-    "location": "At the info header",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-		"2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
-    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-		"127419-GoB-an-unofficial-GoZ-for-Blender",
-    "category": "Import-Export"}
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -145,7 +133,6 @@ class GoB_import(bpy.types.Operator):
         diff = False
         disp = False
         nmp = False
-        mode = 'OBJECT'
         utag = 0
         vertsData = []
         facesData = []
@@ -163,12 +150,7 @@ class GoB_import(bpy.types.Operator):
         me = bpy.data.meshes.new(objName)
         tag = fic.read(4)
 
-        # set the objects to OBJECT mode to ensure the update and save the current mode to restore after gozit
-        if bpy.context.object.mode == 'EDIT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-            mode = 'EDIT'
-        else:
-            mode = 'OBJECT'
+        objMode = remember_object_mode()
 
         while tag:
             if tag == b'\x89\x13\x00\x00':
@@ -330,6 +312,7 @@ class GoB_import(bpy.types.Operator):
                     fic.seek(cnt,1)
                 tag = fic.read(4)
             fic.close()
+            bpy.ops.object.select_all(action='DESELECT')
             ob.select = True
             scn.objects.active = ob
             GoBmat = False
@@ -490,6 +473,7 @@ class GoB_import(bpy.types.Operator):
                     fic.seek(cnt,1)
                 tag = fic.read(4)
             fic.close()
+            bpy.ops.object.select_all(action='DESELECT')
             ob.select = True
             scn.objects.active = ob
             objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
@@ -514,16 +498,7 @@ class GoB_import(bpy.types.Operator):
                 mtex.normal_map_space = 'TANGENT'
             me.materials.append(objMat)
 
-
-        # restore the object mode that was active before gozit
-        if mode == 'EDIT':
-            bpy.ops.object.mode_set(mode='EDIT')
-        else:
-            if bpy.context.object.library:
-                bpy.ops.object.mode_set(mode='OBJECT')
-            else:
-                bpy.ops.object.mode_set(mode='EDIT')    # is this needed to update the mesh data?
-                bpy.ops.object.mode_set(mode='OBJECT')
+        restore_object_mode(objMode)
 
         return
 
@@ -584,11 +559,7 @@ class GoB_export(bpy.types.Operator):
                 ob.select = False
                 scn.objects.active = new_ob
 
-            else:
-                #bpy.ops.object.convert(target='MESH')   # TODO: this will apply modifiers, why is this here?
-                pass
-
-        me = ob.to_mesh(scn,False,'PREVIEW')
+        me = ob.to_mesh(scn,True,'RENDER')
         mat_transform = mathutils.Matrix([
                                 (1.,0., 0.,0.),
                                 (0.,0.,-1.,0.),
@@ -810,7 +781,7 @@ class GoB_export(bpy.types.Operator):
                 if bpy.context.object.library:
                     pass
                 else:
-                    bpy.ops.object.mode_set(mode='OBJECT')
+                    objMode = remember_object_mode()
                 self.exportGoZ(
                     PATHGOZ, scn, obj,
                     '{0}/GoZProjects/Default'.format(PATHGOZ))
@@ -820,6 +791,9 @@ class GoB_export(bpy.types.Operator):
                 ztn.close()
                 fic.write(
                     '{0}/GoZProjects/Default/{1}\n'.format(PATHGOZ, obj.name))
+
+                restore_object_mode(objMode)
+
         fic.close()
         varTime = os.path.getmtime(
                         "{0}/GoZBrush/GoZ_ObjectList.txt".format(PATHGOZ))
@@ -828,6 +802,24 @@ class GoB_export(bpy.types.Operator):
 
     def invoke(self, context, event):
         return self.execute(context)
+
+
+# set to OBJECT mode to ensure to update and save the current mode to restore after gozit
+def remember_object_mode():
+    if bpy.ops.object.mode_set.poll():
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+            mode = 'EDIT'
+        else:
+            mode = 'OBJECT'
+        return mode
+
+
+def restore_object_mode(mode='OBJECT'):
+    if mode == 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+    else:
+        bpy.ops.object.mode_set(mode='OBJECT')
 
 
 class GoB_ModalTimerOperator(bpy.types.Operator):
@@ -856,21 +848,3 @@ class GoB_ModalTimerOperator(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-def register():
-    bpy.utils.register_class(GoB_export)
-    bpy.utils.register_class(GoB_import)
-    bpy.utils.register_class(INFO_HT_header)
-    # bpy.utils.register_class(bl_ui.space_info.INFO_MT_editor_menus)
-    bpy.utils.register_class(GoB_ModalTimerOperator)
-
-def unregister():
-    import bl_ui
-
-    bpy.utils.unregister_class(GoB_export)
-    bpy.utils.unregister_class(GoB_import)
-    bpy.utils.unregister_class(INFO_HT_header)
-    bpy.utils.register_class(bl_ui.space_info.INFO_HT_header)
-    bpy.utils.unregister_class(GoB_ModalTimerOperator)
-
-if __name__ == "__main__":
-    if PATHGOZ:register()
