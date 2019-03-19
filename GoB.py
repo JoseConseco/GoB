@@ -20,18 +20,6 @@ import bpy, mathutils, bl_ui, time, os
 from struct import pack,unpack
 from copy import deepcopy
 
-bl_info = {
-    "name": "GoB",
-    "description": "An unofficial GOZ-like for Blender",
-    "author": "ODe",
-    "version": (2, 72),
-    "blender": (2, 72, 0),
-    "location": "At the info header",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-		"2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
-    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-		"127419-GoB-an-unofficial-GoZ-for-Blender",
-    "category": "Import-Export"}
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -860,21 +848,3 @@ class GoB_ModalTimerOperator(bpy.types.Operator):
         return {'CANCELLED'}
 
 
-def register():
-    bpy.utils.register_class(GoB_export)
-    bpy.utils.register_class(GoB_import)
-    bpy.utils.register_class(INFO_HT_header)
-    # bpy.utils.register_class(bl_ui.space_info.INFO_MT_editor_menus)
-    bpy.utils.register_class(GoB_ModalTimerOperator)
-
-def unregister():
-    import bl_ui
-
-    bpy.utils.unregister_class(GoB_export)
-    bpy.utils.unregister_class(GoB_import)
-    bpy.utils.unregister_class(INFO_HT_header)
-    bpy.utils.register_class(bl_ui.space_info.INFO_HT_header)
-    bpy.utils.unregister_class(GoB_ModalTimerOperator)
-
-if __name__ == "__main__":
-    if PATHGOZ:register()
