@@ -564,8 +564,7 @@ class GoB_OT_export(bpy.types.Operator):
         GoZ_ObjectList = open("{0}/GoZBrush/GoZ_ObjectList.txt".format(PATHGOZ), 'wt')
         for obj in scn.objects:
             if obj.type == 'MESH' and obj.select_get():
-                obj.name = obj.name.replace('.', '_')
-                obj.name = obj.name.replace(' ', '_')
+                obj.name = self.escape_object_name(obj.name)
                 bpy.ops.object.mode_set(mode='OBJECT')
                 self.exportGoZ(
                     PATHGOZ, scn, obj,
@@ -584,6 +583,15 @@ class GoB_OT_export(bpy.types.Operator):
 
     def invoke(self, context, event):
         return self.execute(context)
+
+    def escape_object_name(self, name):
+        """
+        Escape object name so it can be used as a valid file name.
+        Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
+        Multiple consecutive invalid characters will be replaced with just a single underscore character.
+        """
+        import re
+        return re.sub('[^\w\_\-\.]+', '_', name)
 
 
 class GoB_OT_ModalTimerOperator(bpy.types.Operator):
