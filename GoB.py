@@ -24,19 +24,6 @@ import os
 from struct import pack, unpack
 from copy import deepcopy
 
-bl_info = {
-    "name": "GoB",
-    "description": "An unofficial GOZ-like for Blender",
-    "author": "ODe",
-    "version": (2, 80),
-    "blender": (2, 80, 0),
-    "location": "At the info header",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-                "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
-    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-                "127419-GoB-an-unofficial-GoZ-for-Blender",
-    "category": "Import-Export"}
-
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
@@ -619,23 +606,3 @@ class GoB_OT_ModalTimerOperator(bpy.types.Operator):
     def cancel(self, context):
         context.window_manager.event_timer_remove(self._timer)
         return {'CANCELLED'}
-
-
-classes = ( GoB_OT_import, GoB_OT_export, GoB_OT_ModalTimerOperator, )
-
-def register():
-    from bpy.utils import register_class
-    for cls in classes:
-        register_class(cls)
-    bpy.types.TOPBAR_HT_upper_bar.append(draw_goz)
-
-def unregister():
-    from bpy.utils import unregister_class
-    for cls in reversed(classes):
-        unregister_class(cls)
-    bpy.types.TOPBAR_HT_upper_bar.remove(draw_goz)
-
-
-if __name__ == "__main__":
-    if PATHGOZ:
-        register()
