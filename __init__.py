@@ -17,7 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-
 if "bpy" in locals():
     import importlib
     importlib.reload(GoB)
