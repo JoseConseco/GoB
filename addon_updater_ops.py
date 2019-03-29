@@ -1008,7 +1008,7 @@ def update_settings_ui(self, context, element=None):
 		if updater.include_branches == True and len(updater.include_branch_list)>0:
 			branch = updater.include_branch_list[0]
 			col.operator(addon_updater_update_target.bl_idname,
-					text="Install latest {} / old version".format(branch))
+					text="Select version to install".format(branch))
 		else:
 			col.operator(addon_updater_update_target.bl_idname,
 					text="Reinstall / install old version")
