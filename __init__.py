@@ -29,9 +29,9 @@ from . import addon_updater_ops
 bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like for Blender",
-    "author": "ODe",
-    "version": (2, 0, 0),
-    "blender": (2, 72, 0),
+    "author": "ODe, JoseConseco, kromar",
+    "version": (2, 1, 0),
+    "blender": (2, 7, 2),
     "location": "At the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions: 2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
     "tracker_url": "http://www.zbrushcentral.com/showthread.php?127419-GoB-an-unofficial-GoZ-for-Blender",
