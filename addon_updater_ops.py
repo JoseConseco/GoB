@@ -1268,7 +1268,7 @@ def register(bl_info):
 	updater.private_token = None # "tokenstring"
 
 	# choose your own username, must match website (not needed for GitLab)
-	updater.user = "kromar"
+	updater.user = "JoseConseco"
 
 	# choose your own repository, must match git name
 	updater.repo = "GoB"
@@ -1276,7 +1276,7 @@ def register(bl_info):
 	#updater.addon = # define at top of module, MUST be done first
 
 	# Website for manual addon download, optional but recommended to set
-	updater.website = "https://github.com/kromar/GoB"
+	updater.website = "https://github.com/JoseConseco/GoB"
 
 	# Addon subfolder path
 	# "sample/path/to/addon"
@@ -1369,7 +1369,7 @@ def register(bl_info):
 	# example targeting another multiple branches allowed to pull from
 	# updater.include_branch_list = ['master', 'dev'] # example with two branches
 	# updater.include_branch_list = None  # None is the equivalent to setting ['master']
-	updater.include_branch_list = ['master', 'GoZ-Blender_28', 'adding_updater_module']
+	updater.include_branch_list = ['master', 'GoZ-Blender_28']
 
 	# Only allow manual install, thus prompting the user to open
 	# the addon's web page to download, specifically: updater.website
@@ -1394,7 +1394,7 @@ def register(bl_info):
 	# Set the min and max versions allowed to install.
 	# Optional, default None
 	# min install (>=) will install this and higher
-	updater.version_min_update = (0,0,0)
+	updater.version_min_update = (2,1,0)
 	# updater.version_min_update = None  # if not wanting to define a min
 
 	# max install (<) will install strictly anything lower
