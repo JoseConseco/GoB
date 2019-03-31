@@ -24,25 +24,27 @@ else:
     from . import GoB
 
 import bpy
+import os
 from . import addon_updater_ops
+
 
 bl_info = {
     "name": "GoB",
-    "description": "An unofficial GOZ-like for Blender",
+    "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, kromar",
     "version": (2, 1, 0),
     "blender": (2, 7, 2),
-    "location": "At the info header",
+    "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions: 2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
     "tracker_url": "http://www.zbrushcentral.com/showthread.php?127419-GoB-an-unofficial-GoZ-for-Blender",
-    "category": "Import-Export"}
+    "category": "Import-Export"
+}
 
 
 class Preferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
     # addon updater preferences
-
     auto_check_update = bpy.props.BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
@@ -86,8 +88,7 @@ class Preferences(bpy.types.AddonPreferences):
         # could also pass in col as third arg
         addon_updater_ops.update_settings_ui(self, context)
 
-        col.scale_y = 1
-        col.operator("wm.url_open","Open webpage ").url=addon_updater_ops.updater.website
+        #addon_updater_ops.update_settings_ui_condensed(self, context, col)
 
 
 classes = (GoB.GoB_import,
@@ -100,9 +101,24 @@ classes = (GoB.GoB_import,
 
 
 def register():
+    import bpy.utils.previews
+    GoB.custom_icons = bpy.utils.previews.new()
+    icons_dir = os.path.join(os.path.dirname(__file__), "icons")
+
+    GoB.custom_icons.load("icon_goz_send", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
+    GoB.custom_icons.load("icon_goz_sync_enabled", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
+    GoB.custom_icons.load("icon_goz_sync_disabled", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
+
+    GoB.preview_collections["main"] = GoB.custom_icons
+
     [bpy.utils.register_class(c) for c in classes]
     addon_updater_ops.register(bl_info)
 
 
 def unregister():
     [bpy.utils.unregister_class(c) for c in classes]
+    bpy.utils.previews.remove(GoB.custom_icons)
+
+
+if __name__ == "__main__":
+    register()
