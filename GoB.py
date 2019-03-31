@@ -16,7 +16,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy, mathutils, bl_ui, time, os
+import bpy
+import mathutils
+import bl_ui
+import time
+import os
 from struct import pack,unpack
 from copy import deepcopy
 
@@ -35,14 +39,19 @@ importToggle = False
 verbose = False
 objectList = []
 varTime = time.time() - 240.0 
-    
+
+#custom_icons = None
+preview_collections = {}
+
+
 class INFO_HT_header(bpy.types.Header):
     bl_space_type = 'INFO'
 
     def draw(self, context):
-        global importToggle
-        layout = self.layout
+        global importToggle, custom_icons
+        custom_icons = preview_collections["main"]
 
+        layout = self.layout
         window = context.window
         scene = context.scene
         rd = scene.render
@@ -58,6 +67,8 @@ class INFO_HT_header(bpy.types.Header):
         else:
             layout.template_ID(context.window, "screen", new="screen.new", unlink="screen.delete")
             layout.template_ID(context.screen, "scene", new="scene.new", unlink="scene.delete")
+
+
 
         layout.separator()
 
@@ -81,24 +92,24 @@ class INFO_HT_header(bpy.types.Header):
             row.operator("script.autoexec_warn_clear", text="Ignore")
             return
 
-        row.operator(
-                operator="scene.gob_export",
-                text="",
-                icon='BRUSH_PINCH',
-                emboss=False)
+        row.operator(operator="scene.gob_export",
+                     text="",
+                     emboss=True,
+                     icon_value=custom_icons["icon_goz_send"].icon_id)
+
         if importToggle:
-            row.operator(
-                    operator="scene.gob_import",
-                    text="",
-                    icon='MATCAP_21',
-                    emboss=False)
+            row.operator(operator="scene.gob_import",
+                         text="",
+                         emboss=True,
+                         icon_value=custom_icons["icon_goz_sync_enabled"].icon_id)
         else:
-            row.operator(
-                    operator="scene.gob_import",
-                    text="",
-                    icon='MATCAP_07',
-                    emboss=False)
+            row.operator(operator="scene.gob_import",
+                         text="",
+                         emboss=True,
+                         icon_value=custom_icons["icon_goz_sync_disabled"].icon_id)
+
         row.label(text=scene.statistics(), translate=False)
+
 
 class INFO_MT_editor_menus(bpy.types.Menu):
     bl_idname = "INFO_MT_editor_menus"
@@ -126,6 +137,7 @@ class INFO_MT_editor_menus(bpy.types.Menu):
 class GoB_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "Import from Zbrush"
+    bl_description = "Toggle object import from Zbrush"
 
     
     def GoZit(self, pathFile):
@@ -534,7 +546,7 @@ class GoB_import(bpy.types.Operator):
         global importToggle
 
         if event.shift:
-            if importToggle == False:
+            if not importToggle:
                 return self.execute(context)
             return{'FINISHED'}
         elif not importToggle:
@@ -546,6 +558,7 @@ class GoB_import(bpy.types.Operator):
 class GoB_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to Zbrush"
+    bl_description = "Send object to Zbrush"
 
     def exportGoZ(self, path,scn,ob,pathImport):
         import random
