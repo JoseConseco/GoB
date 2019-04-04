@@ -16,15 +16,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-if "bpy" in locals():
-    import importlib
-    importlib.reload(GoB)
-else:
-    from . import GoB
-
-import bpy
-
-
 bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like for Blender",
@@ -38,9 +29,21 @@ bl_info = {
                 "127419-GoB-an-unofficial-GoZ-for-Blender",
     "category": "Import-Export"}
 
+
+if "bpy" in locals():
+    import importlib
+    importlib.reload(GoB)
+else:
+    from . import GoB
+
+import bpy
+
+
+
 classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
+    GoB.GoBPreferences,
     GoB.GoB_OT_ModalTimerOperator
     )
 
