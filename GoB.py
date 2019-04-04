@@ -148,7 +148,7 @@ class GoB_OT_import(bpy.types.Operator):
             if objName in bpy.data.objects.keys():  # if obj already exist do code below
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
-                instances = [obj for obj in bpy.data.objects if obj.data == obj.data]
+                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
                 for old_mat in oldMesh.materials:
                     me.materials.append(old_mat)
                 for instance in instances:
