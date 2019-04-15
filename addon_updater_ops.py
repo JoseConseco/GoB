@@ -1008,7 +1008,7 @@ def update_settings_ui(self, context, element=None):
 		if updater.include_branches == True and len(updater.include_branch_list)>0:
 			branch = updater.include_branch_list[0]
 			col.operator(addon_updater_update_target.bl_idname,
-					text="Install latest {} / old version".format(branch))
+					text="Select version to install".format(branch))
 		else:
 			col.operator(addon_updater_update_target.bl_idname,
 					text="Reinstall / install old version")
@@ -1268,7 +1268,7 @@ def register(bl_info):
 	updater.private_token = None # "tokenstring"
 
 	# choose your own username, must match website (not needed for GitLab)
-	updater.user = "kromar"
+	updater.user = "JoseConseco"
 
 	# choose your own repository, must match git name
 	updater.repo = "GoB"
@@ -1368,7 +1368,8 @@ def register(bl_info):
 	# updater.include_branch_list defaults to ['master'] branch if set to none
 	# example targeting another multiple branches allowed to pull from
 	# updater.include_branch_list = ['master', 'dev'] # example with two branches
-	updater.include_branch_list = None  # None is the equivalent to setting ['master']
+	# updater.include_branch_list = None  # None is the equivalent to setting ['master']
+	updater.include_branch_list = ['GoZ-Blender_28']
 
 	# Only allow manual install, thus prompting the user to open
 	# the addon's web page to download, specifically: updater.website
@@ -1393,7 +1394,7 @@ def register(bl_info):
 	# Set the min and max versions allowed to install.
 	# Optional, default None
 	# min install (>=) will install this and higher
-	updater.version_min_update = (0,0,0)
+	updater.version_min_update = (3,0,0)
 	# updater.version_min_update = None  # if not wanting to define a min
 
 	# max install (<) will install strictly anything lower
