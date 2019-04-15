@@ -364,7 +364,26 @@ class GoB_OT_import(bpy.types.Operator):
         elif not importToggle:
             bpy.ops.wm.gob_timer()
         importToggle = not importToggle
-        return{'FINISHED'}
+
+
+def remove_ngons(obj):
+    #create a temp data block to apply modifiers and process export
+    obj.select = True
+    bpy.ops.object.duplicate(linked=False)
+    obj_temp = bpy.context.active_object
+
+    obj_temp.select = True
+    obj.select = False
+
+    mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
+    # set modifier properties
+    mod.keep_custom_normals = False
+    mod.min_vertices = 5
+    mod.ngon_method = 'BEAUTY'
+    mod.quad_method = 'BEAUTY'
+    bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
+
+    return obj_temp
 
 
 class GoB_OT_export(bpy.types.Operator):
@@ -374,16 +393,31 @@ class GoB_OT_export(bpy.types.Operator):
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+
+        if bpy.context.object.type == 'MESH':
+            # create mesh if object is linked
+            if bpy.context.object.library:
+                new_ob = obj.copy()
+                new_ob.data = obj.data.copy()
+                scn.objects.link(new_ob)
+                new_ob.select = True
+                obj.select = False
+                scn.objects.active = new_ob
+
+        obj_temp = remove_ngons(obj)
         if pref.modifiers == 'APPLY_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers = True, calc_undeformed=False)
+            me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
             obj.data = me
             obj.modifiers.clear()
         elif pref.modifiers == 'JUST_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers = True, calc_undeformed=False)
+            me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
         else:
-            me = obj.data
+            # TODO: make sure we do not pass ngons with more than 4 versices to zbrush
+            me = obj_temp.data
 
         me.calc_loop_triangles()
+        #me.update(calc_edges=False, calc_edges_loose=False, calc_loop_triangles=False)
+
         if pref.flip_y:
             mat_transform = mathutils.Matrix([
                 (1., 0., 0., 0.),
@@ -634,6 +668,24 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:-2] + str(i).zfill(2)
             i += 1
         obj.name = new_name
+
+
+# set to OBJECT mode to ensure to update and save the current mode to restore after gozit
+def remember_object_mode():
+    if bpy.ops.object.mode_set.poll():
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+            mode = 'EDIT'
+        else:
+            mode = 'OBJECT'
+        return mode
+
+
+def restore_object_mode(mode='OBJECT'):
+    if mode == 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+    else:
+        bpy.ops.object.mode_set(mode='OBJECT')
 
 
 class GoB_OT_ModalTimerOperator(bpy.types.Operator):
