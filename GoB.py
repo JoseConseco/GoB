@@ -368,9 +368,11 @@ class GoB_OT_import(bpy.types.Operator):
 
 
 def apply_modifiers(obj, pref):
-    # TODO: make sure we do not pass ngons with more than 4 versices to zbrush
-    # Dummy object for ngon triangulation
-    # 1.create dummy object
+    # TODO: triangulation fix is messing with the export options
+    #  we should always transfer what we see,
+    #  this is currently not given with the extra modifier that applies
+
+    # 1.create dummy object to apply ngon fix
     obj.select_set(state=True)
     bpy.ops.object.duplicate(linked=False)
     obj_temp = bpy.context.active_object
