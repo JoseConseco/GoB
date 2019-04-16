@@ -364,26 +364,51 @@ class GoB_OT_import(bpy.types.Operator):
         elif not importToggle:
             bpy.ops.wm.gob_timer()
         importToggle = not importToggle
+        return{'FINISHED'}
 
 
-def remove_ngons(obj):
-    #create a temp data block to apply modifiers and process export
-    obj.select = True
+def apply_modifiers(obj, pref):
+    # TODO: make sure we do not pass ngons with more than 4 versices to zbrush
+    # Dummy object for ngon triangulation
+    # 1.create dummy object
+    obj.select_set(state=True)
     bpy.ops.object.duplicate(linked=False)
     obj_temp = bpy.context.active_object
+    obj_temp.select_set(state=True)
+    obj.select_set(state=False)
+    bpy.context.view_layer.objects.active = obj_temp
 
-    obj_temp.select = True
-    obj.select = False
-
+    # 2. apply triangulation to not crash zbrush
     mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
-    # set modifier properties
     mod.keep_custom_normals = False
     mod.min_vertices = 5
     mod.ngon_method = 'BEAUTY'
     mod.quad_method = 'BEAUTY'
     bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
 
-    return obj_temp
+    # quadrangulate triangulation
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+    bpy.ops.mesh.reveal()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.tris_convert_to_quads()
+    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
+    # 3. apply user modifier export choice
+    if pref.modifiers == 'APPLY_EXPORT':
+        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+        obj_temp.data = me
+        obj_temp.modifiers.clear()
+    elif pref.modifiers == 'JUST_EXPORT':
+        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+    else:
+        me = obj_temp.data
+
+    #  5. delete that dummy object and reselect the original
+    bpy.ops.object.delete(use_global=True)
+    obj.select_set(state=True)
+    bpy.context.view_layer.objects.active = obj
+
+    return me
 
 
 class GoB_OT_export(bpy.types.Operator):
@@ -400,23 +425,12 @@ class GoB_OT_export(bpy.types.Operator):
                 new_ob = obj.copy()
                 new_ob.data = obj.data.copy()
                 scn.objects.link(new_ob)
-                new_ob.select = True
-                obj.select = False
+                new_ob.select_set(state=True)
+                obj.select_set(state=False)
                 scn.objects.active = new_ob
 
-        obj_temp = remove_ngons(obj)
-        if pref.modifiers == 'APPLY_EXPORT':
-            me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
-            obj.data = me
-            obj.modifiers.clear()
-        elif pref.modifiers == 'JUST_EXPORT':
-            me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
-        else:
-            # TODO: make sure we do not pass ngons with more than 4 versices to zbrush
-            me = obj_temp.data
-
+        me = apply_modifiers(obj, pref)
         me.calc_loop_triangles()
-        #me.update(calc_edges=False, calc_edges_loose=False, calc_loop_triangles=False)
 
         if pref.flip_y:
             mat_transform = mathutils.Matrix([
@@ -624,8 +638,11 @@ class GoB_OT_export(bpy.types.Operator):
             # fin
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
-        if pref.modifiers == 'JUST_EXPORT': #remove temp mesh with modifiers applied
-            bpy.data.meshes.remove(me)
+
+        bpy.data.meshes.remove(me)
+        # if pref.modifiers == 'JUST_EXPORT': #remove temp mesh with modifiers applied
+        #     bpy.data.meshes.remove(me)
+
         return
 
     def execute(self, context):
