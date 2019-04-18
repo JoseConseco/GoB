@@ -58,12 +58,13 @@ def register():
         addon_updater_ops.make_annotations(c)  # to avoid blender 2.8 warnings
         bpy.utils.register_class(c)
 
-    GoB.custom_icons = bpy.utils.previews.new()
+    global icons
+    icons = bpy.utils.previews.new()
     icons_dir = os.path.join(os.path.dirname(__file__), "icons")
-    GoB.custom_icons.load("icon_goz_send", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
-    GoB.custom_icons.load("icon_goz_sync_enabled", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
-    GoB.custom_icons.load("icon_goz_sync_disabled", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    GoB.preview_collections["main"] = GoB.custom_icons
+    icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
+    icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
+    icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
+    GoB.preview_collections["main"] = icons
 
     bpy.types.TOPBAR_HT_upper_bar.append(GoB.draw_goz)
 
@@ -72,7 +73,7 @@ def unregister():
     addon_updater_ops.unregister()
 
     for GoB.custom_icons in GoB.preview_collections.values():
-        bpy.utils.previews.remove(GoB.custom_icons)
+        bpy.utils.previews.remove(icons)
     GoB.preview_collections.clear()
 
     bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz)
