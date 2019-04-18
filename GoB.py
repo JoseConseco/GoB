@@ -18,7 +18,6 @@
 
 import bpy
 import mathutils
-import bl_ui
 import time
 import os
 from struct import pack, unpack
@@ -42,34 +41,32 @@ autoload = 2.0  # Check GoZ export every 2.0 seconds
 importToggle = False
 objectList = []
 varTime = time.time() - 240.0
-
-# custom_icons = None
 preview_collections = {}
 
 
 def draw_goz(self, context):
-    global importToggle, custom_icons
-    custom_icons = preview_collections["main"]
+    global importToggle, icons
+    icons = preview_collections["main"]
 
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=False)
+        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=True)
         if importToggle:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True)
+            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=True)
         else:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=False)
+            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=False)
 
-        # FIXME: new icons do not show for some reason
-        row2 = layout.row(align=True)
-        row2.operator(operator="scene.gob_export", text="", emboss=True,
-                      icon_value=custom_icons["icon_goz_send"].icon_id)
-        if importToggle:
-            row2.operator(operator="scene.gob_import", text="", emboss=True,
-                          icon_value=custom_icons["icon_goz_sync_enabled"].icon_id)
-        else:
-            row2.operator(operator="scene.gob_import", text="", emboss=True,
-                          icon_value=custom_icons["icon_goz_sync_disabled"].icon_id)
+        # FIXME: new icons do not show for some reason, i think there is currently a bug in blender (18.04.2019)
+        # row2 = layout.row(align=True)
+        # row2.operator(operator="scene.gob_export", text="send", emboss=True,
+        #              icon_value=icons["GOZ_SEND"].icon_id)
+        # if importToggle:
+        #     row2.operator(operator="scene.gob_import", text="sync on", emboss=True, depress=True,
+        #                  icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+        # else:
+        #     row2.operator(operator="scene.gob_import", text="sync off", emboss=True, depress=False,
+        #                  icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
@@ -99,10 +96,11 @@ class GoB_OT_import(bpy.types.Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
-            print(f"Importing :{objName}")
+            print(f"Importing: {pathFile, objName}")
             me = bpy.data.meshes.new(objName)
             tag = goz_file.read(4)
             while tag:
+                print('tags: ', tag)
                 if tag == b'\x89\x13\x00\x00':
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
@@ -193,6 +191,7 @@ class GoB_OT_import(bpy.types.Operator):
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 scn.collection.objects.link(obj)
             utag = 0
+
             while tag:
                 if tag == b'\xa9\x61\x00\x00':  # UVs
                     me.uv_layers.new()
@@ -421,15 +420,17 @@ class GoB_OT_export(bpy.types.Operator):
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
 
+        # TODO: when linked system is finalized it could be possible to provide
+        #  a option to modify the linked object. for now a copy
+        #  of the linked object is created to goz it
         if bpy.context.object.type == 'MESH':
-            # create mesh if object is linked
             if bpy.context.object.library:
                 new_ob = obj.copy()
                 new_ob.data = obj.data.copy()
-                scn.objects.link(new_ob)
+                scn.collection.objects.link(new_ob)
                 new_ob.select_set(state=True)
                 obj.select_set(state=False)
-                scn.objects.active = new_ob
+                bpy.context.view_layer.objects.active = new_ob
 
         me = apply_modifiers(obj, pref)
         me.calc_loop_triangles()
