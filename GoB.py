@@ -683,9 +683,9 @@ class GoB_OT_export(bpy.types.Operator):
         if new_name == obj.name:
             return
         i = 0
-        while new_name in bpy.data.objects.keys():
-            name_cut = 0 if i == 0 else 2
-            new_name = new_name[:-2] + str(i).zfill(2)
+        while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
+            name_cut = None if i == 0 else -2  #in first loop, do not slice name.
+            new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
 
