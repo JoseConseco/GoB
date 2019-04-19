@@ -16,19 +16,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-bl_info = {
-    "name": "GoB",
-    "description": "An unofficial GOZ-like for Blender",
-    "author": "ODe",
-    "version": (2, 0, 1),
-    "blender": (2, 80, 0),
-    "location": "At the info header",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-                "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
-    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-                "127419-GoB-an-unofficial-GoZ-for-Blender",
-    "category": "Import-Export"}
-
 
 if "bpy" in locals():
     import importlib
@@ -37,7 +24,23 @@ else:
     from . import GoB
 
 import bpy
+import os
+from . import addon_updater_ops
+import bpy.utils.previews
 
+
+bl_info = {
+    "name": "GoB",
+    "description": "An unofficial GOZ-like addon for Blender",
+    "author": "ODe, JoseConseco, kromar",
+    "version": (3, 0, 0),
+    "blender": (2, 80, 0),
+    "location": "In the info header",
+    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
+                "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
+    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
+                "127419-GoB-an-unofficial-GoZ-for-Blender",
+    "category": "Import-Export"}
 
 
 classes = (
@@ -49,12 +52,32 @@ classes = (
 
 
 def register():
-    [bpy.utils.register_class(c) for c in classes]
+    addon_updater_ops.register(bl_info)
+
+    for c in classes:
+        addon_updater_ops.make_annotations(c)  # to avoid blender 2.8 warnings
+        bpy.utils.register_class(c)
+
+    global icons
+    icons = bpy.utils.previews.new()
+    icons_dir = os.path.join(os.path.dirname(__file__), "icons")
+    icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
+    icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
+    icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
+    GoB.preview_collections["main"] = icons
+
     bpy.types.TOPBAR_HT_upper_bar.append(GoB.draw_goz)
 
-
 def unregister():
-    [bpy.utils.unregister_class(c) for c in classes]
+    # addon updater unregister
+    addon_updater_ops.unregister()
+
+    for GoB.custom_icons in GoB.preview_collections.values():
+        bpy.utils.previews.remove(icons)
+    GoB.preview_collections.clear()
+
     bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz)
+
+    [bpy.utils.unregister_class(c) for c in classes]
 
 

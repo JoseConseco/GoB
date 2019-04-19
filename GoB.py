@@ -18,12 +18,14 @@
 
 import bpy
 import mathutils
-import bl_ui
 import time
 import os
 from struct import pack, unpack
 from copy import deepcopy
 import string
+
+from . import addon_updater_ops
+
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -39,18 +41,32 @@ autoload = 2.0  # Check GoZ export every 2.0 seconds
 importToggle = False
 objectList = []
 varTime = time.time() - 240.0
+preview_collections = {}
 
 
 def draw_goz(self, context):
-    global importToggle
+    global importToggle, icons
+    icons = preview_collections["main"]
+
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=False)
+        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=True)
         if importToggle:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True)
+            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=True)
         else:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=False)
+            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=False)
+
+        # FIXME: new icons do not show for some reason, i think there is currently a bug in blender (18.04.2019)
+        # row2 = layout.row(align=True)
+        # row2.operator(operator="scene.gob_export", text="send", emboss=True,
+        #              icon_value=icons["GOZ_SEND"].icon_id)
+        # if importToggle:
+        #     row2.operator(operator="scene.gob_import", text="sync on", emboss=True, depress=True,
+        #                  icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+        # else:
+        #     row2.operator(operator="scene.gob_import", text="sync off", emboss=True, depress=False,
+        #                  icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
@@ -80,10 +96,11 @@ class GoB_OT_import(bpy.types.Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
-            print(f"Importing :{objName}")
+            print(f"Importing: {pathFile, objName}")
             me = bpy.data.meshes.new(objName)
             tag = goz_file.read(4)
             while tag:
+                print('tags: ', tag)
                 if tag == b'\x89\x13\x00\x00':
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
@@ -174,6 +191,7 @@ class GoB_OT_import(bpy.types.Operator):
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 scn.collection.objects.link(obj)
             utag = 0
+
             while tag:
                 if tag == b'\xa9\x61\x00\x00':  # UVs
                     me.uv_layers.new()
@@ -348,6 +366,52 @@ class GoB_OT_import(bpy.types.Operator):
         return{'FINISHED'}
 
 
+def apply_modifiers(obj, pref):
+    # TODO: triangulation fix is messing with the export options
+    #  we should always transfer what we see,
+    #  this is currently not given with the extra modifier that applies
+
+    # 1.create dummy object to apply ngon fix
+    obj.select_set(state=True)
+    bpy.ops.object.duplicate(linked=False)
+    obj_temp = bpy.context.active_object
+    obj_temp.select_set(state=True)
+    obj.select_set(state=False)
+    bpy.context.view_layer.objects.active = obj_temp
+
+    # 2. apply triangulation to not crash zbrush
+    mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
+    mod.keep_custom_normals = False
+    mod.min_vertices = 5
+    mod.ngon_method = 'BEAUTY'
+    mod.quad_method = 'BEAUTY'
+    bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
+
+    # quadrangulate triangulation
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+    bpy.ops.mesh.reveal()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.tris_convert_to_quads()
+    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
+    # 3. apply user modifier export choice
+    if pref.modifiers == 'APPLY_EXPORT':
+        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+        obj_temp.data = me
+        obj_temp.modifiers.clear()
+    elif pref.modifiers == 'JUST_EXPORT':
+        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+    else:
+        me = obj_temp.data
+
+    #  5. delete that dummy object and reselect the original
+    bpy.ops.object.delete(use_global=True)
+    obj.select_set(state=True)
+    bpy.context.view_layer.objects.active = obj
+
+    return me
+
+
 class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to Zbrush"
@@ -355,16 +419,22 @@ class GoB_OT_export(bpy.types.Operator):
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-        if pref.modifiers == 'APPLY_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers = True, calc_undeformed=False)
-            obj.data = me
-            obj.modifiers.clear()
-        elif pref.modifiers == 'JUST_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers = True, calc_undeformed=False)
-        else:
-            me = obj.data
 
+        # TODO: when linked system is finalized it could be possible to provide
+        #  a option to modify the linked object. for now a copy
+        #  of the linked object is created to goz it
+        if bpy.context.object.type == 'MESH':
+            if bpy.context.object.library:
+                new_ob = obj.copy()
+                new_ob.data = obj.data.copy()
+                scn.collection.objects.link(new_ob)
+                new_ob.select_set(state=True)
+                obj.select_set(state=False)
+                bpy.context.view_layer.objects.active = new_ob
+
+        me = apply_modifiers(obj, pref)
         me.calc_loop_triangles()
+
         if pref.flip_y:
             mat_transform = mathutils.Matrix([
                 (1., 0., 0., 0.),
@@ -571,8 +641,11 @@ class GoB_OT_export(bpy.types.Operator):
             # fin
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
-        if pref.modifiers == 'JUST_EXPORT': #remove temp mesh with modifiers applied
-            bpy.data.meshes.remove(me)
+
+        bpy.data.meshes.remove(me)
+        # if pref.modifiers == 'JUST_EXPORT': #remove temp mesh with modifiers applied
+        #     bpy.data.meshes.remove(me)
+
         return
 
     def execute(self, context):
@@ -617,6 +690,24 @@ class GoB_OT_export(bpy.types.Operator):
         obj.name = new_name
 
 
+# set to OBJECT mode to ensure to update and save the current mode to restore after gozit
+def remember_object_mode():
+    if bpy.ops.object.mode_set.poll():
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+            mode = 'EDIT'
+        else:
+            mode = 'OBJECT'
+        return mode
+
+
+def restore_object_mode(mode='OBJECT'):
+    if mode == 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+    else:
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+
 class GoB_OT_ModalTimerOperator(bpy.types.Operator):
     """Operator which runs its self from a timer"""
     bl_idname = "wm.gob_timer"
@@ -647,13 +738,56 @@ class GoB_OT_ModalTimerOperator(bpy.types.Operator):
 class GoBPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
-    flip_y: bpy.props.BoolProperty(name="Flip object mode", description="If you experience bad mesh orientation use this option, change mesh export/import orientation mode",  default=False)
-    modifiers: bpy.props.EnumProperty(name='Modifiers', description='How to handle exported object modifiers',
-                                      items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-                                             ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
-                                             ('IGNORE', 'Ignore', 'Do not export modifiers')], default='JUST_EXPORT')
+    flip_y: bpy.props.BoolProperty(
+        name="Invert up axis",
+        description="If you experience bad mesh orientation use this option, change mesh export/import orientation mode",
+        default=False)
+    modifiers: bpy.props.EnumProperty(
+        name='Modifiers',
+        description='How to handle exported object modifiers',
+        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
+               ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
+               ('IGNORE', 'Ignore', 'Do not export modifiers')],
+        default='JUST_EXPORT')
+
+    # addon updater preferences
+    auto_check_update: bpy.props.BoolProperty(
+        name="Auto-check for Update",
+        description="If enabled, auto-check for updates using an interval",
+        default=False)
+    updater_intrval_months: bpy.props.IntProperty(
+        name='Months',
+        description="Number of months between checking for updates",
+        default=0,
+        min=0)
+    updater_intrval_days: bpy.props.IntProperty(
+        name='Days',
+        description="Number of days between checking for updates",
+        default=7,
+        min=0,
+        max=31)
+    updater_intrval_hours: bpy.props.IntProperty(
+        name='Hours',
+        description="Number of hours between checking for updates",
+        default=0,
+        min=0,
+        max=23)
+    updater_intrval_minutes: bpy.props.IntProperty(
+        name='Minutes',
+        description="Number of minutes between checking for updates",
+        default=0,
+        min=0,
+        max=59)
 
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'flip_y')
         layout.prop(self, 'modifiers')
+
+        col = layout.column()   # works best if a column, or even just self.layout
+        mainrow = layout.row()
+        col = mainrow.column()
+
+        # updater draw function
+        # could also pass in col as third arg
+        addon_updater_ops.update_settings_ui(self, context)
