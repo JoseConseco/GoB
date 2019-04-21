@@ -379,22 +379,7 @@ def apply_modifiers(obj, pref):
     obj.select_set(state=False)
     bpy.context.view_layer.objects.active = obj_temp
 
-    # 2. apply triangulation to not crash zbrush
-    mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
-    mod.keep_custom_normals = False
-    mod.min_vertices = 5
-    mod.ngon_method = 'BEAUTY'
-    mod.quad_method = 'BEAUTY'
-    bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
-
-    # quadrangulate triangulation
-    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-    bpy.ops.mesh.reveal()
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.tris_convert_to_quads()
-    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-
-    # 3. apply user modifier export choice
+    # 2. apply user modifier export choice
     if pref.modifiers == 'APPLY_EXPORT':
         me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
         obj_temp.data = me
@@ -403,6 +388,22 @@ def apply_modifiers(obj, pref):
         me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
     else:
         me = obj_temp.data
+
+    # 3. apply triangulation to not crash zbrush
+    mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
+    mod.keep_custom_normals = False
+    mod.min_vertices = 5
+    mod.ngon_method = 'BEAUTY'
+    mod.quad_method = 'BEAUTY'
+    bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
+
+    # 4. quadrangulate triangulation
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+    bpy.ops.mesh.reveal()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.tris_convert_to_quads()
+    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+    me = obj_temp.data
 
     #  5. delete that dummy object and reselect the original
     bpy.ops.object.delete(use_global=True)
