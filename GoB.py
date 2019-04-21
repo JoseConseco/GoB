@@ -373,7 +373,7 @@ def apply_modifiers(obj, pref):
 
     # 1.create dummy object to apply ngon fix
     obj.select_set(state=True)
-    bpy.ops.object.duplicate(linked=False)
+    bpy.ops.object.duplicate()
     obj_temp = bpy.context.active_object
     obj_temp.select_set(state=True)
     obj.select_set(state=False)
