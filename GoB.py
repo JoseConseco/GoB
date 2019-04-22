@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import bmesh
 import mathutils
 import time
 import os
@@ -367,50 +368,27 @@ class GoB_OT_import(bpy.types.Operator):
 
 
 def apply_modifiers(obj, pref):
-    # TODO: triangulation fix is messing with the export options
-    #  we should always transfer what we see,
-    #  this is currently not given with the extra modifier that applies
-
-    # 1.create dummy object to apply ngon fix
-    obj.select_set(state=True)
-    bpy.ops.object.duplicate()
-    obj_temp = bpy.context.active_object
-    obj_temp.select_set(state=True)
-    obj.select_set(state=False)
-    bpy.context.view_layer.objects.active = obj_temp
-
-    # 2. apply user modifier export choice
     if pref.modifiers == 'APPLY_EXPORT':
-        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
-        obj_temp.data = me
-        obj_temp.modifiers.clear()
+        me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+        obj.data = me
+        obj.modifiers.clear()
     elif pref.modifiers == 'JUST_EXPORT':
-        me = obj_temp.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+        me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
     else:
-        me = obj_temp.data
+        me = obj.data
 
-    # 3. apply triangulation to not crash zbrush
-    mod = obj_temp.modifiers.new("TriangulateNgons", 'TRIANGULATE')
-    mod.keep_custom_normals = False
-    mod.min_vertices = 5
-    mod.ngon_method = 'BEAUTY'
-    mod.quad_method = 'BEAUTY'
-    bpy.ops.object.modifier_apply(modifier='TriangulateNgons')
+    #DO the triangulation, but do not write it to original object. User has to handle Ngons manaully if they want.
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    triangulate_faces = [f for f in bm.faces if len(f.edges) > 4]
+    result = bmesh.ops.triangulate(bm, faces=triangulate_faces)
+    bmesh.ops.join_triangles(bm, faces=result['faces'], cmp_seam=False, cmp_sharp=False, cmp_uvs=False, cmp_vcols=False, cmp_materials=False, angle_face_threshold=3.1, angle_shape_threshold=3.1)
+    export_mesh = bpy.data.meshes.new(name = f'{obj.name}_goz')  #mesh is deleted in main loop anyway
+    bm.to_mesh(export_mesh)
+    bm.free()
+    
+    return export_mesh
 
-    # 4. quadrangulate triangulation
-    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-    bpy.ops.mesh.reveal()
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.tris_convert_to_quads()
-    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-    me = obj_temp.data
-
-    #  5. delete that dummy object and reselect the original
-    bpy.ops.object.delete(use_global=True)
-    obj.select_set(state=True)
-    bpy.context.view_layer.objects.active = obj
-
-    return me
 
 
 class GoB_OT_export(bpy.types.Operator):
@@ -644,9 +622,6 @@ class GoB_OT_export(bpy.types.Operator):
             goz_file.write(pack('16x'))
 
         bpy.data.meshes.remove(me)
-        # if pref.modifiers == 'JUST_EXPORT': #remove temp mesh with modifiers applied
-        #     bpy.data.meshes.remove(me)
-
         return
 
     def execute(self, context):
