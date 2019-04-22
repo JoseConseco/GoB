@@ -51,22 +51,14 @@ def draw_goz(self, context):
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=True)
+        row.operator(operator="scene.gob_export", text="", emboss=True,
+                     icon_value=icons["GOZ_SEND"].icon_id)
         if importToggle:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=True)
+            row.operator(operator="scene.gob_import", text="", emboss=True, depress=True,
+                         icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=False)
-
-        # FIXME: new icons do not show for some reason, i think there is currently a bug in blender (18.04.2019)
-        # row2 = layout.row(align=True)
-        # row2.operator(operator="scene.gob_export", text="send", emboss=True,
-        #              icon_value=icons["GOZ_SEND"].icon_id)
-        # if importToggle:
-        #     row2.operator(operator="scene.gob_import", text="sync on", emboss=True, depress=True,
-        #                  icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
-        # else:
-        #     row2.operator(operator="scene.gob_import", text="sync off", emboss=True, depress=False,
-        #                  icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+            row.operator(operator="scene.gob_import", text="", emboss=True, depress=False,
+                         icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
