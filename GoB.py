@@ -680,7 +680,7 @@ class GoB_OT_export(bpy.types.Operator):
         Multiple consecutive invalid characters will be replaced with just a single underscore character.
         """
         import re
-        new_name = re.sub('[^\w\_\-\.]+', '_', obj.name)
+        new_name = re.sub('[^\w\_\-]+', '_', obj.name)
         if new_name == obj.name:
             return
         i = 0
