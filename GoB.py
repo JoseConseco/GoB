@@ -306,28 +306,10 @@ class GoB_OT_import(bpy.types.Operator):
         return
 
     def execute(self, context):
-        global cached_last_edition_time
-
-        exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        if not exists:
-            print('GoZ_ObjectList.txt dosent exist. Check your Zbrush GOZ installation.')
-            return{'CANCELLED'}
-
-        try:
-            file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        except:
-            print(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt unreadable")
-            return{'CANCELLED'}
-
         goz_obj_paths = []
-        if file_edition_time > cached_last_edition_time:
-            cached_last_edition_time = file_edition_time
-            with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
-                for line in goz_objs_list:
-                    goz_obj_paths.append(line.strip() + '.GoZ')
-        else:
-            # print("GOZ: Nothing to update")
-            return{'CANCELLED'}
+        with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
+            for line in goz_objs_list:
+                goz_obj_paths.append(line.strip() + '.GoZ')
 
         if len(goz_obj_paths) == 0:
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
@@ -345,30 +327,42 @@ class GoB_OT_import(bpy.types.Operator):
 
     def invoke(self, context, event):
         global run_background_update
-        if event.shift:
-            if not run_background_update:
-                return self.execute(context)
-            return{'FINISHED'}
+        if run_background_update:
+            if bpy.app.timers.is_registered(run_import_periodically):
+                bpy.app.timers.unregister(run_import_periodically)
+                print('Disabling GOZ background listener')
+            run_background_update = False
         else:
-            if run_background_update:
-                if bpy.app.timers.is_registered(run_import_periodically):
-                    bpy.app.timers.unregister(run_import_periodically)
-                    print('Disabling GOZ background listener')
-                run_background_update = False
-            else:
-                if not bpy.app.timers.is_registered(run_import_periodically):
-                    bpy.app.timers.register(run_import_periodically, persistent=True)
-                    print('Enabling GOZ background listener')
-                run_background_update = True
+            if not bpy.app.timers.is_registered(run_import_periodically):
+                bpy.app.timers.register(run_import_periodically, persistent=True)
+                print('Enabling GOZ background listener')
+            run_background_update = True
         return{'FINISHED'}
 
 
 def run_import_periodically():
     # print("Runing timers update check")
-    # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
-    window = bpy.context.window_manager.windows[0]
-    ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-    bpy.ops.scene.gob_import(ctx)
+    global cached_last_edition_time, run_background_update
+
+    try:
+        file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+    except Exception as e:
+        print(e)
+        run_background_update = False
+        if bpy.app.timers.is_registered(run_import_periodically):
+            bpy.app.timers.unregister(run_import_periodically)
+        return time_interval
+
+    if file_edition_time > cached_last_edition_time:
+        cached_last_edition_time = file_edition_time
+        # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
+        window = bpy.context.window_manager.windows[0]
+        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+    else:
+        # print("GOZ: Nothing to update")
+        return time_interval
+    
     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
         bpy.app.timers.unregister(run_import_periodically)
     return time_interval
