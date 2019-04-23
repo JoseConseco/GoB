@@ -33,7 +33,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, kromar",
-    "version": (3, 0, 1),
+    "version": (3, 0, 2),
     "blender": (2, 80, 0),
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
@@ -46,8 +46,7 @@ bl_info = {
 classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
-    GoB.GoBPreferences,
-    GoB.GoB_OT_ModalTimerOperator
+    GoB.GoBPreferences
     )
 
 
@@ -79,5 +78,8 @@ def unregister():
     bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz)
 
     [bpy.utils.unregister_class(c) for c in classes]
+    
+    if bpy.app.timers.is_registered(GoB.run_import_periodically):
+        bpy.app.timers.unregister(GoB.run_import_periodically)
 
 

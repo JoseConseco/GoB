@@ -1,4 +1,4 @@
-# ##### BEGIN GPL LICENSE BLOCK #####
+﻿# ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -38,42 +38,30 @@ else:
     PATHGOZ = False
 
 
-autoload = 2.0  # Check GoZ export every 2.0 seconds
-importToggle = False
-objectList = []
-varTime = time.time() - 240.0
+time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
+run_background_update = False
+cached_last_edition_time = time.time() - 10.0
 preview_collections = {}
 
 
 def draw_goz(self, context):
-    global importToggle, icons
+    global run_background_update, icons
     icons = preview_collections["main"]
 
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="", icon='EXPORT', emboss=True)
-        if importToggle:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=True)
+        row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+        if run_background_update:
+            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_import", text="", icon='FILE_REFRESH', emboss=True, depress=False)
-
-        # FIXME: new icons do not show for some reason, i think there is currently a bug in blender (18.04.2019)
-        # row2 = layout.row(align=True)
-        # row2.operator(operator="scene.gob_export", text="send", emboss=True,
-        #              icon_value=icons["GOZ_SEND"].icon_id)
-        # if importToggle:
-        #     row2.operator(operator="scene.gob_import", text="sync on", emboss=True, depress=True,
-        #                  icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
-        # else:
-        #     row2.operator(operator="scene.gob_import", text="sync off", emboss=True, depress=False,
-        #                  icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
-    bl_label = "Import from Zbrush"
-    bl_description = "Import from Zbrush"
+    bl_label = "GOZ import"
+    bl_description = "GOZ import background listener"
 
     def GoZit(self, pathFile):
         scn = bpy.context.scene
@@ -89,7 +77,7 @@ class GoB_OT_import(bpy.types.Operator):
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
             return
-            
+
         with open(pathFile, 'rb') as goz_file:
             goz_file.seek(36, 0)
             lenObjName = unpack('<I', goz_file.read(4))[0] - 16
@@ -172,11 +160,8 @@ class GoB_OT_import(bpy.types.Operator):
                 for instance in instances:
                     instance.data = me
                 bpy.data.meshes.remove(oldMesh)
-                backupMatrix = deepcopy(obj.matrix_world)
-                obj.matrix_world = backupMatrix
-                obj.data.transform(backupMatrix.inverted())
+                obj.data.transform(obj.matrix_world.inverted()) #assume we have to rever transformation from obj mode
                 obj.select_set(True)
-                bpy.context.view_layer.objects.active = obj
                 if len(obj.material_slots) > 0:
                     if obj.material_slots[0].material is not None:
                         objMat = obj.material_slots[0].material
@@ -296,9 +281,8 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        
+        bpy.context.view_layer.objects.active = obj #make active last obj
+
         # if diff:
         #     mtex = objMat.texture_slots.add()
         #     mtex.texture = txtDiff
@@ -322,7 +306,7 @@ class GoB_OT_import(bpy.types.Operator):
         return
 
     def execute(self, context):
-        global varTime, objectList
+        global cached_last_edition_time
 
         exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         if not exists:
@@ -330,71 +314,94 @@ class GoB_OT_import(bpy.types.Operator):
             return{'CANCELLED'}
 
         try:
-            ficTime = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+            file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         except:
             print(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt unreadable")
             return{'CANCELLED'}
-            
-        if ficTime > varTime:
-            objectList = []
-            varTime = ficTime
+
+        goz_obj_paths = []
+        if file_edition_time > cached_last_edition_time:
+            cached_last_edition_time = file_edition_time
             with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
-                    objectList.append(line.strip() + '.GoZ')
+                    goz_obj_paths.append(line.strip() + '.GoZ')
         else:
-            if importToggle:
-                # self.report({'INFO'}, "Nothing to update")
-                # print("GOZ: Nothing to update")
-                return{'CANCELLED'}
-        if len(objectList) == 0:
-            self.report({'INFO'}, message="No update")
+            # print("GOZ: Nothing to update")
             return{'CANCELLED'}
-        for objPath in objectList:
-            self.GoZit(objPath)
+
+        if len(goz_obj_paths) == 0:
+            self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
+            return{'CANCELLED'}
+
+        if context.object and context.object.mode != 'OBJECT':
+            # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
+            bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
+
+        for ztool_path in goz_obj_paths:
+            self.GoZit(ztool_path)
+
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
     def invoke(self, context, event):
-        global importToggle
-
+        global run_background_update
         if event.shift:
-            if importToggle == False:
+            if not run_background_update:
                 return self.execute(context)
             return{'FINISHED'}
-        elif not importToggle:
-            bpy.ops.wm.gob_timer()
-        importToggle = not importToggle
+        else:
+            if run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
+            else:
+                if not bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.register(run_import_periodically, persistent=True)
+                    print('Enabling GOZ background listener')
+                run_background_update = True
         return{'FINISHED'}
 
 
-def apply_modifiers(obj, pref):
-    if pref.modifiers == 'APPLY_EXPORT':
-        me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
-        obj.data = me
-        obj.modifiers.clear()
-    elif pref.modifiers == 'JUST_EXPORT':
-        me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
-    else:
-        me = obj.data
-
-    #DO the triangulation, but do not write it to original object. User has to handle Ngons manaully if they want.
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    triangulate_faces = [f for f in bm.faces if len(f.edges) > 4]
-    result = bmesh.ops.triangulate(bm, faces=triangulate_faces)
-    bmesh.ops.join_triangles(bm, faces=result['faces'], cmp_seam=False, cmp_sharp=False, cmp_uvs=False, cmp_vcols=False, cmp_materials=False, angle_face_threshold=3.1, angle_shape_threshold=3.1)
-    export_mesh = bpy.data.meshes.new(name = f'{obj.name}_goz')  #mesh is deleted in main loop anyway
-    bm.to_mesh(export_mesh)
-    bm.free()
-    
-    return export_mesh
-
+def run_import_periodically():
+    # print("Runing timers update check")
+    # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
+    window = bpy.context.window_manager.windows[0]
+    ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+    bpy.ops.scene.gob_import(ctx)
+    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
+        bpy.app.timers.unregister(run_import_periodically)
+    return time_interval
 
 
 class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to Zbrush"
     bl_description = "Export to Zbrush"
+
+    @staticmethod
+    def apply_modifiers(obj, pref):
+        if pref.modifiers == 'APPLY_EXPORT':
+            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+            obj.data = me
+            obj.modifiers.clear()
+        elif pref.modifiers == 'JUST_EXPORT':
+            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+        else:
+            me = obj.data
+
+        #DO the triangulation of Ngons only, but do not write it to original object. User has to handle Ngons manaully if they want.
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        triangulate_faces = [f for f in bm.faces if len(f.edges) > 4]
+        result = bmesh.ops.triangulate(bm, faces=triangulate_faces)
+        #join traingles only that are result of ngon triangulation
+        bmesh.ops.join_triangles(bm, faces=result['faces'], cmp_seam=False, cmp_sharp=False, cmp_uvs=False, cmp_vcols=False, cmp_materials=False, angle_face_threshold=3.1, angle_shape_threshold=3.1)
+        export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop anyway
+        bm.to_mesh(export_mesh)
+        bm.free()
+
+        return export_mesh
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
@@ -411,7 +418,7 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
-        me = apply_modifiers(obj, pref)
+        me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
         if pref.flip_y:
@@ -473,7 +480,7 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
                     if i == 2:
                         goz_file.write(pack('<2f', 0., 1.))
-                        
+
 
             # --Polypainting--
             if me.vertex_colors.active:
@@ -639,14 +646,12 @@ class GoB_OT_export(bpy.types.Operator):
                     with open( f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ztn", 'wt') as ztn:
                         ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
                     GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
-                        
-        global varTime
-        varTime = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+
+        global cached_last_edition_time
+        cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
         return{'FINISHED'}
 
-    def invoke(self, context, event):
-        return self.execute(context)
 
     def escape_object_name(self, obj):
         """
@@ -664,51 +669,6 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
-
-
-# set to OBJECT mode to ensure to update and save the current mode to restore after gozit
-def remember_object_mode():
-    if bpy.ops.object.mode_set.poll():
-        if bpy.context.object.mode == 'EDIT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-            mode = 'EDIT'
-        else:
-            mode = 'OBJECT'
-        return mode
-
-
-def restore_object_mode(mode='OBJECT'):
-    if mode == 'EDIT':
-        bpy.ops.object.mode_set(mode='EDIT')
-    else:
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-
-class GoB_OT_ModalTimerOperator(bpy.types.Operator):
-    """Operator which runs its self from a timer"""
-    bl_idname = "wm.gob_timer"
-    bl_label = "Modal Timer Operator for GoB"
-
-    _timer = None
-
-    def modal(self, context, event):
-        global importToggle
-
-        if not importToggle:
-            return self.cancel(context)
-        if event.type == 'TIMER':
-            bpy.ops.scene.gob_import()
-        return {'PASS_THROUGH'}
-
-    def execute(self, context):
-        global autoload
-        self._timer = context.window_manager.event_timer_add(autoload, window=context.window)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def cancel(self, context):
-        context.window_manager.event_timer_remove(self._timer)
-        return {'CANCELLED'}
 
 
 class GoBPreferences(bpy.types.AddonPreferences):
