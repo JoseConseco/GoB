@@ -171,11 +171,13 @@ class GoB_OT_import(bpy.types.Operator):
                 else:
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
-
+                create_node_material(objMat)
             else:
                 obj = bpy.data.objects.new(objName, me)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                obj.data.materials.append(objMat)
                 scn.collection.objects.link(obj)
+                create_node_material(objMat)
             utag = 0
 
             while tag:
@@ -190,6 +192,7 @@ class GoB_OT_import(bpy.types.Operator):
                             uv_layer.data[loop_index].uv = x, 1. - y
                         if i < 3:  # cos uv always have 4 coords... ??
                             x, y = unpack('<2f', goz_file.read(8))
+
                 elif tag == b'\xb9\x88\x00\x00':  # Polypainting
                     min = 255
                     goz_file.seek(4, 1)
@@ -214,6 +217,7 @@ class GoB_OT_import(bpy.types.Operator):
                                     vertexColor.data[iv].color = [color[2]/255, color[1]/255, color[0]/255]
                                 iv += 1
                     del polypaint
+
                 elif tag == b'\x32\x75\x00\x00':  # Mask
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
@@ -223,6 +227,7 @@ class GoB_OT_import(bpy.types.Operator):
                     for i in range(cnt):
                         data = unpack('<H', goz_file.read(2))[0] / 65535.
                         groupMask.add([i], 1.-data, 'ADD')
+
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
                     goz_file.seek(4, 1)
@@ -243,6 +248,7 @@ class GoB_OT_import(bpy.types.Operator):
                         pass
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
+
                 elif tag == b'\xc9\xaf\x00\x00':  # Diff map
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
@@ -338,6 +344,23 @@ class GoB_OT_import(bpy.types.Operator):
                 print('Enabling GOZ background listener')
             run_background_update = True
         return{'FINISHED'}
+
+
+def create_node_material(mat):
+    # enable nodes
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    output_node = nodes.get('Principled BSDF')
+    vcol_node = nodes.get('ShaderNodeAttribute')
+
+    # create new node
+    if not vcol_node:
+        vcol_node = nodes.new('ShaderNodeAttribute')
+        vcol_node.location = -300, 200
+        vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
+
+        # link nodes
+        mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
 
 
 def run_import_periodically():
