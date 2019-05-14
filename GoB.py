@@ -138,10 +138,10 @@ class GoB_OT_import(bpy.types.Operator):
             me.from_pydata(vertsData, [], facesData)  # Assume mesh data in ready to write to mesh..
             del vertsData
             del facesData
-            if pref.flip_y: #fixes bad mesh orientation for some people
+            if pref.flip_y:  # fixes bad mesh orientation for some people
                 me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
                     (0., 1., 0., 0.),
                     (0., 0., 0., 1.)]))
             else:
@@ -440,9 +440,9 @@ class GoB_OT_export(bpy.types.Operator):
 
         if pref.flip_y:
             mat_transform = mathutils.Matrix([
-                (1., 0., 0., 0.),
+                (-1., 0., 0., 0.),
                 (0., 0., 1., 0.),
-                (0., -1., 0., 0.),
+                (0., 1., 0., 0.),
                 (0., 0., 0., 1.)])
         else:
             mat_transform = mathutils.Matrix([
