@@ -398,12 +398,16 @@ class GoB_OT_export(bpy.types.Operator):
 
     @staticmethod
     def apply_modifiers(obj, pref):
+        depsgraph = bpy.context.evaluated_depsgraph_get()
         if pref.modifiers == 'APPLY_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+            object_eval = obj.evaluated_get(depsgraph)
+            # me = object_eval.to_mesh() #with modifiers - crash need to_mesh_clear()?
+            me = bpy.data.meshes.new_from_object(object_eval)  # with modifiers
             obj.data = me
             obj.modifiers.clear()
         elif pref.modifiers == 'JUST_EXPORT':
-            me = obj.to_mesh(bpy.context.depsgraph, apply_modifiers=True, calc_undeformed=False)
+            object_eval = obj.evaluated_get(depsgraph)
+            me = bpy.data.meshes.new_from_object(object_eval)
         else:
             me = obj.data
 
