@@ -476,7 +476,7 @@ class addon_updater_updated_successful(bpy.types.Operator):
 				msg = updater.error_msg
 			else:
 				msg = self.error
-			col.label(str(msg), icon="BLANK1")
+			col.label(text=str(msg), icon="BLANK1")
 			rw = col.row()
 			rw.scale_y = 2
 			rw.operator("wm.url_open",
