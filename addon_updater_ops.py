@@ -476,7 +476,7 @@ class addon_updater_updated_successful(bpy.types.Operator):
 				msg = updater.error_msg
 			else:
 				msg = self.error
-			col.label(str(msg), icon="BLANK1")
+			col.label(text=str(msg), icon="BLANK1")
 			rw = col.row()
 			rw.scale_y = 2
 			rw.operator("wm.url_open",
@@ -1358,7 +1358,7 @@ def register(bl_info):
 	# which enables pulling down release logs/notes, as well as specify installs from
 	# release-attached zips (instead of just the auto-packaged code generated with
 	# a release/tag). Setting has no impact on BitBucket or GitLab repos
-	updater.use_releases = True
+	updater.use_releases = False
 	# note: Releases always have a tag, but a tag may not always be a release
 	# Therefore, setting True above will filter out any non-annoted tags
 	# note 2: Using this option will also display the release name instead of
