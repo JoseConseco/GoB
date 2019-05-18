@@ -38,8 +38,7 @@ bl_info = {
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
                 "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
-    "tracker_url": "http://www.zbrushcentral.com/showthread.php?"
-                "127419-GoB-an-unofficial-GoZ-for-Blender",
+    "tracker_url": "https://github.com/JoseConseco/GoB/issues/new",
     "category": "Import-Export"}
 
 
