@@ -30,7 +30,7 @@ C:\Program Files\Pixologic\ZBrush 2019\Troubleshoot Help\GoZ_for_ZBrush_Installe
 **_Note**: If you have a previous version, remove it via the Addon panel (unroll the GoB entry and remove it) before continuing._
 
 **_Note**: Github breaks (changes) name of zip file and the first (root) folder inside zip, when you download addon. Both zip file and first folder inside should be named: 'GoB'
-The addon final location should look like this:
+The addon final location sould look like this:
 * C:\Users\XXXXX\AppData\Roaming\Blender Foundation\Blender\2.80\scripts\addons\**GoB**
 
 1. In Blender, open the addon panel, then click the _'Install From Files...'_ button at the bottom. Select the `GoB.zip` file, this will install the addon inside the correct folder.
