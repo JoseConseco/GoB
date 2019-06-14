@@ -362,8 +362,10 @@ class GoB_OT_import(bpy.types.Operator):
         global run_background_update
 
         if not run_background_update:
-            run_background_update = not run_background_update
+            run_background_update = True
             bpy.ops.wm.gob_timer()
+        else:
+            run_background_update = False
         return{'FINISHED'}
 
 
