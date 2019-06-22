@@ -17,9 +17,8 @@ You can transfer:
 
 
 
-
 ## Installation (updated)
-1. Install the GoB addon for blender (follow steps from 'Configure Blender') and activate.
+1. Install the GoB addon for blender (follow steps from '**Configure Blender**') and activate.
 1. Put the 'Blender' folder directly inside the _GoZApps_ folder at this path:
   * Windows: `C:/Users/Public/Pixologic/GoZApps`
   * Macintosh: `/Users/Shared/Pixologic/GoZApps`
@@ -28,10 +27,10 @@ C:\Program Files\Pixologic\ZBrush 2019\Troubleshoot Help\GoZ_for_ZBrush_Installe
 3. launch ZBrush 2019.1 and run GoZ once and choose your blender install location.
 
 ### Configure Blender
-_Note: If you have a previous version, remove it via the Addon panel (unroll the GoB entry and remove it) before continuing._
-_Note: Github breaks (changes) the naming of zip file and the root folder in zip when you download addon. Both zip file and first folder inside should be named: 'Gob'_
-When you get zip file, make sure to change its name to: GoB.zip, and do the same thing for first folder in zip file.
-The addon final location sould look like this:
+**_Note**: If you have a previous version, remove it via the Addon panel (unroll the GoB entry and remove it) before continuing._
+
+**_Note**: Github breaks (changes) name of zip file and the first (root) folder inside zip, when you download addon. Both zip file and first folder inside should be named: 'GoB'
+The addon final location should look like this:
 * C:\Users\XXXXX\AppData\Roaming\Blender Foundation\Blender\2.80\scripts\addons\**GoB**
 
 1. In Blender, open the addon panel, then click the _'Install From Files...'_ button at the bottom. Select the `GoB.zip` file, this will install the addon inside the correct folder.
