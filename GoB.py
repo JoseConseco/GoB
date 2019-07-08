@@ -292,7 +292,19 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
-        bpy.context.view_layer.objects.active = obj #make active last obj
+
+        # select object and make active
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+
+        # user defined import shading
+        print("object active, selected", bpy.context.view_layer.objects.active.name, obj.select_get())
+        if pref.shading == 'SHADE_SMOOTH':
+            print("shading smooth")
+            bpy.ops.object.shade_smooth()
+        else:
+            print("shading flat")
+            bpy.ops.object.shade_flat()
 
         # if diff:
         #     mtex = objMat.texture_slots.add()
@@ -711,6 +723,12 @@ class GoBPreferences(bpy.types.AddonPreferences):
                ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
                ('IGNORE', 'Ignore', 'Do not export modifiers')],
         default='JUST_EXPORT')
+    shading: bpy.props.EnumProperty(
+        name="Import Shading",
+        description="Shading that is applied after a object is imported",
+        items=[('SHADE_SMOOTH', 'Smooth Shading', 'test'),
+               ('SHADE_FLAT', 'Flat Shading', 'test')],
+        default='SHADE_SMOOTH')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
@@ -744,6 +762,7 @@ class GoBPreferences(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'flip_y')
+        layout.prop(self, 'shading')
         layout.prop(self, 'modifiers')
 
         col = layout.column()   # works best if a column, or even just self.layout
