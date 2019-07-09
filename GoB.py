@@ -156,7 +156,8 @@ class GoB_OT_import(bpy.types.Operator):
             # update mesh data after transformations to fix normals
             me.update(calc_edges=True, calc_edges_loose=True, calc_loop_triangles=True)
 
-            if objName in bpy.data.objects.keys():  # if obj already exist do code below
+            # if obj already exist do code below
+            if objName in bpy.data.objects.keys():
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
                 instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
@@ -177,12 +178,23 @@ class GoB_OT_import(bpy.types.Operator):
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
                 create_node_material(objMat)
+
+            # create new object
             else:
                 obj = bpy.data.objects.new(objName, me)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
                 scn.collection.objects.link(obj)
+                obj.select_set(True)
                 create_node_material(objMat)
+
+            # user defined import shading
+            if pref.shading == 'SHADE_SMOOTH':
+                values = [True] * len(me.polygons)
+            else:
+                values = [False] * len(me.polygons)
+            me.polygons.foreach_set("use_smooth", values)
+
             utag = 0
 
             while tag:
@@ -293,18 +305,8 @@ class GoB_OT_import(bpy.types.Operator):
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
 
-        # select object and make active
-        obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
 
-        # user defined import shading
-        print("object active, selected", bpy.context.view_layer.objects.active.name, obj.select_get())
-        if pref.shading == 'SHADE_SMOOTH':
-            print("shading smooth")
-            bpy.ops.object.shade_smooth()
-        else:
-            print("shading flat")
-            bpy.ops.object.shade_flat()
 
         # if diff:
         #     mtex = objMat.texture_slots.add()
