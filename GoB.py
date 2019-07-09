@@ -727,9 +727,9 @@ class GoBPreferences(bpy.types.AddonPreferences):
         default='JUST_EXPORT')
     shading: bpy.props.EnumProperty(
         name="Import Shading",
-        description="Shading that is applied after a object is imported",
-        items=[('SHADE_SMOOTH', 'Smooth Shading', 'test'),
-               ('SHADE_FLAT', 'Flat Shading', 'test')],
+        description="Shading mode",
+        items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')],
         default='SHADE_SMOOTH')
 
     # addon updater preferences
