@@ -464,8 +464,38 @@ class GoB_OT_export(bpy.types.Operator):
 
         return export_mesh
 
+    @staticmethod
+    def create_polygroups(obj, pref):
+
+        for index, slot in enumerate(obj.material_slots):
+            #select the verts from faces with material index
+            if not slot.material:
+                # empty slot
+                continue
+            verts = [v for f in obj.data.polygons
+                     if f.material_index == index for v in f.vertices]
+            if len(verts):
+                vg = obj.vertex_groups.get(slot.material.name)
+                if vg is None:
+                    vg = obj.vertex_groups.new(name=slot.material.name)
+                vg.add(verts, 1.0, 'ADD')
+
+
+        if pref.polygroups == 'MATERIALS':
+            pass
+        elif pref.polygroups == 'VIEWPORTCOLORS':
+            pass
+        elif pref.polygroups == 'UVS':
+            pass
+        else:
+            pass
+
+
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+
+        #create polygroups from object features (materials, uvs, ...)
+        self.create_polygroups(obj, pref)
 
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -770,15 +800,27 @@ class GoBPreferences(bpy.types.AddonPreferences):
         name='Modifiers',
         description='How to handle exported object modifiers',
         items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-               ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
-               ('IGNORE', 'Ignore', 'Do not export modifiers')],
-        default='JUST_EXPORT')
+               ('ONLY_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
+               ('IGNORE', 'Ignore', 'Do not export modifiers')
+               ],
+        default='ONLY_EXPORT')
     shading: bpy.props.EnumProperty(
         name="Shading Mode",
         description="Shading mode",
         items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')],
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
+               ],
         default='SHADE_SMOOTH')
+
+    polygroups: bpy.props.EnumProperty(
+        name="Polygroups",
+        description="Polygroups mode",
+        items=[('MATERIALS', 'from Materials', ''),
+               ('VIEWPORTCOLORS', 'from Viewport Colors', ''),
+               ('UVS', 'from UV', ''),
+               ('IGNORE', 'Ignore', 'No additional polygroup data is created'),
+               ],
+        default='VIEWPORTCOLORS')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
@@ -814,6 +856,7 @@ class GoBPreferences(bpy.types.AddonPreferences):
         layout.prop(self, 'flip_y')
         layout.prop(self, 'shading')
         layout.prop(self, 'modifiers')
+        layout.prop(self, 'polygroups')
 
         col = layout.column()   # works best if a column, or even just self.layout
         mainrow = layout.row()
