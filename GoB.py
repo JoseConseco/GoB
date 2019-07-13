@@ -465,24 +465,28 @@ class GoB_OT_export(bpy.types.Operator):
         return export_mesh
 
     @staticmethod
-    def create_polygroups(obj, pref):
-
-        for index, slot in enumerate(obj.material_slots):
-            #select the verts from faces with material index
-            if not slot.material:
-                # empty slot
-                continue
-            verts = [v for f in obj.data.polygons
-                     if f.material_index == index for v in f.vertices]
-            if len(verts):
-                vg = obj.vertex_groups.get(slot.material.name)
-                if vg is None:
-                    vg = obj.vertex_groups.new(name=slot.material.name)
-                vg.add(verts, 1.0, 'ADD')
-
+    def make_polygroups(obj, pref, create=False):
 
         if pref.polygroups == 'MATERIALS':
-            pass
+            for index, slot in enumerate(obj.material_slots):
+                #select the verts from faces with material index
+                if not slot.material:
+                    # empty slot
+                    continue
+                verts = [v for f in obj.data.polygons
+                         if f.material_index == index for v in f.vertices]
+                if len(verts):
+                    vg = obj.vertex_groups.get(slot.material.name)
+                    if create == True:
+                        if vg is None:
+                            vg = obj.vertex_groups.new(name=slot.material.name)
+                            vg.add(verts, 1.0, 'ADD')
+                    else:
+                        try:
+                            obj.vertex_groups.remove(vg)
+                        except:
+                            pass
+
         elif pref.polygroups == 'VIEWPORTCOLORS':
             pass
         elif pref.polygroups == 'UVS':
@@ -494,8 +498,6 @@ class GoB_OT_export(bpy.types.Operator):
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
 
-        #create polygroups from object features (materials, uvs, ...)
-        self.create_polygroups(obj, pref)
 
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -509,6 +511,8 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
+        #create polygroups from object features (materials, uvs, ...)
+        self.make_polygroups(obj, pref, True)
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
@@ -718,6 +722,8 @@ class GoB_OT_export(bpy.types.Operator):
             # fin
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
+
+        self.make_polygroups(obj, pref, False)
 
         bpy.data.meshes.remove(me)
         return
