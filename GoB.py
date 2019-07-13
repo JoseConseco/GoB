@@ -487,8 +487,6 @@ class GoB_OT_export(bpy.types.Operator):
                         except:
                             pass
 
-        elif pref.polygroups == 'VIEWPORTCOLORS':
-            pass
         elif pref.polygroups == 'UVS':
             pass
         else:
@@ -822,11 +820,10 @@ class GoBPreferences(bpy.types.AddonPreferences):
         name="Polygroups",
         description="Polygroups mode",
         items=[('MATERIALS', 'from Materials', ''),
-               ('VIEWPORTCOLORS', 'from Viewport Colors', ''),
                ('UVS', 'from UV', ''),
                ('IGNORE', 'Ignore', 'No additional polygroup data is created'),
                ],
-        default='VIEWPORTCOLORS')
+        default='MATERIALS')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
