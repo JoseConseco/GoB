@@ -816,8 +816,8 @@ class GoBPreferences(bpy.types.AddonPreferences):
     polygroups: bpy.props.EnumProperty(
         name="Polygroups",
         description="Polygroups mode",
-        items=[('MATERIALS', 'from Materials', ''),
-               ('IGNORE', 'Ignore', 'No additional polygroup data is created'),
+        items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+               ('IGNORE', 'Ignore', 'No additional polygroups are created'),
                ],
         default='MATERIALS')
 
