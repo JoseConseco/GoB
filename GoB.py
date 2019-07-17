@@ -151,7 +151,13 @@ class GoB_OT_import(bpy.types.Operator):
                     (0., -1., 0., 0.),
                     (0., 0., 0., 1.)]))
 
-            if objName in bpy.data.objects.keys():  # if obj already exist do code below
+            # useful for development when the mesh may be invalid.
+            me.validate(verbose=True)
+            # update mesh data after transformations to fix normals
+            me.update(calc_edges=True, calc_edges_loose=True, calc_loop_triangles=True)
+
+            # if obj already exist do code below
+            if objName in bpy.data.objects.keys():
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
                 instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
@@ -172,12 +178,23 @@ class GoB_OT_import(bpy.types.Operator):
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
                 create_node_material(objMat)
+
+            # create new object
             else:
                 obj = bpy.data.objects.new(objName, me)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
                 scn.collection.objects.link(obj)
+                obj.select_set(True)
                 create_node_material(objMat)
+
+            # user defined import shading
+            if pref.shading == 'SHADE_SMOOTH':
+                values = [True] * len(me.polygons)
+            else:
+                values = [False] * len(me.polygons)
+            me.polygons.foreach_set("use_smooth", values)
+
             utag = 0
 
             while tag:
@@ -287,7 +304,9 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
-        bpy.context.view_layer.objects.active = obj #make active last obj
+
+        bpy.context.view_layer.objects.active = obj
+
 
         # if diff:
         #     mtex = objMat.texture_slots.add()
@@ -706,6 +725,12 @@ class GoBPreferences(bpy.types.AddonPreferences):
                ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
                ('IGNORE', 'Ignore', 'Do not export modifiers')],
         default='JUST_EXPORT')
+    shading: bpy.props.EnumProperty(
+        name="Shading Mode",
+        description="Shading mode",
+        items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')],
+        default='SHADE_SMOOTH')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
@@ -739,6 +764,7 @@ class GoBPreferences(bpy.types.AddonPreferences):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'flip_y')
+        layout.prop(self, 'shading')
         layout.prop(self, 'modifiers')
 
         col = layout.column()   # works best if a column, or even just self.layout
