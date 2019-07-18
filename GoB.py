@@ -417,16 +417,14 @@ class GoB_OT_export(bpy.types.Operator):
 
     @staticmethod
     def apply_modifiers(obj, pref):
-        depsgraph = bpy.context.evaluated_depsgraph_get()
+        dg = bpy.context.evaluated_depsgraph_get()
         if pref.modifiers == 'APPLY_EXPORT':
-            object_eval = obj.evaluated_get(depsgraph)
             # me = object_eval.to_mesh() #with modifiers - crash need to_mesh_clear()?
-            me = bpy.data.meshes.new_from_object(object_eval)  # with modifiers
+            me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
             obj.data = me
             obj.modifiers.clear()
-        elif pref.modifiers == 'JUST_EXPORT':
-            object_eval = obj.evaluated_get(depsgraph)
-            me = bpy.data.meshes.new_from_object(object_eval)
+        elif pref.modifiers == 'ONLY_EXPORT':
+            me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
         else:
             me = obj.data
 
@@ -443,8 +441,35 @@ class GoB_OT_export(bpy.types.Operator):
 
         return export_mesh
 
+    @staticmethod
+    def make_polygroups(obj, pref, create=False):
+
+        if pref.polygroups == 'MATERIALS':
+            for index, slot in enumerate(obj.material_slots):
+                #select the verts from faces with material index
+                if not slot.material:
+                    # empty slot
+                    continue
+                verts = [v for f in obj.data.polygons
+                         if f.material_index == index for v in f.vertices]
+                if len(verts):
+                    vg = obj.vertex_groups.get(slot.material.name)
+                    if create == True:
+                        if vg is None:
+                            vg = obj.vertex_groups.new(name=slot.material.name)
+                            vg.add(verts, 1.0, 'ADD')
+                    else:
+                        try:
+                            obj.vertex_groups.remove(vg)
+                        except:
+                            pass
+        else:
+            pass
+
+
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+
 
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -458,6 +483,8 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
+        #create polygroups from object features (materials, uvs, ...)
+        self.make_polygroups(obj, pref, True)
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
@@ -668,6 +695,8 @@ class GoB_OT_export(bpy.types.Operator):
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
 
+        self.make_polygroups(obj, pref, False)
+
         bpy.data.meshes.remove(me)
         return
 
@@ -722,15 +751,25 @@ class GoBPreferences(bpy.types.AddonPreferences):
         name='Modifiers',
         description='How to handle exported object modifiers',
         items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-               ('JUST_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
-               ('IGNORE', 'Ignore', 'Do not export modifiers')],
-        default='JUST_EXPORT')
+               ('ONLY_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
+               ('IGNORE', 'Ignore', 'Do not export modifiers')
+               ],
+        default='ONLY_EXPORT')
     shading: bpy.props.EnumProperty(
         name="Shading Mode",
         description="Shading mode",
         items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')],
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
+               ],
         default='SHADE_SMOOTH')
+
+    polygroups: bpy.props.EnumProperty(
+        name="Polygroups",
+        description="Polygroups mode",
+        items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+               ('IGNORE', 'Ignore', 'No additional polygroups are created'),
+               ],
+        default='MATERIALS')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
@@ -766,6 +805,7 @@ class GoBPreferences(bpy.types.AddonPreferences):
         layout.prop(self, 'flip_y')
         layout.prop(self, 'shading')
         layout.prop(self, 'modifiers')
+        layout.prop(self, 'polygroups')
 
         col = layout.column()   # works best if a column, or even just self.layout
         mainrow = layout.row()
