@@ -774,11 +774,11 @@ class GoBPreferences(bpy.types.AddonPreferences):
 
     flip_up_axis: bpy.props.BoolProperty(
         name="Invert up axis",
-        description="If your object is upside down, use this to invert the up axis",
+        description="Enable this to invert the up axis on import/export",
         default=False)
     flip_forward_axis: bpy.props.BoolProperty(
         name="Invert forward axis",
-        description="If you experience wrong forward axis orientation use this option, change mesh export/import orientation mode",
+        description="Enable this to invert the forward axis on import/export",
         default=False)
     modifiers: bpy.props.EnumProperty(
         name='Modifiers',
