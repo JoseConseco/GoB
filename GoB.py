@@ -145,6 +145,7 @@ class GoB_OT_import(bpy.types.Operator):
                         (0., 0., -1., 0.),
                         (0., 1., 0., 0.),
                         (0., 0., 0., 1.)]))
+                    me.flip_normals()
                 else:
                     me.transform(mathutils.Matrix([
                         (-1., 0., 0., 0.),
@@ -159,6 +160,7 @@ class GoB_OT_import(bpy.types.Operator):
                         (0., 0., -1., 0.),
                         (0., -1., 0., 0.),
                         (0., 0., 0., 1.)]))
+                    me.flip_normals()
                 else:
                     me.transform(mathutils.Matrix([
                         (1., 0., 0., 0.),
