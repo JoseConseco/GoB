@@ -138,18 +138,35 @@ class GoB_OT_import(bpy.types.Operator):
             me.from_pydata(vertsData, [], facesData)  # Assume mesh data in ready to write to mesh..
             del vertsData
             del facesData
-            if pref.flip_y:  # fixes bad mesh orientation for some people
-                me.transform(mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+            if pref.flip_up_axis:  # fixes bad mesh orientation for some people
+                if pref.flip_forward_axis:
+                    me.transform(mathutils.Matrix([
+                        (-1., 0., 0., 0.),
+                        (0., 0., -1., 0.),
+                        (0., 1., 0., 0.),
+                        (0., 0., 0., 1.)]))
+                    me.flip_normals()
+                else:
+                    me.transform(mathutils.Matrix([
+                        (-1., 0., 0., 0.),
+                        (0., 0., 1., 0.),
+                        (0., 1., 0., 0.),
+                        (0., 0., 0., 1.)]))
+
             else:
-                me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                if pref.flip_forward_axis:
+                    me.transform(mathutils.Matrix([
+                        (1., 0., 0., 0.),
+                        (0., 0., -1., 0.),
+                        (0., -1., 0., 0.),
+                        (0., 0., 0., 1.)]))
+                    me.flip_normals()
+                else:
+                    me.transform(mathutils.Matrix([
+                        (1., 0., 0., 0.),
+                        (0., 0., 1., 0.),
+                        (0., -1., 0., 0.),
+                        (0., 0., 0., 1.)]))
 
             # useful for development when the mesh may be invalid.
             me.validate(verbose=True)
@@ -488,18 +505,32 @@ class GoB_OT_export(bpy.types.Operator):
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
-        if pref.flip_y:
-            mat_transform = mathutils.Matrix([
-                (-1., 0., 0., 0.),
-                (0., 0., 1., 0.),
-                (0., 1., 0., 0.),
-                (0., 0., 0., 1.)])
+        if pref.flip_up_axis:
+            if pref.flip_forward_axis:
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)])
+            else:
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)])
         else:
-            mat_transform = mathutils.Matrix([
-                (1., 0., 0., 0.),
-                (0., 0., -1., 0.),
-                (0., 1., 0., 0.),
-                (0., 0., 0., 1.)])
+            if pref.flip_forward_axis:
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)])
+            else:
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)])
 
         with open(pathImport+'/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
@@ -743,9 +774,13 @@ class GoB_OT_export(bpy.types.Operator):
 class GoBPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
-    flip_y: bpy.props.BoolProperty(
+    flip_up_axis: bpy.props.BoolProperty(
         name="Invert up axis",
-        description="If you experience bad mesh orientation use this option, change mesh export/import orientation mode",
+        description="Enable this to invert the up axis on import/export",
+        default=False)
+    flip_forward_axis: bpy.props.BoolProperty(
+        name="Invert forward axis",
+        description="Enable this to invert the forward axis on import/export",
         default=False)
     modifiers: bpy.props.EnumProperty(
         name='Modifiers',
@@ -802,7 +837,8 @@ class GoBPreferences(bpy.types.AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, 'flip_y')
+        layout.prop(self, 'flip_up_axis')
+        layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'shading')
         layout.prop(self, 'modifiers')
         layout.prop(self, 'polygroups')
