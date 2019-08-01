@@ -194,7 +194,7 @@ class GoB_OT_import(bpy.types.Operator):
                 else:
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
-                create_node_material(objMat)
+                create_node_material(objMat, pref)
 
             # create new object
             else:
@@ -203,7 +203,7 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.data.materials.append(objMat)
                 scn.collection.objects.link(obj)
                 obj.select_set(True)
-                create_node_material(objMat)
+                create_node_material(objMat, pref)
 
             # user defined import shading
             if pref.shading == 'SHADE_SMOOTH':
@@ -382,21 +382,23 @@ class GoB_OT_import(bpy.types.Operator):
         return{'FINISHED'}
 
 
-def create_node_material(mat):
+def create_node_material(mat, pref):
     # enable nodes
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     output_node = nodes.get('Principled BSDF')
     vcol_node = nodes.get('ShaderNodeAttribute')
 
-    # create new node
-    if not vcol_node:
-        vcol_node = nodes.new('ShaderNodeAttribute')
-        vcol_node.location = -300, 200
-        vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
+    if pref.materialinput == 'POLYPAINT':
 
-        # link nodes
-        mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+        # create new node
+        if not vcol_node:
+            vcol_node = nodes.new('ShaderNodeAttribute')
+            vcol_node.location = -300, 200
+            vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
+
+            # link nodes
+            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
 
 
 def run_import_periodically():
@@ -782,6 +784,8 @@ class GoBPreferences(bpy.types.AddonPreferences):
         name="Invert forward axis",
         description="Enable this to invert the forward axis on import/export",
         default=False)
+
+    # blender to zbrush
     modifiers: bpy.props.EnumProperty(
         name='Modifiers',
         description='How to handle exported object modifiers',
@@ -790,6 +794,9 @@ class GoBPreferences(bpy.types.AddonPreferences):
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
+
+
+    # zbrush to blender
     shading: bpy.props.EnumProperty(
         name="Shading Mode",
         description="Shading mode",
@@ -799,12 +806,21 @@ class GoBPreferences(bpy.types.AddonPreferences):
         default='SHADE_SMOOTH')
 
     polygroups: bpy.props.EnumProperty(
-        name="Polygroups",
-        description="Polygroups mode",
-        items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-               ('IGNORE', 'Ignore', 'No additional polygroups are created'),
-               ],
-        default='MATERIALS')
+            name="Polygroups",
+            description="Polygroups mode",
+            items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+                   ('IGNORE', 'Ignore', 'No additional polygroups are created'),
+                   ],
+            default='MATERIALS')
+
+    materialinput: bpy.props.EnumProperty(
+            name="Create material",
+            description="choose source for material import",
+            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),
+                   ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
+                   ('IGNORE', 'Ignore', 'No additional material inputs are created'),
+                   ],
+            default='IGNORE')
 
     # addon updater preferences
     auto_check_update: bpy.props.BoolProperty(
@@ -839,13 +855,19 @@ class GoBPreferences(bpy.types.AddonPreferences):
         layout = self.layout
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'shading')
-        layout.prop(self, 'modifiers')
-        layout.prop(self, 'polygroups')
-
         col = layout.column()   # works best if a column, or even just self.layout
-        mainrow = layout.row()
-        col = mainrow.column()
+
+
+        box = layout.box()
+        box.label(text='Blender to Zbrush', icon='EXPORT')
+        box.prop(self, 'modifiers')
+
+
+        box = layout.box()
+        box.label(text='Zbrush to Blender', icon='IMPORT')
+        box.prop(self, 'shading')
+        box.prop(self, 'polygroups')
+        box.prop(self, 'materialinput')
 
         # updater draw function
         # could also pass in col as third arg
