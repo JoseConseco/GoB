@@ -25,7 +25,6 @@ from struct import pack, unpack
 from copy import deepcopy
 import string
 
-from . import addon_updater_ops
 
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
@@ -348,18 +347,6 @@ class GoB_OT_import(bpy.types.Operator):
         return
 
     def execute(self, context):
-        global cached_last_edition_time, run_background_update
-        try:
-            file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-            if file_edition_time > cached_last_edition_time:
-                cached_last_edition_time = file_edition_time
-            else:#NOTHING TO UPDATE
-                return {'FINISHED'}
-        except Exception as e:
-            print(e)
-            run_background_update = False
-            return {'CANCELLED'}
-
         goz_obj_paths = []
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
             for line in goz_objs_list:
@@ -369,12 +356,10 @@ class GoB_OT_import(bpy.types.Operator):
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
             return{'CANCELLED'}
 
-
-        
         if context.object and context.object.mode != 'OBJECT':
             # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
-            # bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
-            bpy.ops.object.mode_set(mode='OBJECT') 
+            bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
+
         for ztool_path in goz_obj_paths:
             self.GoZit(ztool_path)
 
@@ -382,26 +367,17 @@ class GoB_OT_import(bpy.types.Operator):
         return{'FINISHED'}
 
     def invoke(self, context, event):
-        #? revert when tiemers will be able to acess context ok
-        # global run_background_update
-        # if run_background_update:
-        #     if bpy.app.timers.is_registered(run_import_periodically):
-        #         bpy.app.timers.unregister(run_import_periodically)
-        #         print('Disabling GOZ background listener')
-        #     run_background_update = False
-        # else:
-        #     if not bpy.app.timers.is_registered(run_import_periodically):
-        #         bpy.app.timers.register(run_import_periodically, persistent=True)
-        #         print('Enabling GOZ background listener')
-        #     run_background_update = True
-        # return{'FINISHED'}
         global run_background_update
-
-        if not run_background_update:
-            run_background_update = True
-            bpy.ops.wm.gob_timer()
-        else:
+        if run_background_update:
+            if bpy.app.timers.is_registered(run_import_periodically):
+                bpy.app.timers.unregister(run_import_periodically)
+                print('Disabling GOZ background listener')
             run_background_update = False
+        else:
+            if not bpy.app.timers.is_registered(run_import_periodically):
+                bpy.app.timers.register(run_import_periodically, persistent=True)
+                print('Enabling GOZ background listener')
+            run_background_update = True
         return{'FINISHED'}
 
 
@@ -423,33 +399,33 @@ def create_node_material(mat, pref):
             # link nodes
             mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
 
-#! revert whne timers will be able to use context
-# def run_import_periodically():
-#     # print("Runing timers update check")
-#     global cached_last_edition_time, run_background_update
 
-#     try:
-#         file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-#     except Exception as e:
-#         print(e)
-#         run_background_update = False
-#         if bpy.app.timers.is_registered(run_import_periodically):
-#             bpy.app.timers.unregister(run_import_periodically)
-#         return time_interval
+def run_import_periodically():
+    # print("Runing timers update check")
+    global cached_last_edition_time, run_background_update
 
-#     if file_edition_time > cached_last_edition_time:
-#         cached_last_edition_time = file_edition_time
-#         # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
-#         window = bpy.context.window_manager.windows[0]
-#         ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-#         bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-#     else:
-#         # print("GOZ: Nothing to update")
-#         return time_interval
+    try:
+        file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+    except Exception as e:
+        print(e)
+        run_background_update = False
+        if bpy.app.timers.is_registered(run_import_periodically):
+            bpy.app.timers.unregister(run_import_periodically)
+        return time_interval
+
+    if file_edition_time > cached_last_edition_time:
+        cached_last_edition_time = file_edition_time
+        # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
+        window = bpy.context.window_manager.windows[0]
+        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+    else:
+        # print("GOZ: Nothing to update")
+        return time_interval
     
-#     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
-#         bpy.app.timers.unregister(run_import_periodically)
-#     return time_interval
+    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
+        bpy.app.timers.unregister(run_import_periodically)
+    return time_interval
 
 
 class GoB_OT_export(bpy.types.Operator):
@@ -796,129 +772,4 @@ class GoB_OT_export(bpy.types.Operator):
         obj.name = new_name
 
 
-class GoB_OT_ModalTimerOperator(bpy.types.Operator):
-    """Operator which runs its self from a timer"""
-    bl_idname = "wm.gob_timer"
-    bl_label = "Modal Timer Operator for GoB"
 
-    _timer = None
-
-    def modal(self, context, event):
-        global run_background_update
-
-        if not run_background_update:
-            return self.cancel(context)
-        if event.type == 'TIMER':
-            bpy.ops.scene.gob_import()
-        return {'PASS_THROUGH'}
-
-    def execute(self, context):
-        global time_interval
-        self._timer = context.window_manager.event_timer_add(time_interval, window=context.window)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def cancel(self, context):
-        context.window_manager.event_timer_remove(self._timer)
-        return {'CANCELLED'}
-
-
-class GoBPreferences(bpy.types.AddonPreferences):
-    bl_idname = __package__
-
-    flip_up_axis: bpy.props.BoolProperty(
-        name="Invert up axis",
-        description="Enable this to invert the up axis on import/export",
-        default=False)
-    flip_forward_axis: bpy.props.BoolProperty(
-        name="Invert forward axis",
-        description="Enable this to invert the forward axis on import/export",
-        default=False)
-
-    # blender to zbrush
-    modifiers: bpy.props.EnumProperty(
-        name='Modifiers',
-        description='How to handle exported object modifiers',
-        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-               ('ONLY_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
-               ('IGNORE', 'Ignore', 'Do not export modifiers')
-               ],
-        default='ONLY_EXPORT')
-
-
-    # zbrush to blender
-    shading: bpy.props.EnumProperty(
-        name="Shading Mode",
-        description="Shading mode",
-        items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
-               ],
-        default='SHADE_SMOOTH')
-
-    polygroups: bpy.props.EnumProperty(
-            name="Polygroups",
-            description="Polygroups mode",
-            items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-                   ('IGNORE', 'Ignore', 'No additional polygroups are created'),
-                   ],
-            default='MATERIALS')
-
-    materialinput: bpy.props.EnumProperty(
-            name="Create material",
-            description="choose source for material import",
-            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),
-                   ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
-                   ('IGNORE', 'Ignore', 'No additional material inputs are created'),
-                   ],
-            default='IGNORE')
-
-    # addon updater preferences
-    auto_check_update: bpy.props.BoolProperty(
-        name="Auto-check for Update",
-        description="If enabled, auto-check for updates using an interval",
-        default=False)
-    updater_intrval_months: bpy.props.IntProperty(
-        name='Months',
-        description="Number of months between checking for updates",
-        default=0,
-        min=0)
-    updater_intrval_days: bpy.props.IntProperty(
-        name='Days',
-        description="Number of days between checking for updates",
-        default=7,
-        min=0,
-        max=31)
-    updater_intrval_hours: bpy.props.IntProperty(
-        name='Hours',
-        description="Number of hours between checking for updates",
-        default=0,
-        min=0,
-        max=23)
-    updater_intrval_minutes: bpy.props.IntProperty(
-        name='Minutes',
-        description="Number of minutes between checking for updates",
-        default=0,
-        min=0,
-        max=59)
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, 'flip_up_axis')
-        layout.prop(self, 'flip_forward_axis')
-        col = layout.column()   # works best if a column, or even just self.layout
-
-
-        box = layout.box()
-        box.label(text='Blender to Zbrush', icon='EXPORT')
-        box.prop(self, 'modifiers')
-
-
-        box = layout.box()
-        box.label(text='Zbrush to Blender', icon='IMPORT')
-        box.prop(self, 'shading')
-        box.prop(self, 'polygroups')
-        box.prop(self, 'materialinput')
-
-        # updater draw function
-        # could also pass in col as third arg
-        addon_updater_ops.update_settings_ui(self, context)
