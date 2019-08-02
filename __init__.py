@@ -25,8 +25,9 @@ else:
 
 import bpy
 import os
-from . import addon_updater_ops
 import bpy.utils.previews
+from . import preferences
+from . import addon_updater_ops
 
 
 bl_info = {
@@ -45,7 +46,7 @@ bl_info = {
 classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
-    GoB.GoBPreferences
+    preferences.GoBPreferences
     )
 
 
@@ -65,6 +66,7 @@ def register():
     GoB.preview_collections["main"] = icons
 
     bpy.types.TOPBAR_HT_upper_bar.append(GoB.draw_goz)
+
 
 def unregister():
     # addon updater unregister
