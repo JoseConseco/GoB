@@ -34,6 +34,10 @@ class GoBPreferences(AddonPreferences):
         name="Invert forward axis",
         description="Enable this to invert the forward axis on import/export",
         default=False)
+    show_button_text: bpy.props.BoolProperty(
+        name="Show header buttons text",
+        description="Enable this to show the import/export text of the header buttons",
+        default=True)
 
     # blender to zbrush
     modifiers: bpy.props.EnumProperty(
@@ -105,6 +109,7 @@ class GoBPreferences(AddonPreferences):
         layout = self.layout
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
+        layout.prop(self, 'show_button_text')
         col = layout.column()   # works best if a column, or even just self.layout
 
 
@@ -122,3 +127,4 @@ class GoBPreferences(AddonPreferences):
         # updater draw function
         # could also pass in col as third arg
         addon_updater_ops.update_settings_ui(self, context)
+
