@@ -40,21 +40,28 @@ else:
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
 cached_last_edition_time = time.time() - 10.0
+
 preview_collections = {}
-
-
-def draw_goz(self, context):
+def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-
+    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
-        if run_background_update:
-            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+
+        if pref.show_button_text:
+            row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if run_background_update:
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+            else:
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if run_background_update:
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+            else:
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
