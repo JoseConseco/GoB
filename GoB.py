@@ -202,12 +202,19 @@ class GoB_OT_import(bpy.types.Operator):
                     obj.data.materials.append(objMat)
                 create_node_material(objMat, pref)
 
+                #relink objects to active collection
+                for collection in bpy.data.collections:
+                    if obj.name in collection.objects:
+                        collection.objects.unlink(obj)
+                if obj.name not in bpy.data.collections[bpy.context.collection.name].objects:
+                    bpy.context.collection.objects.link(obj)
+
             # create new object
             else:
                 obj = bpy.data.objects.new(objName, me)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
-                scn.collection.objects.link(obj)
+                bpy.context.collection.objects.link(obj)
                 obj.select_set(True)
                 create_node_material(objMat, pref)
 
