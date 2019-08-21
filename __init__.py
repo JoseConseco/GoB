@@ -36,7 +36,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, kromar",
-    "version": (3, 0, 8),
+    "version": (3, 0, 9),
     "blender": (2, 80, 0),
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
