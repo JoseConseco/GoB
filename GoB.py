@@ -25,7 +25,6 @@ from struct import pack, unpack
 from copy import deepcopy
 import string
 
-from . import addon_updater_ops
 
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
@@ -41,21 +40,28 @@ else:
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
 cached_last_edition_time = time.time() - 10.0
+
 preview_collections = {}
-
-
-def draw_goz(self, context):
+def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-
+    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
-        row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
-        if run_background_update:
-            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+
+        if pref.show_button_text:
+            row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if run_background_update:
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+            else:
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if run_background_update:
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+            else:
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
 class GoB_OT_import(bpy.types.Operator):
@@ -773,102 +779,4 @@ class GoB_OT_export(bpy.types.Operator):
         obj.name = new_name
 
 
-class GoBPreferences(bpy.types.AddonPreferences):
-    bl_idname = __package__
 
-    flip_up_axis: bpy.props.BoolProperty(
-        name="Invert up axis",
-        description="Enable this to invert the up axis on import/export",
-        default=False)
-    flip_forward_axis: bpy.props.BoolProperty(
-        name="Invert forward axis",
-        description="Enable this to invert the forward axis on import/export",
-        default=False)
-
-    # blender to zbrush
-    modifiers: bpy.props.EnumProperty(
-        name='Modifiers',
-        description='How to handle exported object modifiers',
-        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-               ('ONLY_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
-               ('IGNORE', 'Ignore', 'Do not export modifiers')
-               ],
-        default='ONLY_EXPORT')
-
-
-    # zbrush to blender
-    shading: bpy.props.EnumProperty(
-        name="Shading Mode",
-        description="Shading mode",
-        items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
-               ],
-        default='SHADE_SMOOTH')
-
-    polygroups: bpy.props.EnumProperty(
-            name="Polygroups",
-            description="Polygroups mode",
-            items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-                   ('IGNORE', 'Ignore', 'No additional polygroups are created'),
-                   ],
-            default='MATERIALS')
-
-    materialinput: bpy.props.EnumProperty(
-            name="Create material",
-            description="choose source for material import",
-            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),
-                   ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
-                   ('IGNORE', 'Ignore', 'No additional material inputs are created'),
-                   ],
-            default='IGNORE')
-
-    # addon updater preferences
-    auto_check_update: bpy.props.BoolProperty(
-        name="Auto-check for Update",
-        description="If enabled, auto-check for updates using an interval",
-        default=False)
-    updater_intrval_months: bpy.props.IntProperty(
-        name='Months',
-        description="Number of months between checking for updates",
-        default=0,
-        min=0)
-    updater_intrval_days: bpy.props.IntProperty(
-        name='Days',
-        description="Number of days between checking for updates",
-        default=7,
-        min=0,
-        max=31)
-    updater_intrval_hours: bpy.props.IntProperty(
-        name='Hours',
-        description="Number of hours between checking for updates",
-        default=0,
-        min=0,
-        max=23)
-    updater_intrval_minutes: bpy.props.IntProperty(
-        name='Minutes',
-        description="Number of minutes between checking for updates",
-        default=0,
-        min=0,
-        max=59)
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, 'flip_up_axis')
-        layout.prop(self, 'flip_forward_axis')
-        col = layout.column()   # works best if a column, or even just self.layout
-
-
-        box = layout.box()
-        box.label(text='Blender to Zbrush', icon='EXPORT')
-        box.prop(self, 'modifiers')
-
-
-        box = layout.box()
-        box.label(text='Zbrush to Blender', icon='IMPORT')
-        box.prop(self, 'shading')
-        box.prop(self, 'polygroups')
-        box.prop(self, 'materialinput')
-
-        # updater draw function
-        # could also pass in col as third arg
-        addon_updater_ops.update_settings_ui(self, context)
