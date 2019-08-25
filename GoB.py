@@ -205,16 +205,15 @@ class GoB_OT_import(bpy.types.Operator):
             # create new object
             else:
                 obj = bpy.data.objects.new(objName, me)
+                # link object to active collection
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
-
-                #add object to selection if not assigned to any other collection already
-                for collection in bpy.data.collections:
-                    if obj.name not in bpy.context.collection.objects and obj.name not in collection.objects:
-                        bpy.context.collection.objects.link(obj)
-
                 obj.select_set(True)
                 create_node_material(objMat, pref)
+
+            # make object active
+            bpy.context.view_layer.objects.active = obj
 
             # user defined import shading
             if pref.shading == 'SHADE_SMOOTH':
@@ -333,7 +332,6 @@ class GoB_OT_import(bpy.types.Operator):
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
 
-        bpy.context.view_layer.objects.active = obj
 
 
         # if diff:
