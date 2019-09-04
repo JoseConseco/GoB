@@ -177,7 +177,7 @@ class GoB_OT_import(bpy.types.Operator):
             # useful for development when the mesh may be invalid.
             me.validate(verbose=True)
             # update mesh data after transformations to fix normals
-            me.update(calc_edges=True, calc_edges_loose=True, calc_loop_triangles=True)
+            me.update(calc_edges=True, calc_edges_loose=True)
 
             # if obj already exist do code below
             if objName in bpy.data.objects.keys():
