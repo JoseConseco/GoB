@@ -49,6 +49,14 @@ class GoBPreferences(AddonPreferences):
                ],
         default='ONLY_EXPORT')
 
+    polygroups: bpy.props.EnumProperty(
+        name="Polygroups",
+        description="Polygroups mode",
+        items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+               ('IGNORE', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
+               ],
+        default='IGNORE')
+
 
     # zbrush to blender
     shading: bpy.props.EnumProperty(
@@ -58,14 +66,6 @@ class GoBPreferences(AddonPreferences):
                ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
                ],
         default='SHADE_SMOOTH')
-
-    polygroups: bpy.props.EnumProperty(
-            name="Polygroups",
-            description="Polygroups mode",
-            items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-                   ('IGNORE', 'Ignore', 'No additional polygroups are created'),
-                   ],
-            default='MATERIALS')
 
     materialinput: bpy.props.EnumProperty(
             name="Create material",
@@ -116,12 +116,12 @@ class GoBPreferences(AddonPreferences):
         box = layout.box()
         box.label(text='Blender to Zbrush', icon='EXPORT')
         box.prop(self, 'modifiers')
+        box.prop(self, 'polygroups')
 
 
         box = layout.box()
         box.label(text='Zbrush to Blender', icon='IMPORT')
         box.prop(self, 'shading')
-        box.prop(self, 'polygroups')
         box.prop(self, 'materialinput')
 
         # updater draw function
