@@ -46,5 +46,4 @@ Network Trash Folder
 Temporary Items
 .apdisk
 *.pyc
-blender_gob_updater/
-gob_updater/GoB_updater_status.json
+.idea/
