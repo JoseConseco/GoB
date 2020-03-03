@@ -21,11 +21,9 @@ if "bpy" in locals():
     import importlib
     importlib.reload(GoB)
     importlib.reload(preferences)
-    importlib.reload(addon_updater_ops)
 else:
     from . import GoB
     from . import preferences
-    from . import addon_updater_ops
 
 import bpy
 import os
@@ -36,7 +34,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, kromar",
-    "version": (3, 0, 91),
+    "version": (3, 1, 0),
     "blender": (2, 80, 0),
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
@@ -53,10 +51,7 @@ classes = (
 
 
 def register():
-    addon_updater_ops.register(bl_info)
-
     for c in classes:
-        addon_updater_ops.make_annotations(c)  # to avoid blender 2.8 warnings
         bpy.utils.register_class(c)
 
     global icons
@@ -71,8 +66,6 @@ def register():
 
 
 def unregister():
-    # addon updater unregister
-    addon_updater_ops.unregister()
 
     for preferences.custom_icons in GoB.preview_collections.values():
         bpy.utils.previews.remove(icons)
@@ -81,7 +74,7 @@ def unregister():
     bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz_buttons)
 
     [bpy.utils.unregister_class(c) for c in classes]
-    
+
     if bpy.app.timers.is_registered(GoB.run_import_periodically):
         bpy.app.timers.unregister(GoB.run_import_periodically)
 
