@@ -20,7 +20,6 @@
 """Addon preferences"""
 import bpy
 from bpy.types import AddonPreferences
-from . import addon_updater_ops
 
 
 class GoBPreferences(AddonPreferences):
@@ -76,42 +75,12 @@ class GoBPreferences(AddonPreferences):
                    ],
             default='IGNORE')
 
-    # addon updater preferences
-    auto_check_update: bpy.props.BoolProperty(
-        name="Auto-check for Update",
-        description="If enabled, auto-check for updates using an interval",
-        default=False)
-    updater_intrval_months: bpy.props.IntProperty(
-        name='Months',
-        description="Number of months between checking for updates",
-        default=0,
-        min=0)
-    updater_intrval_days: bpy.props.IntProperty(
-        name='Days',
-        description="Number of days between checking for updates",
-        default=7,
-        min=0,
-        max=31)
-    updater_intrval_hours: bpy.props.IntProperty(
-        name='Hours',
-        description="Number of hours between checking for updates",
-        default=0,
-        min=0,
-        max=23)
-    updater_intrval_minutes: bpy.props.IntProperty(
-        name='Minutes',
-        description="Number of minutes between checking for updates",
-        default=0,
-        min=0,
-        max=59)
-
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')
         col = layout.column()   # works best if a column, or even just self.layout
-
 
         box = layout.box()
         box.label(text='Blender to Zbrush', icon='EXPORT')
@@ -124,7 +93,4 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'shading')
         box.prop(self, 'materialinput')
 
-        # updater draw function
-        # could also pass in col as third arg
-        addon_updater_ops.update_settings_ui(self, context)
 
