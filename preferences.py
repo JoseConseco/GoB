@@ -52,9 +52,20 @@ class GoBPreferences(AddonPreferences):
         name="Polygroups",
         description="Polygroups mode",
         items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+               ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
                ('IGNORE', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                ],
         default='IGNORE')
+
+    export_scale_factor: bpy.props.FloatProperty(
+        name="** export_scale_factor",
+        description="export_scale_factor",
+        default=1.0,
+        min=0,
+        soft_max=2,
+        step=0.1,
+        precision=2,
+        subtype='FACTOR')
 
 
     # zbrush to blender
@@ -75,6 +86,29 @@ class GoBPreferences(AddonPreferences):
                    ],
             default='IGNORE')
 
+    polygroups_to_facemaps: bpy.props.BoolProperty(
+        name="** polygroups_top_facemaps ",
+        description="polygroups_top_facemaps",
+        default=True)
+
+    polygroups_to_vertexgroups: bpy.props.BoolProperty(
+        name="** polygroups_to_vertexgroups",
+        description="polygroups_to_vertexgroups",
+        default=True)
+
+    import_scale_factor: bpy.props.FloatProperty(
+        name="** import_scale_factor",
+        description="import_scale_factor",
+        default=1.0,
+        min=0,
+        soft_max=2,
+        step=0.1,
+        precision=2,
+        subtype='FACTOR')
+
+
+
+
     def draw(self, context):
         layout = self.layout
         layout.prop(self, 'flip_up_axis')
@@ -84,12 +118,18 @@ class GoBPreferences(AddonPreferences):
 
         box = layout.box()
         box.label(text='Blender to Zbrush', icon='EXPORT')
+        box.prop(self, 'export_scale_factor')
         box.prop(self, 'modifiers')
         box.prop(self, 'polygroups')
 
 
         box = layout.box()
+
         box.label(text='Zbrush to Blender', icon='IMPORT')
+        box.prop(self, 'import_scale_factor')
+
+        box.prop(self, 'polygroups_to_facemaps')
+        box.prop(self, 'polygroups_to_vertexgroups')
         box.prop(self, 'shading')
         box.prop(self, 'materialinput')
 
