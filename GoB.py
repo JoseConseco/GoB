@@ -309,6 +309,21 @@ class GoB_OT_import(bpy.types.Operator):
                         #add elements to facemap
                         fm.add(list(me.polygons[i].vertices))
 
+                        print("vertex group: ", vg.name)
+                        print(list(me.polygons[i].vertices), 1.0, 'ADD')
+                        print("face map: ", fm.name)
+                        print(me.polygons[i].index)
+                        print(list(me.polygons[i].vertices), "\n")
+
+
+
+                    # #apply face maps to sculpt mode face sets
+                    # current_mode = bpy.context.mode
+                    # print(current_mode)
+                    # print("set sculpt mode")
+                    # bpy.ops.object.mode_set(mode='SCULPT')
+                    # bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
+                    # bpy.ops.object.mode_set(mode=current_mode)
 
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
@@ -362,6 +377,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
+
 
 
 
