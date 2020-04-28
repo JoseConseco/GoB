@@ -129,7 +129,7 @@ class GoBPreferences(AddonPreferences):
         #EXPORT OPTIONS
         box = layout.box()
         box.label(text='Export', icon='EXPORT')
-        #box.prop(self, 'export_scale_factor')
+        box.prop(self, 'export_scale_factor')
         box.prop(self, 'modifiers')
         box.prop(self, 'polygroups')
 
@@ -138,12 +138,13 @@ class GoBPreferences(AddonPreferences):
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
 
-        #box.prop(self, 'import_scale_factor')
+        box.prop(self, 'import_scale_factor')
         box.prop(self, 'shading')
         box.prop(self, 'materialinput')
         box.prop(self, 'polygroups_to_vertexgroups')
         box.prop(self, 'polygroups_to_facemaps')
-        #box.prop(self, 'apply_facemaps_to_facesets')
-        #box.prop(self, 'switch_to_sculpt_mode')
+        if self.polygroups_to_facemaps:
+            box.prop(self, 'apply_facemaps_to_facesets')
+            box.prop(self, 'switch_to_sculpt_mode')
 
 
