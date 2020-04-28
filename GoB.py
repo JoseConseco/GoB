@@ -145,6 +145,7 @@ class GoB_OT_import(bpy.types.Operator):
             me.from_pydata(vertsData, [], facesData)  # Assume mesh data in ready to write to mesh..
             del vertsData
             del facesData
+            # TODO: do we add scaling here?
             if pref.flip_up_axis:  # fixes bad mesh orientation for some people
                 if pref.flip_forward_axis:
                     me.transform(mathutils.Matrix([
@@ -190,7 +191,7 @@ class GoB_OT_import(bpy.types.Operator):
                 for instance in instances:
                     instance.data = me
                 bpy.data.meshes.remove(oldMesh)
-                obj.data.transform(obj.matrix_world.inverted()) #assume we have to rever transformation from obj mode
+                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
                 obj.select_set(True)
                 if len(obj.material_slots) > 0:
                     if obj.material_slots[0].material is not None:
@@ -233,7 +234,7 @@ class GoB_OT_import(bpy.types.Operator):
                 if tag == b'\xa9\x61\x00\x00':  # UVs
                     me.uv_layers.new()
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0] #face count..
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count..
                     uv_layer = me.uv_layers[0]
                     for tri in me.polygons:
                         for i, loop_index in enumerate(tri.loop_indices):
@@ -277,8 +278,6 @@ class GoB_OT_import(bpy.types.Operator):
                         data = unpack('<H', goz_file.read(2))[0] / 65535.
                         groupMask.add([i], 1.-data, 'ADD')
 
-
-
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
                     facemaps = []
@@ -286,7 +285,6 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
                     for faceindex in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        #print("group: ", group)
                         if pref.polygroups_to_vertexgroups:
                             if group not in groups:
                                 if str(group) in obj.vertex_groups:
@@ -307,27 +305,15 @@ class GoB_OT_import(bpy.types.Operator):
                                 fm = obj.face_maps[str(group)]
                             fm.add([faceindex])     # add faces to facemap
 
-
-
-
-                    # #apply face maps to sculpt mode face sets
-                    # current_mode = bpy.context.mode
-                    # print(current_mode)
-                    # print("set sculpt mode")
-                    # bpy.ops.object.mode_set(mode='SCULPT')
-                    # bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
-                    # bpy.ops.object.mode_set(mode=current_mode)
-
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
-                    try:
+                    try: # TODO: whats this used for?
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
-
 
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
@@ -372,6 +358,15 @@ class GoB_OT_import(bpy.types.Operator):
                 tag = goz_file.read(4)
 
 
+        # #apply face maps to sculpt mode face sets
+        if pref.apply_facemaps_to_facesets:
+
+            current_mode = bpy.context.mode
+            print("mode: ", current_mode)
+            bpy.ops.object.mode_set(mode='SCULPT')
+            bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
+            if not pref.switch_to_sculpt_mode:
+                bpy.ops.object.mode_set(mode=current_mode)
 
 
         # if diff:
