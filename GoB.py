@@ -283,37 +283,30 @@ class GoB_OT_import(bpy.types.Operator):
                     groups = []
                     facemaps = []
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]
-                    for i in range(cnt):
-                        gr = unpack('<H', goz_file.read(2))[0]
-
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
+                    for faceindex in range(cnt):    # faces of each polygroup
+                        group = unpack('<H', goz_file.read(2))[0]
+                        #print("group: ", group)
                         if pref.polygroups_to_vertexgroups:
-                            if gr not in groups:
-                                if str(gr) in obj.vertex_groups:
-                                    obj.vertex_groups.remove(obj.vertex_groups[str(gr)])
-                                vg = obj.vertex_groups.new(name=str(gr))
-                                groups.append(gr)
+                            if group not in groups:
+                                if str(group) in obj.vertex_groups:
+                                    obj.vertex_groups.remove(obj.vertex_groups[str(group)])
+                                vg = obj.vertex_groups.new(name=str(group))
+                                groups.append(group)
                             else:
-                                vg = obj.vertex_groups[str(gr)]
-                        # add vertices to vertex group
-                        vg.add(list(me.polygons[i].vertices), 1., 'ADD')
+                                vg = obj.vertex_groups[str(group)]
+                            vg.add(list(me.polygons[faceindex].vertices), 1., 'ADD')    # add vertices to vertex group
 
                         if pref.polygroups_to_facemaps:
-                            if gr not in facemaps:
-                                if str(gr) in obj.face_maps:
-                                    obj.face_maps.remove(obj.face_maps[str(gr)])
-                                fm = obj.face_maps.new(name=str(gr))
-                                facemaps.append(gr)
+                            if group not in facemaps:
+                                if str(group) in obj.face_maps:
+                                    obj.face_maps.remove(obj.face_maps[str(group)])
+                                fm = obj.face_maps.new(name=str(group))
+                                facemaps.append(group)
                             else:
-                                fm = obj.face_maps[str(gr)]
-                        #add elements to facemap
-                        fm.add(list(me.polygons[i].vertices))
+                                fm = obj.face_maps[str(group)]
+                            fm.add([faceindex])     # add faces to facemap
 
-                        print("vertex group: ", vg.name)
-                        print(list(me.polygons[i].vertices), 1.0, 'ADD')
-                        print("face map: ", fm.name)
-                        print(me.polygons[i].index)
-                        print(list(me.polygons[i].vertices), "\n")
 
 
 
