@@ -55,6 +55,18 @@ class GoBPreferences(AddonPreferences):
                ('IGNORE', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                ],
         default='IGNORE')
+    # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
+
+
+    export_scale_factor: bpy.props.FloatProperty(
+        name="** Scale",
+        description="export_scale_factor",
+        default=1.0,
+        min=0,
+        soft_max=2,
+        step=0.1,
+        precision=2,
+        subtype='FACTOR')
 
 
     # zbrush to blender
@@ -75,22 +87,63 @@ class GoBPreferences(AddonPreferences):
                    ],
             default='IGNORE')
 
+    polygroups_to_vertexgroups: bpy.props.BoolProperty(
+        name="Polygroups as Vertex Groups",
+        description="polygroups_to_vertexgroups",
+        default=True)
+
+    polygroups_to_facemaps: bpy.props.BoolProperty(
+        name="Polygrous as Face Maps",
+        description="polygroups_to_facemaps",
+        default=True)
+
+    apply_facemaps_to_facesets: bpy.props.BoolProperty(
+        name="** apply_facemaps_to_facesets",
+        description="apply_facemaps_to_facesets",
+        default=True)
+
+    switch_to_sculpt_mode: bpy.props.BoolProperty(
+        name="** switch_to_sculpt_mode",
+        description="switch_to_sculpt_mode",
+        default=True)
+
+    import_scale_factor: bpy.props.FloatProperty(
+        name="** Scale",
+        description="import_scale_factor",
+        default=1.0, min=0, soft_max=2, step=0.1, precision=2,
+        subtype='FACTOR')
+
+
+
+
     def draw(self, context):
+        #GLOBAL OPTIONS
         layout = self.layout
+        layout.use_property_split = True
+
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')
         col = layout.column()   # works best if a column, or even just self.layout
 
+        #EXPORT OPTIONS
         box = layout.box()
-        box.label(text='Blender to Zbrush', icon='EXPORT')
+        box.label(text='Export', icon='EXPORT')
+        #box.prop(self, 'export_scale_factor')
         box.prop(self, 'modifiers')
         box.prop(self, 'polygroups')
 
 
+        # IMPORT OPTIONS
         box = layout.box()
-        box.label(text='Zbrush to Blender', icon='IMPORT')
+        box.label(text='Import', icon='IMPORT')
+
+        #box.prop(self, 'import_scale_factor')
         box.prop(self, 'shading')
         box.prop(self, 'materialinput')
+        box.prop(self, 'polygroups_to_vertexgroups')
+        box.prop(self, 'polygroups_to_facemaps')
+        #box.prop(self, 'apply_facemaps_to_facesets')
+        #box.prop(self, 'switch_to_sculpt_mode')
 
 

@@ -34,7 +34,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, kromar",
-    "version": (3, 1, 0),
+    "version": (3, 2, 0),
     "blender": (2, 80, 0),
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
@@ -77,5 +77,3 @@ def unregister():
 
     if bpy.app.timers.is_registered(GoB.run_import_periodically):
         bpy.app.timers.unregister(GoB.run_import_periodically)
-
-

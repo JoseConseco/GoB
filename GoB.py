@@ -80,6 +80,7 @@ class GoB_OT_import(bpy.types.Operator):
         facesData = []
         polypaint = []
         exists = os.path.isfile(pathFile)
+        objMat = None
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
             return
@@ -200,7 +201,9 @@ class GoB_OT_import(bpy.types.Operator):
                 else:
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
-                create_node_material(objMat, pref)
+
+                # if pref.materialinput == 'POLYPAINT':
+                #     create_node_material(objMat, pref)
 
             # create new object
             else:
@@ -210,6 +213,8 @@ class GoB_OT_import(bpy.types.Operator):
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
                 obj.select_set(True)
+
+            if pref.materialinput == 'POLYPAINT':
                 create_node_material(objMat, pref)
 
             # make object active
@@ -272,24 +277,58 @@ class GoB_OT_import(bpy.types.Operator):
                         data = unpack('<H', goz_file.read(2))[0] / 65535.
                         groupMask.add([i], 1.-data, 'ADD')
 
+
+
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
+                    facemaps = []
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]
-                    for i in range(cnt):
-                        gr = unpack('<H', goz_file.read(2))[0]
-                        if gr not in groups:
-                            if str(gr) in obj.vertex_groups:
-                                obj.vertex_groups.remove(obj.vertex_groups[str(gr)])
-                            polygroup = obj.vertex_groups.new(name=str(gr))
-                            groups.append(gr)
-                        else:
-                            polygroup = obj.vertex_groups[str(gr)]
-                        polygroup.add(list(me.polygons[i].vertices), 1., 'ADD')
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
+                    for faceindex in range(cnt):    # faces of each polygroup
+                        group = unpack('<H', goz_file.read(2))[0]
+                        #print("group: ", group)
+                        if pref.polygroups_to_vertexgroups:
+                            if group not in groups:
+                                if str(group) in obj.vertex_groups:
+                                    obj.vertex_groups.remove(obj.vertex_groups[str(group)])
+                                vg = obj.vertex_groups.new(name=str(group))
+                                groups.append(group)
+                            else:
+                                vg = obj.vertex_groups[str(group)]
+                            vg.add(list(me.polygons[faceindex].vertices), 1., 'ADD')    # add vertices to vertex group
+
+                        if pref.polygroups_to_facemaps:
+                            if group not in facemaps:
+                                if str(group) in obj.face_maps:
+                                    obj.face_maps.remove(obj.face_maps[str(group)])
+                                fm = obj.face_maps.new(name=str(group))
+                                facemaps.append(group)
+                            else:
+                                fm = obj.face_maps[str(group)]
+                            fm.add([faceindex])     # add faces to facemap
+
+
+
+
+                    # #apply face maps to sculpt mode face sets
+                    # current_mode = bpy.context.mode
+                    # print(current_mode)
+                    # print("set sculpt mode")
+                    # bpy.ops.object.mode_set(mode='SCULPT')
+                    # bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
+                    # bpy.ops.object.mode_set(mode=current_mode)
+
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
+
+                    try:
+                        obj.face_maps.remove(obj.face_maps.get('0'))
+                    except:
+                        pass
+
+
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
 
@@ -331,6 +370,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
+
 
 
 
@@ -397,17 +437,14 @@ def create_node_material(mat, pref):
     nodes = mat.node_tree.nodes
     output_node = nodes.get('Principled BSDF')
     vcol_node = nodes.get('ShaderNodeAttribute')
+    # create new node
+    if not vcol_node:
+        vcol_node = nodes.new('ShaderNodeAttribute')
+        vcol_node.location = -300, 200
+        vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
 
-    if pref.materialinput == 'POLYPAINT':
-
-        # create new node
-        if not vcol_node:
-            vcol_node = nodes.new('ShaderNodeAttribute')
-            vcol_node.location = -300, 200
-            vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
-
-            # link nodes
-            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+        # link nodes
+        mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
 
 
 def run_import_periodically():
