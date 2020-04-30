@@ -39,6 +39,7 @@ else:
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
+icons = None
 cached_last_edition_time = time.time() - 10.0
 
 preview_collections = {}
@@ -68,7 +69,7 @@ class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
     bl_description = "GOZ import background listener"
-
+    
     def GoZit(self, pathFile):
         scn = bpy.context.scene
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
@@ -222,11 +223,12 @@ class GoB_OT_import(bpy.types.Operator):
             bpy.context.view_layer.objects.active = obj
 
             # user defined import shading
-            if pref.shading == 'SHADE_SMOOTH':
-                values = [True] * len(me.polygons)
-            else:
-                values = [False] * len(me.polygons)
-            me.polygons.foreach_set("use_smooth", values)
+            if pref.shading != 'IGNORE':
+                if pref.shading == 'SHADE_SMOOTH':
+                    values = [True] * len(me.polygons)
+                else:
+                    values = [False] * len(me.polygons)
+                me.polygons.foreach_set("use_smooth", values)
 
             utag = 0
 
@@ -358,15 +360,13 @@ class GoB_OT_import(bpy.types.Operator):
                 tag = goz_file.read(4)
 
 
-        # #apply face maps to sculpt mode face sets
-        if pref.apply_facemaps_to_facesets:
-
-            current_mode = bpy.context.mode
-            print("mode: ", current_mode)
-            bpy.ops.object.mode_set(mode='SCULPT')
-            bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
-            if not pref.switch_to_sculpt_mode:
-                bpy.ops.object.mode_set(mode=current_mode)
+            # #apply face maps to sculpt mode face sets
+            if pref.apply_facemaps_to_facesets:
+                current_mode = bpy.context.mode
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT') #hack
+                bpy.ops.sculpt.face_sets_init(bpy.context.copy(), mode='FACE_MAPS')
+                if not pref.switch_to_sculpt_mode:
+                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode) #hack
 
 
         # if diff:
@@ -391,6 +391,7 @@ class GoB_OT_import(bpy.types.Operator):
         # me.materials.append(objMat)
         return
 
+
     def execute(self, context):
         goz_obj_paths = []
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
@@ -411,19 +412,29 @@ class GoB_OT_import(bpy.types.Operator):
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
-    def invoke(self, context, event):
-        global run_background_update
-        if run_background_update:
-            if bpy.app.timers.is_registered(run_import_periodically):
-                bpy.app.timers.unregister(run_import_periodically)
-                print('Disabling GOZ background listener')
-            run_background_update = False
+    
+    def invoke(self, context, event):        
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        if pref.import_method == 'AUTOMATIC':
+            global run_background_update
+            if run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
+            else:
+                if not bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.register(run_import_periodically, persistent=True)
+                    print('Enabling GOZ background listener')
+                run_background_update = True
+            return{'FINISHED'}
         else:
-            if not bpy.app.timers.is_registered(run_import_periodically):
-                bpy.app.timers.register(run_import_periodically, persistent=True)
-                print('Enabling GOZ background listener')
-            run_background_update = True
-        return{'FINISHED'}
+            if run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
+            return{'FINISHED'}
 
 
 def create_node_material(mat, pref):

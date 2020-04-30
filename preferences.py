@@ -36,7 +36,7 @@ class GoBPreferences(AddonPreferences):
     show_button_text: bpy.props.BoolProperty(
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
-        default=True)
+        default=False)
 
     # blender to zbrush
     modifiers: bpy.props.EnumProperty(
@@ -74,9 +74,10 @@ class GoBPreferences(AddonPreferences):
         name="Shading Mode",
         description="Shading mode",
         items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import'),
+               ('IGNORE', 'Ignore Shading', 'Objects will be shaded by Zbrush export')
                ],
-        default='SHADE_SMOOTH')
+        default='SHADE_FLAT')
 
     materialinput: bpy.props.EnumProperty(
             name="Create material",
@@ -86,6 +87,14 @@ class GoBPreferences(AddonPreferences):
                    ('IGNORE', 'Ignore', 'No additional material inputs are created'),
                    ],
             default='IGNORE')
+            
+    import_method: bpy.props.EnumProperty(
+            name="Import Button Method",
+            description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
+            items=[('MANUAL', 'Manual', 'Manual Mode requires to press the import every time you send a model from zbrush to import it.'),
+                   ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
+                   ],
+            default='AUTOMATIC')
 
     polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups as Vertex Groups",
@@ -105,15 +114,13 @@ class GoBPreferences(AddonPreferences):
     switch_to_sculpt_mode: bpy.props.BoolProperty(
         name="** switch_to_sculpt_mode",
         description="switch_to_sculpt_mode",
-        default=True)
+        default=False)
 
     import_scale_factor: bpy.props.FloatProperty(
         name="** Scale",
         description="import_scale_factor",
         default=1.0, min=0, soft_max=2, step=0.1, precision=2,
         subtype='FACTOR')
-
-
 
 
     def draw(self, context):
@@ -123,8 +130,9 @@ class GoBPreferences(AddonPreferences):
 
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')
-        col = layout.column()   # works best if a column, or even just self.layout
+        layout.prop(self, 'show_button_text')         
+
+        col = layout.column()
 
         #EXPORT OPTIONS
         box = layout.box()
@@ -137,6 +145,7 @@ class GoBPreferences(AddonPreferences):
         # IMPORT OPTIONS
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
+        box.prop(self, 'import_method')
 
         box.prop(self, 'import_scale_factor')
         box.prop(self, 'shading')
