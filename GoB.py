@@ -204,7 +204,7 @@ class GoB_OT_import(bpy.types.Operator):
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
 
-                # if pref.materialinput == 'POLYPAINT':
+                # if pref.import_material == 'POLYPAINT':
                 #     create_node_material(objMat, pref)
 
             # create new object
@@ -216,15 +216,15 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.data.materials.append(objMat)
                 obj.select_set(True)
 
-            if pref.materialinput == 'POLYPAINT':
+            if pref.import_material == 'POLYPAINT':
                 create_node_material(objMat, pref)
 
             # make object active
             bpy.context.view_layer.objects.active = obj
 
-            # user defined import shading
-            if pref.shading != 'IGNORE':
-                if pref.shading == 'SHADE_SMOOTH':
+            # user defined import import_shading
+            if pref.import_shading != 'IGNORE':
+                if pref.import_shading == 'SHADE_SMOOTH':
                     values = [True] * len(me.polygons)
                 else:
                     values = [False] * len(me.polygons)

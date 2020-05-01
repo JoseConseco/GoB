@@ -70,7 +70,7 @@ class GoBPreferences(AddonPreferences):
 
 
     # zbrush to blender
-    shading: bpy.props.EnumProperty(
+    import_shading: bpy.props.EnumProperty(
         name="Shading Mode",
         description="Shading mode",
         items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
@@ -79,12 +79,13 @@ class GoBPreferences(AddonPreferences):
                ],
         default='SHADE_FLAT')
 
-    materialinput: bpy.props.EnumProperty(
+    import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
-            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),
+            items=[('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),
+                   ('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
-                   ('IGNORE', 'Ignore', 'No additional material inputs are created'),
+                   ('IGNORE', 'None', 'No additional material inputs are created'),
                    ],
             default='IGNORE')
             
@@ -97,13 +98,18 @@ class GoBPreferences(AddonPreferences):
             default='AUTOMATIC')
 
     polygroups_to_vertexgroups: bpy.props.BoolProperty(
-        name="Polygroups as Vertex Groups",
-        description="polygroups_to_vertexgroups",
+        name="to Vertex Groups",
+        description="Import Polygroups as Vertex Groups",
         default=True)
 
     polygroups_to_facemaps: bpy.props.BoolProperty(
-        name="Polygrous as Face Maps",
-        description="polygroups_to_facemaps",
+        name="to Face Maps",
+        description="Import Polygroups as Face Maps",
+        default=True)
+
+    polygroups_to_uvs: bpy.props.BoolProperty(
+        name="** to UV Maps",
+        description="Import Polygroups as UV Maps",
         default=True)
 
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
@@ -112,8 +118,8 @@ class GoBPreferences(AddonPreferences):
         default=True)
 
     switch_to_sculpt_mode: bpy.props.BoolProperty(
-        name="** switch_to_sculpt_mode",
-        description="switch_to_sculpt_mode",
+        name="Sculpt Mode after import", 
+        description="Go to Sculpt Mode after Face Maps import",
         default=False)
 
     import_scale_factor: bpy.props.FloatProperty(
@@ -121,8 +127,8 @@ class GoBPreferences(AddonPreferences):
         description="import_scale_factor",
         default=1.0, min=0, soft_max=2, step=0.1, precision=2,
         subtype='FACTOR')
-
-
+    
+  
     def draw(self, context):
         #GLOBAL OPTIONS
         layout = self.layout
@@ -132,28 +138,30 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')         
 
-        col = layout.column()
-
         #EXPORT OPTIONS
+        col = layout.column()
         box = layout.box()
         box.label(text='Export', icon='EXPORT')
-        box.prop(self, 'export_scale_factor')
+        #box.prop(self, 'export_scale_factor')
         box.prop(self, 'modifiers')
         box.prop(self, 'polygroups')
 
-
         # IMPORT OPTIONS
+        col = layout.column(heading="Diffuse", align=True)
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
-        box.prop(self, 'import_method')
+        #box.prop(self, 'import_method')
 
-        box.prop(self, 'import_scale_factor')
-        box.prop(self, 'shading')
-        box.prop(self, 'materialinput')
-        box.prop(self, 'polygroups_to_vertexgroups')
-        box.prop(self, 'polygroups_to_facemaps')
+        #box.prop(self, 'import_scale_factor')
+        box.prop(self, 'import_shading')
+        box.prop(self, 'import_material')
+        
+        col = box.column(heading="Polygroups", align=True)
+        col.prop(self, 'polygroups_to_vertexgroups')
+        col.prop(self, 'polygroups_to_uvs')
+        col.prop(self, 'polygroups_to_facemaps')        
         if self.polygroups_to_facemaps:
-            box.prop(self, 'apply_facemaps_to_facesets')
-            box.prop(self, 'switch_to_sculpt_mode')
+            col.prop(self, 'apply_facemaps_to_facesets')
+            col.prop(self, 'switch_to_sculpt_mode')
 
 
