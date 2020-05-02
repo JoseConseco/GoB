@@ -25,6 +25,7 @@ from bpy.types import AddonPreferences
 class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
+    #GLOBAL
     flip_up_axis: bpy.props.BoolProperty(
         name="Invert up axis",
         description="Enable this to invert the up axis on import/export",
@@ -36,10 +37,10 @@ class GoBPreferences(AddonPreferences):
     show_button_text: bpy.props.BoolProperty(
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
-        default=True)
+        default=False)
 
-    # blender to zbrush
-    modifiers: bpy.props.EnumProperty(
+    # EXPORT
+    export_modifiers: bpy.props.EnumProperty(
         name='Modifiers',
         description='How to handle exported object modifiers',
         items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
@@ -48,13 +49,14 @@ class GoBPreferences(AddonPreferences):
                ],
         default='ONLY_EXPORT')
 
-    polygroups: bpy.props.EnumProperty(
+    export_polygroups: bpy.props.EnumProperty(
         name="Polygroups",
         description="Polygroups mode",
         items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-               ('IGNORE', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
+                ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'),    #TODO
+                ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                ],
-        default='IGNORE')
+        default='VERTEX_GROUPS')
     # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
 
 
@@ -69,32 +71,53 @@ class GoBPreferences(AddonPreferences):
         subtype='FACTOR')
 
 
-    # zbrush to blender
-    shading: bpy.props.EnumProperty(
+    # IMPORT
+    import_shading: bpy.props.EnumProperty(
         name="Shading Mode",
         description="Shading mode",
         items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import')
+               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import'),
+               ('IGNORE', 'Ignore Shading', 'Objects will be shaded by Zbrush export')
                ],
-        default='SHADE_SMOOTH')
+        default='SHADE_FLAT')
 
-    materialinput: bpy.props.EnumProperty(
+    import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
-            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),
+            items=[#('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),        #TODO
+                   #('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
-                   ('IGNORE', 'Ignore', 'No additional material inputs are created'),
+                   ('IGNORE', 'None', 'No additional material inputs are created'),
                    ],
             default='IGNORE')
+            
+    import_method: bpy.props.EnumProperty(
+            name="Import Button Method",
+            description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
+            items=[('MANUAL', 'Manual', 'Manual Mode requires to press the import every time you send a model from zbrush to import it.'),
+                   ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
+                   ],
+            default='AUTOMATIC')
 
-    polygroups_to_vertexgroups: bpy.props.BoolProperty(
-        name="Polygroups as Vertex Groups",
-        description="polygroups_to_vertexgroups",
+    import_scale_factor: bpy.props.FloatProperty(
+        name="** Scale",
+        description="import_scale_factor",
+        default=1.0, min=0, soft_max=2, step=0.1, precision=2,
+        subtype='FACTOR')
+
+    import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
+        name="to Vertex Groups",
+        description="Import Polygroups as Vertex Groups",
         default=True)
 
-    polygroups_to_facemaps: bpy.props.BoolProperty(
-        name="Polygrous as Face Maps",
-        description="polygroups_to_facemaps",
+    import_polygroups_to_facemaps: bpy.props.BoolProperty(
+        name="to Face Maps",
+        description="Import Polygroups as Face Maps",
+        default=True)
+
+    import_polygroups_to_uvs: bpy.props.BoolProperty(
+        name="** to UV Maps",
+        description="Import Polygroups as UV Maps",
         default=True)
 
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
@@ -103,47 +126,45 @@ class GoBPreferences(AddonPreferences):
         default=True)
 
     switch_to_sculpt_mode: bpy.props.BoolProperty(
-        name="** switch_to_sculpt_mode",
-        description="switch_to_sculpt_mode",
-        default=True)
+        name="Sculpt Mode after import", 
+        description="Go to Sculpt Mode after Face Maps import",
+        default=False)
 
-    import_scale_factor: bpy.props.FloatProperty(
-        name="** Scale",
-        description="import_scale_factor",
-        default=1.0, min=0, soft_max=2, step=0.1, precision=2,
-        subtype='FACTOR')
-
-
-
-
+    
+  
     def draw(self, context):
-        #GLOBAL OPTIONS
+        #GLOBAL
         layout = self.layout
         layout.use_property_split = True
 
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')
-        col = layout.column()   # works best if a column, or even just self.layout
+        layout.prop(self, 'show_button_text')      
+           
 
-        #EXPORT OPTIONS
+        #EXPORT
+        col = layout.column()
         box = layout.box()
         box.label(text='Export', icon='EXPORT')
-        #box.prop(self, 'export_scale_factor')
-        box.prop(self, 'modifiers')
-        box.prop(self, 'polygroups')
+        #box.prop(self, 'export_scale_factor')      #TODO
+        box.prop(self, 'export_modifiers')
+        box.prop(self, 'export_polygroups')
 
 
-        # IMPORT OPTIONS
+        # IMPORT
+        col = layout.column(heading="Diffuse", align=True)
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
-
-        #box.prop(self, 'import_scale_factor')
-        box.prop(self, 'shading')
-        box.prop(self, 'materialinput')
-        box.prop(self, 'polygroups_to_vertexgroups')
-        box.prop(self, 'polygroups_to_facemaps')
-        #box.prop(self, 'apply_facemaps_to_facesets')
-        #box.prop(self, 'switch_to_sculpt_mode')
+        #box.prop(self, 'import_method')            #TODO: disabled, some bugs when switching
+        #box.prop(self, 'import_scale_factor')      #TODO
+        box.prop(self, 'import_shading')
+        box.prop(self, 'import_material')              
+        col = box.column(heading="Polygroups", align=True)
+        col.prop(self, 'import_polygroups_to_vertexgroups')
+        #col.prop(self, 'import_polygroups_to_uvs')                #TODO
+        col.prop(self, 'import_polygroups_to_facemaps')        
+        if self.import_polygroups_to_facemaps:
+            #col.prop(self, 'apply_facemaps_to_facesets')   # TODO: 20200502 operator not working https://developer.blender.org/T76324
+            col.prop(self, 'switch_to_sculpt_mode')
 
 
