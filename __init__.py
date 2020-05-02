@@ -34,8 +34,8 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 2, 1),
-    "blender": (2, 80, 0),
+    "version": (3, 2, 2),
+    "blender": (2, 82, 0),
     "location": "In the info header",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
                 "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",

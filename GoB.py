@@ -287,7 +287,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
                     for faceindex in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        if pref.polygroups_to_vertexgroups:
+                        if pref.import_polygroups_to_vertexgroups:
                             if group not in groups:
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
@@ -297,7 +297,7 @@ class GoB_OT_import(bpy.types.Operator):
                                 vg = obj.vertex_groups[str(group)]
                             vg.add(list(me.polygons[faceindex].vertices), 1., 'ADD')    # add vertices to vertex group
 
-                        if pref.polygroups_to_facemaps:
+                        if pref.import_polygroups_to_facemaps:
                             if group not in facemaps:
                                 if str(group) in obj.face_maps:
                                     obj.face_maps.remove(obj.face_maps[str(group)])
@@ -489,12 +489,12 @@ class GoB_OT_export(bpy.types.Operator):
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()
-        if pref.modifiers == 'APPLY_EXPORT':
+        if pref.export_modifiers == 'APPLY_EXPORT':
             # me = object_eval.to_mesh() #with modifiers - crash need to_mesh_clear()?
             me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
             obj.data = me
             obj.modifiers.clear()
-        elif pref.modifiers == 'ONLY_EXPORT':
+        elif pref.export_modifiers == 'ONLY_EXPORT':
             me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
         else:
             me = obj.data
@@ -515,7 +515,7 @@ class GoB_OT_export(bpy.types.Operator):
     @staticmethod
     def make_polygroups(obj, pref, create=False):
 
-        if pref.polygroups == 'MATERIALS':
+        if pref.export_polygroups == 'MATERIALS':
             for index, slot in enumerate(obj.material_slots):
                 #select the verts from faces with material index
                 if not slot.material:
@@ -534,13 +534,15 @@ class GoB_OT_export(bpy.types.Operator):
                             obj.vertex_groups.remove(vg)
                         except:
                             pass
+        elif pref.export_polygroups == 'FACE_MAPS':
+            pass
+        
         else:
             pass
 
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-
 
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -666,8 +668,25 @@ class GoB_OT_export(bpy.types.Operator):
                         except:
                             goz_file.write(pack('<H', 255))
                     break
+
+
+
+
+
+
             # --Polygroups--
-            vertWeight = []
+            #TODO:  this polygroup implementation is based on vertex weights which works fine for
+            #       vertex wegihts, although overlapping weights will create corrupt polygroups
+            #           and there is a nasty workaround for PG from materials which is based on this weight basis
+            #       we now also have face maps which are a proper representation of polygroups and should be the basis
+            #           for PG transfer instead of the vertex weights
+            #       conclusion: rewrite polygroup export to properly support differtn types
+            #                   - FACEMAPS
+            #                   - MATERIALS
+            #                   - VERTEXGROUPS  (maybe this should be removed due to inacuracy)
+            #                   - LOOSE PARTS
+
+            vertWeight = []     
             for i in range(len(me.vertices)):
                 vertWeight.append([])
                 for group in me.vertices[i].groups:
@@ -706,6 +725,10 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<H', grName))
                 else:
                     goz_file.write(pack('<H', 0))
+
+
+
+
             # Diff, disp and nm maps
             diff = 0
             disp = 0
