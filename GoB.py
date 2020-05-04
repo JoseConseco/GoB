@@ -186,22 +186,20 @@ class GoB_OT_import(bpy.types.Operator):
             if objName in bpy.data.objects.keys():
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
-                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
+                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]                
                 
-                
-                ## automated smoothing
+                ## keep users smoothing groups
+                # transfer old smoot face data new new mesh
                 bm = bmesh.new()
-                bm.from_mesh(oldMesh)
-                for f in bm.faces:  
-                    if f.smooth: 
-                        f.smooth = True
-                    else:
-                        f.smooth = False
-                    print(f.smooth)
-                    values = [f.smooth] * len(me.polygons) 
-                    me.polygons.foreach_set("use_smooth", values)            
-                bm.free()
-
+                bm.from_mesh(me)
+                bm.faces.ensure_lookup_table()
+                bm_old = bmesh.new()
+                bm_old.from_mesh(oldMesh)
+                for f in bm_old.faces:
+                    bm.faces[f.index].smooth = f.smooth
+                bm.to_mesh(me)               
+                bm_old.free()              
+                bm.free()                
 
                 for old_mat in oldMesh.materials:
                     me.materials.append(old_mat)
@@ -240,15 +238,6 @@ class GoB_OT_import(bpy.types.Operator):
 
             # make object active
             bpy.context.view_layer.objects.active = obj
-            
-            # user defined import import_shading
-            """ if pref.import_shading != 'IGNORE':
-                if pref.import_shading == 'SHADE_SMOOTH':
-                    values = [True] * len(me.polygons)
-                else:
-                    values = [False] * len(me.polygons)
-                me.polygons.foreach_set("use_smooth", values) """
-
             utag = 0
 
             while tag:
