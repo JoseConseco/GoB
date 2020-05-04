@@ -187,11 +187,30 @@ class GoB_OT_import(bpy.types.Operator):
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
                 instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
+                
+                
+                ## automated smoothing
+                bm = bmesh.new()
+                bm.from_mesh(oldMesh)
+                for f in bm.faces:  
+                    if f.smooth: 
+                        f.smooth = True
+                    else:
+                        f.smooth = False
+                    print(f.smooth)
+                    values = [f.smooth] * len(me.polygons) 
+                    me.polygons.foreach_set("use_smooth", values)            
+                bm.free()
+
+
                 for old_mat in oldMesh.materials:
                     me.materials.append(old_mat)
+
                 for instance in instances:
                     instance.data = me
+
                 bpy.data.meshes.remove(oldMesh)
+
                 obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
                 obj.select_set(True)
                 if len(obj.material_slots) > 0:
@@ -221,14 +240,14 @@ class GoB_OT_import(bpy.types.Operator):
 
             # make object active
             bpy.context.view_layer.objects.active = obj
-
+            
             # user defined import import_shading
-            if pref.import_shading != 'IGNORE':
+            """ if pref.import_shading != 'IGNORE':
                 if pref.import_shading == 'SHADE_SMOOTH':
                     values = [True] * len(me.polygons)
                 else:
                     values = [False] * len(me.polygons)
-                me.polygons.foreach_set("use_smooth", values)
+                me.polygons.foreach_set("use_smooth", values) """
 
             utag = 0
 
