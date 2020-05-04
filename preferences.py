@@ -72,15 +72,6 @@ class GoBPreferences(AddonPreferences):
 
 
     # IMPORT
-    import_shading: bpy.props.EnumProperty(
-        name="Shading Mode",
-        description="Shading mode",
-        items=[('SHADE_SMOOTH', 'Smooth Shading', 'Objects will be Smooth Shaded after import'),
-               ('SHADE_FLAT', 'Flat Shading', 'Objects will be Flat Shaded after import'),
-               ('IGNORE', 'Ignore Shading', 'Objects will be shaded by Zbrush export')
-               ],
-        default='SHADE_FLAT')
-
     import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
@@ -157,7 +148,6 @@ class GoBPreferences(AddonPreferences):
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled, some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
-        box.prop(self, 'import_shading')
         box.prop(self, 'import_material')              
         col = box.column(heading="Polygroups", align=True)
         col.prop(self, 'import_polygroups_to_vertexgroups')
