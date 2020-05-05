@@ -19,6 +19,7 @@
 import bpy
 import bmesh
 import mathutils
+import math
 import time
 import os
 from struct import pack, unpack
@@ -508,12 +509,24 @@ class GoB_OT_export(bpy.types.Operator):
             me = obj.data
 
         #DO the triangulation of Ngons only, but do not write it to original object. User has to handle Ngons manaully if they want.
+        
         bm = bmesh.new()
         bm.from_mesh(me)
-        triangulate_faces = [f for f in bm.faces if len(f.edges) > 4]
-        result = bmesh.ops.triangulate(bm, faces=triangulate_faces)
-        #join traingles only that are result of ngon triangulation
-        bmesh.ops.join_triangles(bm, faces=result['faces'], cmp_seam=False, cmp_sharp=False, cmp_uvs=False, cmp_vcols=False, cmp_materials=False, angle_face_threshold=3.1, angle_shape_threshold=3.1)
+        #join traingles only that are result of ngon triangulation        
+        for f in bm.faces:
+            if len(f.edges) > 4:
+                print("test")   
+                result = bmesh.ops.triangulate(bm, faces=[f])
+                bmesh.ops.join_triangles(bm, 
+                                faces= result['faces'], 
+                                cmp_seam=False, 
+                                cmp_sharp=False, 
+                                cmp_uvs=False, 
+                                cmp_vcols=False, 
+                                cmp_materials=False, 
+                                angle_face_threshold=(math.pi), 
+                                angle_shape_threshold=(math.pi))
+        
         export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop anyway
         bm.to_mesh(export_mesh)
         bm.free()
