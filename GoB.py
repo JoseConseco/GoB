@@ -39,6 +39,7 @@ else:
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
+icons = None
 cached_last_edition_time = time.time() - 10.0
 
 preview_collections = {}
@@ -68,7 +69,7 @@ class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
     bl_description = "GOZ import background listener"
-
+    
     def GoZit(self, pathFile):
         scn = bpy.context.scene
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
@@ -145,6 +146,7 @@ class GoB_OT_import(bpy.types.Operator):
             me.from_pydata(vertsData, [], facesData)  # Assume mesh data in ready to write to mesh..
             del vertsData
             del facesData
+            # TODO: do we add scaling here?
             if pref.flip_up_axis:  # fixes bad mesh orientation for some people
                 if pref.flip_forward_axis:
                     me.transform(mathutils.Matrix([
@@ -184,13 +186,30 @@ class GoB_OT_import(bpy.types.Operator):
             if objName in bpy.data.objects.keys():
                 obj = bpy.data.objects[objName]
                 oldMesh = obj.data
-                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]
+                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]                
+                
+                ## keep users smoothing groups
+                # transfer old smoot face data new new mesh
+                bm = bmesh.new()
+                bm.from_mesh(me)
+                bm.faces.ensure_lookup_table()
+                bm_old = bmesh.new()
+                bm_old.from_mesh(oldMesh)
+                for f in bm_old.faces:
+                    bm.faces[f.index].smooth = f.smooth
+                bm.to_mesh(me)               
+                bm_old.free()              
+                bm.free()                
+
                 for old_mat in oldMesh.materials:
                     me.materials.append(old_mat)
+
                 for instance in instances:
                     instance.data = me
+
                 bpy.data.meshes.remove(oldMesh)
-                obj.data.transform(obj.matrix_world.inverted()) #assume we have to rever transformation from obj mode
+
+                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
                 obj.select_set(True)
                 if len(obj.material_slots) > 0:
                     if obj.material_slots[0].material is not None:
@@ -202,7 +221,7 @@ class GoB_OT_import(bpy.types.Operator):
                     objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     obj.data.materials.append(objMat)
 
-                # if pref.materialinput == 'POLYPAINT':
+                # if pref.import_material == 'POLYPAINT':
                 #     create_node_material(objMat, pref)
 
             # create new object
@@ -214,26 +233,18 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.data.materials.append(objMat)
                 obj.select_set(True)
 
-            if pref.materialinput == 'POLYPAINT':
+            if pref.import_material == 'POLYPAINT':
                 create_node_material(objMat, pref)
 
             # make object active
             bpy.context.view_layer.objects.active = obj
-
-            # user defined import shading
-            if pref.shading == 'SHADE_SMOOTH':
-                values = [True] * len(me.polygons)
-            else:
-                values = [False] * len(me.polygons)
-            me.polygons.foreach_set("use_smooth", values)
-
             utag = 0
 
             while tag:
                 if tag == b'\xa9\x61\x00\x00':  # UVs
                     me.uv_layers.new()
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0] #face count..
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count..
                     uv_layer = me.uv_layers[0]
                     for tri in me.polygons:
                         for i, loop_index in enumerate(tri.loop_indices):
@@ -277,8 +288,6 @@ class GoB_OT_import(bpy.types.Operator):
                         data = unpack('<H', goz_file.read(2))[0] / 65535.
                         groupMask.add([i], 1.-data, 'ADD')
 
-
-
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
                     facemaps = []
@@ -286,8 +295,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
                     for faceindex in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        #print("group: ", group)
-                        if pref.polygroups_to_vertexgroups:
+                        if pref.import_polygroups_to_vertexgroups:
                             if group not in groups:
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
@@ -297,7 +305,7 @@ class GoB_OT_import(bpy.types.Operator):
                                 vg = obj.vertex_groups[str(group)]
                             vg.add(list(me.polygons[faceindex].vertices), 1., 'ADD')    # add vertices to vertex group
 
-                        if pref.polygroups_to_facemaps:
+                        if pref.import_polygroups_to_facemaps:
                             if group not in facemaps:
                                 if str(group) in obj.face_maps:
                                     obj.face_maps.remove(obj.face_maps[str(group)])
@@ -307,27 +315,15 @@ class GoB_OT_import(bpy.types.Operator):
                                 fm = obj.face_maps[str(group)]
                             fm.add([faceindex])     # add faces to facemap
 
-
-
-
-                    # #apply face maps to sculpt mode face sets
-                    # current_mode = bpy.context.mode
-                    # print(current_mode)
-                    # print("set sculpt mode")
-                    # bpy.ops.object.mode_set(mode='SCULPT')
-                    # bpy.ops.sculpt.face_sets_init(mode='FACE_MAPS')
-                    # bpy.ops.object.mode_set(mode=current_mode)
-
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
-                    try:
+                    try: # TODO: whats this used for?
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
-
 
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
@@ -372,6 +368,13 @@ class GoB_OT_import(bpy.types.Operator):
                 tag = goz_file.read(4)
 
 
+            # #apply face maps to sculpt mode face sets
+            if pref.apply_facemaps_to_facesets:
+                current_mode = bpy.context.mode
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT') #hack
+                bpy.ops.sculpt.face_sets_init(bpy.context.copy(), mode='FACE_MAPS')
+                if not pref.switch_to_sculpt_mode:
+                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode) #hack
 
 
         # if diff:
@@ -396,6 +399,7 @@ class GoB_OT_import(bpy.types.Operator):
         # me.materials.append(objMat)
         return
 
+
     def execute(self, context):
         goz_obj_paths = []
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
@@ -416,19 +420,29 @@ class GoB_OT_import(bpy.types.Operator):
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
-    def invoke(self, context, event):
-        global run_background_update
-        if run_background_update:
-            if bpy.app.timers.is_registered(run_import_periodically):
-                bpy.app.timers.unregister(run_import_periodically)
-                print('Disabling GOZ background listener')
-            run_background_update = False
+    
+    def invoke(self, context, event):        
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        if pref.import_method == 'AUTOMATIC':
+            global run_background_update
+            if run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
+            else:
+                if not bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.register(run_import_periodically, persistent=True)
+                    print('Enabling GOZ background listener')
+                run_background_update = True
+            return{'FINISHED'}
         else:
-            if not bpy.app.timers.is_registered(run_import_periodically):
-                bpy.app.timers.register(run_import_periodically, persistent=True)
-                print('Enabling GOZ background listener')
-            run_background_update = True
-        return{'FINISHED'}
+            if run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
+            return{'FINISHED'}
 
 
 def create_node_material(mat, pref):
@@ -483,12 +497,12 @@ class GoB_OT_export(bpy.types.Operator):
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()
-        if pref.modifiers == 'APPLY_EXPORT':
+        if pref.export_modifiers == 'APPLY_EXPORT':
             # me = object_eval.to_mesh() #with modifiers - crash need to_mesh_clear()?
             me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
             obj.data = me
             obj.modifiers.clear()
-        elif pref.modifiers == 'ONLY_EXPORT':
+        elif pref.export_modifiers == 'ONLY_EXPORT':
             me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
         else:
             me = obj.data
@@ -509,7 +523,7 @@ class GoB_OT_export(bpy.types.Operator):
     @staticmethod
     def make_polygroups(obj, pref, create=False):
 
-        if pref.polygroups == 'MATERIALS':
+        if pref.export_polygroups == 'MATERIALS':
             for index, slot in enumerate(obj.material_slots):
                 #select the verts from faces with material index
                 if not slot.material:
@@ -528,13 +542,15 @@ class GoB_OT_export(bpy.types.Operator):
                             obj.vertex_groups.remove(vg)
                         except:
                             pass
+        elif pref.export_polygroups == 'FACE_MAPS':
+            pass
+        
         else:
             pass
 
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-
 
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -660,8 +676,25 @@ class GoB_OT_export(bpy.types.Operator):
                         except:
                             goz_file.write(pack('<H', 255))
                     break
+
+
+
+
+
+
             # --Polygroups--
-            vertWeight = []
+            #TODO:  this polygroup implementation is based on vertex weights which works fine for
+            #       vertex wegihts, although overlapping weights will create corrupt polygroups
+            #           and there is a nasty workaround for PG from materials which is based on this weight basis
+            #       we now also have face maps which are a proper representation of polygroups and should be the basis
+            #           for PG transfer instead of the vertex weights
+            #       conclusion: rewrite polygroup export to properly support differtn types
+            #                   - FACEMAPS
+            #                   - MATERIALS
+            #                   - VERTEXGROUPS  (maybe this should be removed due to inacuracy)
+            #                   - LOOSE PARTS
+
+            vertWeight = []     
             for i in range(len(me.vertices)):
                 vertWeight.append([])
                 for group in me.vertices[i].groups:
@@ -700,6 +733,10 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<H', grName))
                 else:
                     goz_file.write(pack('<H', 0))
+
+
+
+
             # Diff, disp and nm maps
             diff = 0
             disp = 0
