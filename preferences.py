@@ -97,12 +97,12 @@ class GoBPreferences(AddonPreferences):
         subtype='FACTOR')
 
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
-        name="to Vertex Groups",
+        name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
         default=True)
 
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
-        name="to Face Maps",
+        name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
         default=True)
 
@@ -143,13 +143,14 @@ class GoBPreferences(AddonPreferences):
 
 
         # IMPORT
-        col = layout.column(heading="Diffuse", align=True)
+        col = layout.column(align=True)
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled, some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
         box.prop(self, 'import_material')              
-        col = box.column(heading="Polygroups", align=True)
+        
+        col = box.column(align=True)
         col.prop(self, 'import_polygroups_to_vertexgroups')
         #col.prop(self, 'import_polygroups_to_uvs')                #TODO
         col.prop(self, 'import_polygroups_to_facemaps')        
