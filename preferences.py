@@ -146,7 +146,7 @@ class GoBPreferences(AddonPreferences):
         col = layout.column(align=True)
         box = layout.box()
         box.label(text='Import', icon='IMPORT')
-        #box.prop(self, 'import_method')            #TODO: disabled, some bugs when switching
+        #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
         box.prop(self, 'import_material')              
         
