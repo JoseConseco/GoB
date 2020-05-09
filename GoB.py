@@ -373,7 +373,7 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.apply_facemaps_to_facesets:
                 current_mode = bpy.context.mode
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT') #hack
-                bpy.ops.sculpt.face_sets_init(bpy.context.copy(), mode='FACE_MAPS')
+                #bpy.ops.sculpt.face_sets_init(bpy.context.copy(), mode='FACE_MAPS')
                 if not pref.switch_to_sculpt_mode:
                     bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode) #hack
 
