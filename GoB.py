@@ -371,10 +371,19 @@ class GoB_OT_import(bpy.types.Operator):
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets:
                 current_mode = bpy.context.mode
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT') #hack
-                #bpy.ops.sculpt.face_sets_init(bpy.context.copy(), mode='FACE_MAPS')
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')
+                if bpy.app.version > (2, 82, 7): #FaceSets are not available in versions
+                    for window in bpy.context.window_manager.windows:
+                        screen = window.screen
+                        for area in screen.areas:
+                            if area.type == 'VIEW_3D':
+                                override = bpy.context.copy()
+                                override = {'window': window, 'screen': screen, 'area': area}
+                                bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
+                                break
+                                 
                 if not pref.switch_to_sculpt_mode:
-                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode) #hack
+                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
 
 
         # if diff:
