@@ -190,7 +190,7 @@ class GoB_OT_import(bpy.types.Operator):
                 instances = [ob for ob in bpy.data.objects if ob.data == obj.data]                
                 
                 ## keep users smoothing groups
-                # transfer old smoot face data new new mesh
+                # transfer old face smooth data to new mesh
                 bm = bmesh.new()
                 bm.from_mesh(me)
                 bm.faces.ensure_lookup_table()
@@ -315,13 +315,12 @@ class GoB_OT_import(bpy.types.Operator):
                             else:
                                 fm = obj.face_maps[str(group)]
                             fm.add([faceindex])     # add faces to facemap
-
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
-                    try: # TODO: whats this used for?
+                    try:
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
@@ -716,20 +715,22 @@ class GoB_OT_export(bpy.types.Operator):
                             vertWeight[i].append(group.group)
                     except:
                         print('error reading vertex group data')
+                        
             goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
             goz_file.write(pack('<I', nbFaces*2+16))
             goz_file.write(pack('<Q', nbFaces))
+
             import random
             numrand = random.randint(1, 40)
             for face in me.polygons:
-                gr = []
+                group = []
                 for vert in face.vertices:
-                    gr.extend(vertWeight[vert])
-                gr.sort()
-                gr.reverse()
+                    group.extend(vertWeight[vert])
+                group.sort()
+                group.reverse()
                 tmp = {}
                 groupVal = 0
-                for val in gr:
+                for val in group:
                     if val not in tmp:
                         tmp[val] = 1
                     else:
@@ -738,16 +739,15 @@ class GoB_OT_export(bpy.types.Operator):
                             groupVal = val
                             break
                 if obj.vertex_groups.items() != []:
-                    grName = obj.vertex_groups[groupVal].name
-                    if grName.lower() == 'mask':
+                    groupName = obj.vertex_groups[groupVal].name
+                    if groupName.lower() == 'mask':
                         goz_file.write(pack('<H', 0))
                     else:
-                        grName = obj.vertex_groups[groupVal].index * numrand
-                        goz_file.write(pack('<H', grName))
+                        groupName = obj.vertex_groups[groupVal].index * numrand
+                        goz_file.write(pack('<H', groupName))
                 else:
                     goz_file.write(pack('<H', 0))
-
-
+                    
 
 
             # Diff, disp and nm maps
@@ -824,7 +824,8 @@ class GoB_OT_export(bpy.types.Operator):
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
 
-        self.make_polygroups(obj, pref, False)
+        #destroy temp vertex groups used for polygroup transfer
+        #self.make_polygroups(obj, pref, False)
 
         bpy.data.meshes.remove(me)
         return
@@ -867,6 +868,3 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
-
-
-
