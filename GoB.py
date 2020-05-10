@@ -536,13 +536,10 @@ class GoB_OT_export(bpy.types.Operator):
         return export_mesh
 
     @staticmethod
-    def make_polygroups(obj, pref):
-        
+    def make_polygroups(obj, pref):        
         dg = bpy.context.evaluated_depsgraph_get()
-        obj = obj.copy()
         me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
         
-
         #mask
         if pref.export_mask == 'MASK':
             print("exporting mask")
@@ -556,7 +553,6 @@ class GoB_OT_export(bpy.types.Operator):
         else:        
             for vertexGroup in obj.vertex_groups:
                 obj.vertex_groups.remove(vertexGroup)
-        
             
         #face maps to polygroups       
         if pref.export_polygroups == 'FACE_MAPS':
@@ -571,14 +567,11 @@ class GoB_OT_export(bpy.types.Operator):
                                         if f.index==index
                                             for v in f.vertices]                                                                        
                 verts = list(set(verts)) 
-                if len(verts): 
-                    #print(verts)
+                if len(verts):
                     vg = obj.vertex_groups.get(facemap.name)                
                     if vg is None:               
                         vg = obj.vertex_groups.new(name=facemap.name) 
-                        vg.add(verts, 1.0, 'ADD')  
-                        #print("created vg:", vg)
-        
+                        vg.add(verts, 1.0, 'ADD')
 
         #materials to polygroups
         if pref.export_polygroups == 'MATERIALS':
@@ -593,8 +586,6 @@ class GoB_OT_export(bpy.types.Operator):
                     if vg is None:
                         vg = obj.vertex_groups.new(name=slot.material.name)
                         vg.add(verts, 1.0, 'ADD')
-        
-        return obj
 
 
     def exportGoZ(self, path, scn, obj, pathImport):
@@ -614,8 +605,8 @@ class GoB_OT_export(bpy.types.Operator):
                 bpy.context.view_layer.objects.active = new_ob
 
 
-        obj_temp = self.make_polygroups(obj, pref)                
-        me = self.apply_modifiers(obj_temp, pref)
+        self.make_polygroups(obj, pref)                
+        me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
         if pref.flip_up_axis:
@@ -845,8 +836,7 @@ class GoB_OT_export(bpy.types.Operator):
             # fin
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
-
-        bpy.data.objects.remove(obj_temp)
+        
         bpy.data.meshes.remove(me)
         return
 
