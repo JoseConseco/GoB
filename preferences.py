@@ -168,7 +168,7 @@ class GoBPreferences(AddonPreferences):
         #col.prop(self, 'import_polygroups_to_uvs')                #TODO
         col.prop(self, 'import_polygroups_to_facemaps')           
         if self.import_polygroups_to_facemaps:
-            col.prop(self, 'apply_facemaps_to_facesets')   # TODO: 20200502 operator not working https://developer.blender.org/T76324
+            col.prop(self, 'apply_facemaps_to_facesets')
             col.prop(self, 'switch_to_sculpt_mode')
 
 
