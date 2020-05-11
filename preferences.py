@@ -38,6 +38,11 @@ class GoBPreferences(AddonPreferences):
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
         default=False)
+        
+    performance_profiling: bpy.props.BoolProperty(
+        name="Performance Profiling",
+        description="This is used for development to identiyfy slow code, note this will slow down your transfer if enabled!",
+        default=True)
 
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
@@ -141,7 +146,9 @@ class GoBPreferences(AddonPreferences):
 
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')      
+        layout.prop(self, 'show_button_text')  
+        
+        layout.prop(self, 'performance_profiling')      
            
 
         #EXPORT

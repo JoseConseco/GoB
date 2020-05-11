@@ -66,16 +66,20 @@ def draw_goz_buttons(self, context):
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 
+start_time = None
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
     bl_description = "GOZ import background listener"
     
     
-    def GoZit(self, pathFile):        
-        start_time = time.time()
-        scn = bpy.context.scene
+    def GoZit(self, pathFile):     
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        
+        if pref.performance_profiling:   
+            start_time = time.time()
+
+        scn = bpy.context.scene
         diff = False
         disp = False
         nmp = False
@@ -186,8 +190,10 @@ class GoB_OT_import(bpy.types.Operator):
             me.update(calc_edges=True, calc_edges_loose=True)
 
 
-            end_time = time.time()
-            print("TIME file read: {}".format(end_time-start_time))  
+            if pref.performance_profiling:  
+                end_time = time.time()
+                print("TIME file read: {:.4f}".format(end_time-start_time))  
+                start_time = time.time()
 
 
             # if obj already exist do code below
@@ -232,8 +238,11 @@ class GoB_OT_import(bpy.types.Operator):
                 # if pref.import_material == 'POLYPAINT':
                 #     create_node_material(objMat, pref)
 
-                end_time = time.time()
-                print("TIME udpate object: {}".format(end_time-start_time))
+                
+                if pref.performance_profiling: 
+                    end_time = time.time()
+                    print("TIME udpate object: {:.4f}".format(end_time-start_time))
+                    start_time = time.time()
 
             # create new object
             else:
@@ -244,14 +253,19 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.data.materials.append(objMat)
                 obj.select_set(True)
                 
-                end_time = time.time()
-                print("TIME new object: {}".format(end_time-start_time))  
+                if pref.performance_profiling: 
+                    end_time = time.time()
+                    print("TIME new object: {:.4f}".format(end_time-start_time))  
+                    start_time = time.time()
 
             if pref.import_material == 'POLYPAINT':
                 create_node_material(objMat, pref)
                 
-                end_time = time.time()
-                print("TIME material node: {}".format(end_time-start_time))  
+                
+                if pref.performance_profiling: 
+                    end_time = time.time()
+                    print("TIME material node: {:.4f}".format(end_time-start_time))  
+                    start_time = time.time()
 
             # make object active
             bpy.context.view_layer.objects.active = obj
@@ -271,8 +285,11 @@ class GoB_OT_import(bpy.types.Operator):
                         if i < 3:  # cos uv always have 4 coords... ??
                             x, y = unpack('<2f', goz_file.read(8))
                 
-                    end_time = time.time()
-                    print("TIME UV: {}".format(end_time-start_time))  
+                    
+                    if pref.performance_profiling: 
+                        end_time = time.time()
+                        print("TIME UV: {:.4f}".format(end_time-start_time))  
+                        start_time = time.time()
 
                 elif tag == b'\xb9\x88\x00\x00':  # Polypainting
                     min = 255
@@ -286,20 +303,30 @@ class GoB_OT_import(bpy.types.Operator):
                         polypaint.append(data)
                     if min < 250:
                         vertexColor = me.vertex_colors.new()
-                        iv = 0
+                        iv = 0                        
+                        
+                        if pref.performance_profiling: 
+                            end_time = time.time()
+                            print("TIME polypaint 1: {:.4f}".format(end_time-start_time)) 
+                            start_time = time.time()
+
                         for poly in me.polygons:
                             for loop_index in poly.loop_indices:
                                 loop = me.loops[loop_index]
                                 v = loop.vertex_index
                                 color = polypaint[v]
+                                                                
                                 if bpy.app.version > (2, 79, 0):
                                     vertexColor.data[iv].color = [color[2]/255, color[1]/255, color[0]/255, 1]
                                 else:
                                     vertexColor.data[iv].color = [color[2]/255, color[1]/255, color[0]/255]
                                 iv += 1
+                        
                     del polypaint
-                    end_time = time.time()
-                    print("TIME polypaint: {}".format(end_time-start_time)) 
+                    if pref.performance_profiling: 
+                        end_time = time.time()
+                        print("TIME polypaint 2: {:.4f}".format(end_time-start_time)) 
+                        start_time = time.time()
 
                 elif tag == b'\x32\x75\x00\x00':  # Mask
                     goz_file.seek(4, 1)
@@ -309,10 +336,12 @@ class GoB_OT_import(bpy.types.Operator):
                     groupMask = obj.vertex_groups.new(name='mask')
                     for i in range(cnt):
                         data = unpack('<H', goz_file.read(2))[0] / 65535.
-                        groupMask.add([i], 1.-data, 'ADD')
+                        groupMask.add([i], 1.-data, 'ADD')                    
                     
-                    end_time = time.time()
-                    print("TIME Mask: {}".format(end_time-start_time)) 
+                    if pref.performance_profiling: 
+                        end_time = time.time()
+                        print("TIME Mask: {:.4f}".format(end_time-start_time)) 
+                        start_time = time.time()
 
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
@@ -349,8 +378,11 @@ class GoB_OT_import(bpy.types.Operator):
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
-                    end_time = time.time()
-                    print("TIME Polyroups: {}".format(end_time-start_time)) 
+                    
+                    if pref.performance_profiling: 
+                        end_time = time.time()
+                        print("TIME Polyroups: {:.4f}".format(end_time-start_time)) 
+                        start_time = time.time()
 
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
@@ -392,10 +424,12 @@ class GoB_OT_import(bpy.types.Operator):
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
-                tag = goz_file.read(4)
+                tag = goz_file.read(4)                
                 
+            if pref.performance_profiling: 
                 end_time = time.time()
-                print("Time Textures: {}".format(end_time-start_time)) 
+                print("Time Textures: {:.4f}".format(end_time-start_time)) 
+                start_time = time.time()
 
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
@@ -414,8 +448,11 @@ class GoB_OT_import(bpy.types.Operator):
                 if not pref.switch_to_sculpt_mode:
                     bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
 
-                end_time = time.time()
-                print("TIME face maps: {}".format(end_time-start_time)) 
+                
+                if pref.performance_profiling: 
+                    end_time = time.time()
+                    print("TIME face maps: {:.4f}".format(end_time-start_time)) 
+                    start_time = time.time()
 
         # if diff:
         #     mtex = objMat.texture_slots.add()
