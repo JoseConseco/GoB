@@ -795,7 +795,7 @@ class GoB_OT_export(bpy.types.Operator):
                 for group in me.vertices[i].groups:
                     try:
                         if group.weight == 1. and obj.vertex_groups[group.group].name.lower() != 'mask':
-                            vertWeight[i].append(group.group)
+                            vertWeight[i].append(group.weight)
                     except:
                         print('error reading vertex group data')
                         
