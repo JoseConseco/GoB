@@ -48,3 +48,4 @@ Temporary Items
 *.pyc
 .idea/
 .vscode/
+__pycache__
