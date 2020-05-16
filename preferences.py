@@ -52,11 +52,12 @@ class GoBPreferences(AddonPreferences):
     export_polygroups: bpy.props.EnumProperty(
         name="Polygroups",
         description="Polygroups mode",
-        items=[('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-                ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'),    #TODO
+        items=[ ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
+                ('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
+                ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')
+        default='FACE_MAPS')
     # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
 
 
@@ -68,7 +69,12 @@ class GoBPreferences(AddonPreferences):
         soft_max=2,
         step=0.1,
         precision=2,
-        subtype='FACTOR')
+        subtype='FACTOR')    
+    
+    export_mask: bpy.props.BoolProperty(
+        name="Mask",
+        description="Export Maks",
+        default=True)
 
 
     # IMPORT
@@ -112,7 +118,7 @@ class GoBPreferences(AddonPreferences):
         default=True)
 
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
-        name="** apply_facemaps_to_facesets",
+        name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
         default=True)
 
@@ -120,6 +126,11 @@ class GoBPreferences(AddonPreferences):
         name="Sculpt Mode after import", 
         description="Go to Sculpt Mode after Face Maps import",
         default=False)
+        
+    import_mask: bpy.props.BoolProperty(
+        name="Mask",
+        description="Import Maks",
+        default=True)
 
     
   
@@ -136,10 +147,11 @@ class GoBPreferences(AddonPreferences):
         #EXPORT
         col = layout.column()
         box = layout.box()
-        box.label(text='Export', icon='EXPORT')
+        box.label(text='Export', icon='EXPORT')  
+        #box.prop(self, 'export_mask')     
         #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
-        box.prop(self, 'export_polygroups')
+        box.prop(self, 'export_polygroups')      
 
 
         # IMPORT
@@ -151,11 +163,12 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'import_material')              
         
         col = box.column(align=True)
+        #col.prop(self, 'import_mask')   
         col.prop(self, 'import_polygroups_to_vertexgroups')
         #col.prop(self, 'import_polygroups_to_uvs')                #TODO
-        col.prop(self, 'import_polygroups_to_facemaps')        
+        col.prop(self, 'import_polygroups_to_facemaps')           
         if self.import_polygroups_to_facemaps:
-            #col.prop(self, 'apply_facemaps_to_facesets')   # TODO: 20200502 operator not working https://developer.blender.org/T76324
+            col.prop(self, 'apply_facemaps_to_facesets')
             col.prop(self, 'switch_to_sculpt_mode')
 
 

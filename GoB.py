@@ -369,18 +369,18 @@ class GoB_OT_import(bpy.types.Operator):
 
 
             # #apply face maps to sculpt mode face sets
-            if pref.apply_facemaps_to_facesets:
+            if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
                 current_mode = bpy.context.mode
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')
-                if bpy.app.version > (2, 82, 7): #FaceSets are not available in versions
-                    for window in bpy.context.window_manager.windows:
-                        screen = window.screen
-                        for area in screen.areas:
-                            if area.type == 'VIEW_3D':
-                                override = bpy.context.copy()
-                                override = {'window': window, 'screen': screen, 'area': area}
-                                bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
-                                break
+                
+                for window in bpy.context.window_manager.windows:
+                    screen = window.screen
+                    for area in screen.areas:
+                        if area.type == 'VIEW_3D':
+                            override = bpy.context.copy()
+                            override = {'window': window, 'screen': screen, 'area': area}
+                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
+                            break
                                  
                 if not pref.switch_to_sculpt_mode:
                     bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
@@ -516,8 +516,7 @@ class GoB_OT_export(bpy.types.Operator):
         else:
             me = obj.data
 
-        #DO the triangulation of Ngons only, but do not write it to original object. User has to handle Ngons manaully if they want.
-        
+        #DO the triangulation of Ngons only, but do not write it to original object.    
         bm = bmesh.new()
         bm.from_mesh(me)
         #join traingles only that are result of ngon triangulation        
@@ -525,15 +524,10 @@ class GoB_OT_export(bpy.types.Operator):
             if len(f.edges) > 4:
                 print("test")   
                 result = bmesh.ops.triangulate(bm, faces=[f])
-                bmesh.ops.join_triangles(bm, 
-                                faces= result['faces'], 
-                                cmp_seam=False, 
-                                cmp_sharp=False, 
-                                cmp_uvs=False, 
-                                cmp_vcols=False, 
-                                cmp_materials=False, 
-                                angle_face_threshold=(math.pi), 
-                                angle_shape_threshold=(math.pi))
+                bmesh.ops.join_triangles(bm, faces= result['faces'], 
+                                        cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
+                                        cmp_vcols=False,cmp_materials=False, 
+                                        angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
         
         export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop anyway
         bm.to_mesh(export_mesh)
@@ -542,37 +536,62 @@ class GoB_OT_export(bpy.types.Operator):
         return export_mesh
 
     @staticmethod
-    def make_polygroups(obj, pref, create=False):
+    def make_polygroups(obj, pref):        
+        dg = bpy.context.evaluated_depsgraph_get()
+        me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
+        
+        #mask
+        if pref.export_mask == 'MASK':
+            print("exporting mask")
 
+        if pref.export_polygroups == 'NONE':
+            pass
+
+        #vertex weights to polygroups
+        if pref.export_polygroups == 'VERTEX_GROUPS':
+            print("exporting vertex groups to polypaint")
+        else:        
+            for vertexGroup in obj.vertex_groups:
+                obj.vertex_groups.remove(vertexGroup)
+            
+        #face maps to polygroups       
+        if pref.export_polygroups == 'FACE_MAPS':
+            print("exporting face maps to polypaint")
+            for facemap in obj.face_maps:
+                #print("map name and index: ", facemap.name, facemap.index)
+                if not facemap:
+                    continue            
+                verts = [v for index, map in enumerate(obj.data.face_maps[0].data)
+                                if map.value == facemap.index  
+                                    for f in obj.data.polygons 
+                                        if f.index==index
+                                            for v in f.vertices]                                                                        
+                verts = list(set(verts)) 
+                if len(verts):
+                    vg = obj.vertex_groups.get(facemap.name)                
+                    if vg is None:               
+                        vg = obj.vertex_groups.new(name=facemap.name) 
+                        vg.add(verts, 1.0, 'ADD')
+
+        #materials to polygroups
         if pref.export_polygroups == 'MATERIALS':
+            print("exporting materials to polypaint")
             for index, slot in enumerate(obj.material_slots):
-                #select the verts from faces with material index
                 if not slot.material:
-                    # empty slot
                     continue
                 verts = [v for f in obj.data.polygons
                          if f.material_index == index for v in f.vertices]
                 if len(verts):
                     vg = obj.vertex_groups.get(slot.material.name)
-                    if create == True:
-                        if vg is None:
-                            vg = obj.vertex_groups.new(name=slot.material.name)
-                            vg.add(verts, 1.0, 'ADD')
-                    else:
-                        try:
-                            obj.vertex_groups.remove(vg)
-                        except:
-                            pass
-        elif pref.export_polygroups == 'FACE_MAPS':
-            pass
-        
-        else:
-            pass
+                    if vg is None:
+                        vg = obj.vertex_groups.new(name=slot.material.name)
+                        vg.add(verts, 1.0, 'ADD')
 
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
 
+        
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
         #  of the linked object is created to goz it
@@ -585,8 +604,8 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
-        #create polygroups from object features (materials, uvs, ...)
-        self.make_polygroups(obj, pref, True)
+
+        self.make_polygroups(obj, pref)                
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
 
@@ -685,6 +704,7 @@ class GoB_OT_export(bpy.types.Operator):
                     goz_file.write(pack('<B', vcolArray[i]))
                     goz_file.write(pack('<B', 0))
                 del vcolArray
+
             # --Mask--
             for vertexGroup in obj.vertex_groups:
                 if vertexGroup.name.lower() == 'mask':
@@ -698,23 +718,7 @@ class GoB_OT_export(bpy.types.Operator):
                             goz_file.write(pack('<H', 255))
                     break
 
-
-
-
-
-
             # --Polygroups--
-            #TODO:  this polygroup implementation is based on vertex weights which works fine for
-            #       vertex wegihts, although overlapping weights will create corrupt polygroups
-            #           and there is a nasty workaround for PG from materials which is based on this weight basis
-            #       we now also have face maps which are a proper representation of polygroups and should be the basis
-            #           for PG transfer instead of the vertex weights
-            #       conclusion: rewrite polygroup export to properly support differtn types
-            #                   - FACEMAPS
-            #                   - MATERIALS
-            #                   - VERTEXGROUPS  (maybe this should be removed due to inacuracy)
-            #                   - LOOSE PARTS
-
             vertWeight = []     
             for i in range(len(me.vertices)):
                 vertWeight.append([])
@@ -832,10 +836,7 @@ class GoB_OT_export(bpy.types.Operator):
             # fin
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
-
-        #destroy temp vertex groups used for polygroup transfer
-        #self.make_polygroups(obj, pref, False)
-
+        
         bpy.data.meshes.remove(me)
         return
 
@@ -877,3 +878,7 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
+
+
+
+
