@@ -86,12 +86,12 @@ class GoBPreferences(AddonPreferences):
     import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
-            items=[#('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),        #TODO
-                   #('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
+            items=[('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),        #TODO
+                   ('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
-                   ('IGNORE', 'None', 'No additional material inputs are created'),
+                   ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='IGNORE')
+            default='POLYPAINT')
             
     import_method: bpy.props.EnumProperty(
             name="Import Button Method",
@@ -110,22 +110,22 @@ class GoBPreferences(AddonPreferences):
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
-        default=True)
+        default=False)
 
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
-        default=True)
+        default=False)
 
     import_polygroups_to_uvs: bpy.props.BoolProperty(
         name="** to UV Maps",
         description="Import Polygroups as UV Maps",
-        default=True)
+        default=False)
 
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
-        default=True)
+        default=False)
 
     switch_to_sculpt_mode: bpy.props.BoolProperty(
         name="Sculpt Mode after import", 
@@ -170,7 +170,7 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'import_material')              
         
         col = box.column(align=True)
-        #col.prop(self, 'import_mask')   
+        col.prop(self, 'import_mask')   
         col.prop(self, 'import_polygroups_to_vertexgroups')
         #col.prop(self, 'import_polygroups_to_uvs')                #TODO
         col.prop(self, 'import_polygroups_to_facemaps')           
