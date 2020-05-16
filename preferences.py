@@ -37,11 +37,10 @@ class GoBPreferences(AddonPreferences):
     show_button_text: bpy.props.BoolProperty(
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
-        default=False)
-        
+        default=False)        
     performance_profiling: bpy.props.BoolProperty(
-        name="Performance Profiling",
-        description="This is used for development to identiyfy slow code, note this will slow down your transfer if enabled!",
+        name="[Debug] Process durations",
+        description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
         default=True)
 
     # EXPORT
@@ -115,17 +114,12 @@ class GoBPreferences(AddonPreferences):
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
-        default=False)
-
-    import_polygroups_to_uvs: bpy.props.BoolProperty(
-        name="** to UV Maps",
-        description="Import Polygroups as UV Maps",
-        default=False)
+        default=True)
 
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
-        default=False)
+        default=True)
 
     switch_to_sculpt_mode: bpy.props.BoolProperty(
         name="Sculpt Mode after import", 
@@ -133,10 +127,14 @@ class GoBPreferences(AddonPreferences):
         default=False)
         
     import_mask: bpy.props.BoolProperty(
-        name="Mask",
-        description="Import Maks",
+        name="Mask to Vertex Group",
+        description="Import Mask to Vertex Group",
         default=True)
 
+    import_uv: bpy.props.BoolProperty(
+        name="UV Map",
+        description="Import Uv Map from Zbrush",
+        default=True)
     
   
     def draw(self, context):
@@ -155,10 +153,10 @@ class GoBPreferences(AddonPreferences):
         col = layout.column()
         box = layout.box()
         box.label(text='Export', icon='EXPORT')  
-        #box.prop(self, 'export_mask')     
         #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
-        box.prop(self, 'export_polygroups')      
+        box.prop(self, 'export_polygroups')    
+        #box.prop(self, 'export_mask')       #TODO: not yet supported by blender (16.5.2020)
 
 
         # IMPORT
@@ -170,12 +168,12 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'import_material')              
         
         col = box.column(align=True)
-        col.prop(self, 'import_mask')   
+        col.prop(self, 'import_mask')
+        col.prop(self, 'import_uv')
         col.prop(self, 'import_polygroups_to_vertexgroups')
-        #col.prop(self, 'import_polygroups_to_uvs')                #TODO
-        col.prop(self, 'import_polygroups_to_facemaps')           
+        col.prop(self, 'import_polygroups_to_facemaps')
         
-        if self.import_polygroups_to_facemaps:
+        if self.import_polygroups_to_facemaps:            
             col.prop(self, 'apply_facemaps_to_facesets')
             col.prop(self, 'switch_to_sculpt_mode')
         else:

@@ -65,7 +65,6 @@ def draw_goz_buttons(self, context):
             else:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
-
 start_time = None
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
@@ -76,14 +75,14 @@ class GoB_OT_import(bpy.types.Operator):
     def GoZit(self, pathFile):     
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
         
-        if pref.performance_profiling:   
-            start_time = time.time()
+        if pref.performance_profiling: 
+            start_time = profiler(time.time(), "Start Profiling")
+            start_total_time = profiler(time.time(), "")
 
         scn = bpy.context.scene
         utag = 0
         vertsData = []
         facesData = []
-        polypaintData = []
         objMat = None
         diff = False
         disp = False
@@ -152,10 +151,7 @@ class GoB_OT_import(bpy.types.Operator):
                 tag = goz_file.read(4)
             
             if pref.performance_profiling:  
-                end_time = time.time()
-                print("TIME file read: {:.4f}".format(end_time-start_time))  
-                start_time = time.time()
-
+                start_time = profiler(start_time, "Unpack Mesh Data")
 
             # if obj already exist do code below
             if objName in bpy.data.objects.keys():                  
@@ -163,7 +159,6 @@ class GoB_OT_import(bpy.types.Operator):
                 instances = [ob for ob in bpy.data.objects if ob.data == obj.data] 
 
                 for instance in instances:
-                    print("instance: ", instance.name)
                     me = instance.data
                     bm = bmesh.new()
                     bm.from_mesh(me)
@@ -180,9 +175,7 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.select_set(True)
                                
                 if pref.performance_profiling: 
-                    end_time = time.time()
-                    print("TIME udpate object: {:.4f}".format(end_time-start_time))
-                    start_time = time.time()
+                    start_time = profiler(start_time, "Udpate Object")
 
             
             # create new object
@@ -196,22 +189,15 @@ class GoB_OT_import(bpy.types.Operator):
                 obj.select_set(True)
                 
                 if pref.performance_profiling: 
-                    end_time = time.time()
-                    print("TIME new object: {:.4f}".format(end_time-start_time))  
-                    start_time = time.time()
-               
-            me = apply_transformation(me, is_import=True)  
+                    start_time = profiler(start_time, "Create New Object")
+            
+            me,_ = apply_transformation(me, is_import=True)  
             del vertsData
             del facesData
 
-            """ for old_mat in me.materials:
-                me.materials.append(old_mat) """
-
             if not pref.import_material == 'NONE':
-                print("import material: ", pref.import_material)
-
                 if len(obj.material_slots) > 0:
-                    print("material slot: ", obj.material_slots[0])
+                    #print("material slot: ", obj.material_slots[0])
                     if obj.material_slots[0].material is not None:
                         objMat = obj.material_slots[0].material
                     else:
@@ -231,37 +217,46 @@ class GoB_OT_import(bpy.types.Operator):
                     create_node_material(objMat, pref)  
             else:
                 print("material import disabled") 
-                
-            if pref.performance_profiling: 
-                end_time = time.time()
-                print("TIME material node: {:.4f}".format(end_time-start_time))  
-                start_time = time.time()
-
+            
             # make object active
             bpy.context.view_layer.objects.active = obj
             utag = 0         
-
+          
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Material Node")
 
             while tag:
-                if tag == b'\xa9\x61\x00\x00':  # UVs
-                    me.uv_layers.new()
+                if tag == b'\xa9\x61\x00\x00' and pref.import_uv:  # UVs
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count..
-                    uv_layer = me.uv_layers[0]
-                    for tri in me.polygons:
-                        for i, loop_index in enumerate(tri.loop_indices):
-                            x, y = unpack('<2f', goz_file.read(8))
-                            uv_layer.data[loop_index].uv = x, 1. - y
-                        if i < 3:  # cos uv always have 4 coords... ??
-                            x, y = unpack('<2f', goz_file.read(8))
-                
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count.. 
+                       
+                    bm = bmesh.new()
+                    bm.from_mesh(me)
+                    bm.faces.ensure_lookup_table()
+                    uvmap = "UVMap"
+                    if me.uv_layers:
+                        if uvmap in me.uv_layers:                            
+                            uv_layer = bm.loops.layers.uv.get(uvmap)
+                        else:
+                            uv_layer = bm.loops.layers.uv.new(uvmap)
+                    else:
+                        uv_layer = bm.loops.layers.uv.new(uvmap) 
+                    uv_layer = bm.loops.layers.uv.verify()
+
+                    for face in bm.faces:
+                        for i, loop in enumerate(face.loops):
+                            x,y = unpack('<2f', goz_file.read(8)) 
+                            loop[uv_layer].uv = x, 1.0-y
+
+                    bm.to_mesh(me)                        
+                    me.update(calc_edges=True, calc_edges_loose=True)  
+                    bm.free()  
                     
                     if pref.performance_profiling: 
-                        end_time = time.time()
-                        print("TIME UV: {:.4f}".format(end_time-start_time))  
-                        start_time = time.time()
+                        start_time = profiler(start_time, "UV Map")
 
                 elif tag == b'\xb9\x88\x00\x00':  # Polypainting
+                    polypaintData = []
                     min = 255
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]                   
@@ -272,37 +267,29 @@ class GoB_OT_import(bpy.types.Operator):
                         if data[0] < min:
                             min = data[0]     
                         alpha = 1
+                        
+                        #print(mathutils.Color(data))
+                        
                         rgb = [x / 255.0 for x in data]    
                         rgb.reverse()                    
-                        rgba = rgb + [alpha] 
-                        #print("rgb: ", data, tuple(rgba))
-                                         
+                        rgba = rgb + [alpha]                                          
                         polypaintData.append(tuple(rgba))
                     
                     if pref.performance_profiling: 
-                        end_time = time.time()
-                        print("TIME polypaint unpack: {:.4f}".format(end_time-start_time)) 
-                        start_time = time.time()
-
+                        start_time = profiler(start_time, "Polypaint Unpack")
 
                     if min < 250:                       
                         bm = bmesh.new()
                         bm.from_mesh(me)
                         bm.faces.ensure_lookup_table()
                         vclayer = "zbrush"
-                        if me.vertex_colors:
-                            print("found VC layers: ", me.name, me.vertex_colors[:])
-                            for vc in me.vertex_colors:
-                                if not vc.name == vclayer:    
-                                    color_layer = bm.loops.layers.color.new(vclayer)
-                                    print("creating new vc: ", color_layer)
-                                else:
-                                    color_layer = bm.loops.layers.color.get(vclayer)
-                                    print("modifying VC: ", color_layer)
-                                    break
+                        if me.vertex_colors:                            
+                            if vclayer in me.vertex_colors: 
+                                color_layer = bm.loops.layers.color.get(vclayer)
+                            else:
+                                color_layer = bm.loops.layers.color.new(vclayer)                                    
                         else:
-                            color_layer = bm.loops.layers.color.new(vclayer)
-                            print("no VC layer, creating new layer: ", color_layer)                    
+                            color_layer = bm.loops.layers.color.new(vclayer)                
                         
                         for face in bm.faces:
                             for loop in face.loops:
@@ -314,9 +301,7 @@ class GoB_OT_import(bpy.types.Operator):
                     del polypaintData
 
                     if pref.performance_profiling: 
-                        end_time = time.time()
-                        print("TIME polypaint assign: {:.4f}".format(end_time-start_time)) 
-                        start_time = time.time()
+                        start_time = profiler(start_time, "Polypaint Assign")
 
 
                 elif tag == b'\x32\x75\x00\x00':  # Mask
@@ -333,17 +318,17 @@ class GoB_OT_import(bpy.types.Operator):
                             groupMask.add([i], 1.-data, 'ADD')       
                         
                         if pref.performance_profiling: 
-                            end_time = time.time()
-                            print("TIME Mask: {:.4f}".format(end_time-start_time)) 
-                            start_time = time.time()
+                            start_time = profiler(start_time, "Mask")
 
                 elif tag == b'\x41\x9c\x00\x00':  # Polyroups
                     groups = []
                     facemaps = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
+
                     for faceindex in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
+
                         if pref.import_polygroups_to_vertexgroups:
                             if group not in groups:
                                 if str(group) in obj.vertex_groups:
@@ -374,9 +359,7 @@ class GoB_OT_import(bpy.types.Operator):
                         pass
                     
                     if pref.performance_profiling: 
-                        end_time = time.time()
-                        print("TIME Polyroups: {:.4f}".format(end_time-start_time)) 
-                        start_time = time.time()
+                        start_time = profiler(start_time, "Polyroups")
 
                 elif tag == b'\x00\x00\x00\x00':
                     break  # End
@@ -420,10 +403,8 @@ class GoB_OT_import(bpy.types.Operator):
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)                
                 
-            if pref.performance_profiling: 
-                end_time = time.time()
-                print("Time Textures: {:.4f}".format(end_time-start_time)) 
-                start_time = time.time()
+            if pref.performance_profiling:                
+                start_time = profiler(start_time, "Textures")
 
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
@@ -442,11 +423,9 @@ class GoB_OT_import(bpy.types.Operator):
                 if not pref.switch_to_sculpt_mode:
                     bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
 
-                
                 if pref.performance_profiling: 
-                    end_time = time.time()
-                    print("TIME face maps: {:.4f}".format(end_time-start_time)) 
-                    start_time = time.time()
+                    profiler(start_time, "Face Maps")
+                    profiler(start_total_time, "Total Import")
 
         # if diff:
         #     mtex = objMat.texture_slots.add()
@@ -528,15 +507,16 @@ def create_node_material(mat, pref):
     if not vcol_node:
         vcol_node = nodes.new('ShaderNodeAttribute')
         vcol_node.location = -300, 200
-        vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
+        vcol_node.attribute_name = 'zbrush'  # TODO: replace with vertex color group name
 
         # link nodes
         mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
-
+           
 def apply_transformation(me, is_import=True): 
     pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    mat_transform = None
 
-     # TODO: do we add scaling here?
+    # TODO: do we add scaling here?
     
     #import
     if pref.flip_up_axis:  # fixes bad mesh orientation for some people
@@ -603,9 +583,14 @@ def apply_transformation(me, is_import=True):
                     (0., 0., -1., 0.),
                     (0., 1., 0., 0.),
                     (0., 0., 0., 1.)])
-    return me
+    return me, mat_transform
                 
-   
+def profiler(start_time=0, string=None):               
+    
+    elapsed = time.time()
+    print("TIME> ", string, "> ", "{:.4f}".format(elapsed-start_time))  
+    start_time = time.time()
+    return start_time  
 
 def run_import_periodically():
     # print("Runing timers update check")
@@ -745,7 +730,7 @@ class GoB_OT_export(bpy.types.Operator):
         self.make_polygroups(obj, pref)                
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
-        me = apply_transformation(me, is_import=False)
+        me, mat_transform = apply_transformation(me, is_import=False)
 
         with open(pathImport+'/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
