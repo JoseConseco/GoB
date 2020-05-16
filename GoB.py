@@ -76,7 +76,8 @@ class GoB_OT_import(bpy.types.Operator):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
         
         if pref.performance_profiling: 
-            start_time = profiler(time.time(), "Start Profiling")
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "Start Import Profiling")
             start_total_time = profiler(time.time(), "")
 
         scn = bpy.context.scene
@@ -327,6 +328,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
 
                     for faceindex in range(cnt):    # faces of each polygroup
+                        #print("faceindex: ", faceindex)
                         group = unpack('<H', goz_file.read(2))[0]
 
                         if pref.import_polygroups_to_vertexgroups:
@@ -644,7 +646,6 @@ class GoB_OT_export(bpy.types.Operator):
         #join traingles only that are result of ngon triangulation        
         for f in bm.faces:
             if len(f.edges) > 4:
-                print("test")   
                 result = bmesh.ops.triangulate(bm, faces=[f])
                 bmesh.ops.join_triangles(bm, faces= result['faces'], 
                                         cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
@@ -713,6 +714,10 @@ class GoB_OT_export(bpy.types.Operator):
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
 
+        if pref.performance_profiling: 
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "Start Export Profiling")
+            start_total_time = profiler(time.time(), "")
         
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -726,11 +731,17 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Linked Object")
 
         self.make_polygroups(obj, pref)                
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
         me, mat_transform = apply_transformation(me, is_import=False)
+
+        if pref.performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh")
+
 
         with open(pathImport+'/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
@@ -766,6 +777,10 @@ class GoB_OT_export(bpy.types.Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
+                                
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Mesh Data")
+
             # --UVs--
             if me.uv_layers.active:
                 uv_layer = me.uv_layers[0]
@@ -778,6 +793,9 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
                     if i == 2:
                         goz_file.write(pack('<2f', 0., 1.))
+                        
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write UV")
 
 
             # --Polypainting--
@@ -800,6 +818,9 @@ class GoB_OT_export(bpy.types.Operator):
                     goz_file.write(pack('<B', vcolArray[i]))
                     goz_file.write(pack('<B', 0))
                 del vcolArray
+            
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Polypaint")
 
             # --Mask--
             for vertexGroup in obj.vertex_groups:
@@ -813,6 +834,9 @@ class GoB_OT_export(bpy.types.Operator):
                         except:
                             goz_file.write(pack('<H', 255))
                     break
+            
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Mask")
 
             # --Polygroups--
             vertWeight = []     
@@ -838,14 +862,14 @@ class GoB_OT_export(bpy.types.Operator):
                 group.sort()
                 group.reverse()
                 tmp = {}
-                groupVal = 0
+                groupVal = int(0)
                 for val in group:
                     if val not in tmp:
                         tmp[val] = 1
                     else:
                         tmp[val] += 1
                         if tmp[val] == len(face.vertices):
-                            groupVal = val
+                            groupVal = int(val)
                             break
                 if obj.vertex_groups.items() != []:
                     groupName = obj.vertex_groups[groupVal].name
@@ -857,6 +881,8 @@ class GoB_OT_export(bpy.types.Operator):
                 else:
                     goz_file.write(pack('<H', 0))
                     
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Polygroups")
 
 
             # Diff, disp and nm maps
@@ -929,10 +955,14 @@ class GoB_OT_export(bpy.types.Operator):
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
-            # fin
+            # end
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
-        
+            
+            if pref.performance_profiling: 
+                profiler(start_time, "Write Textures")
+                profiler(start_total_time, "Total Export")
+
         bpy.data.meshes.remove(me)
         return
 
