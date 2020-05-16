@@ -174,8 +174,12 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polygroups_to_vertexgroups')
         #col.prop(self, 'import_polygroups_to_uvs')                #TODO
         col.prop(self, 'import_polygroups_to_facemaps')           
+        
         if self.import_polygroups_to_facemaps:
             col.prop(self, 'apply_facemaps_to_facesets')
             col.prop(self, 'switch_to_sculpt_mode')
+        else:
+            self.apply_facemaps_to_facesets = False
+            self.switch_to_sculpt_mode = False
 
 
