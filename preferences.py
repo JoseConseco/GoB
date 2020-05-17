@@ -109,7 +109,7 @@ class GoBPreferences(AddonPreferences):
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
-        default=False)
+        default=True)
 
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
