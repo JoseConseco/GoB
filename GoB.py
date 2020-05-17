@@ -101,7 +101,7 @@ class GoB_OT_import(bpy.types.Operator):
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             print(f"Importing: {pathFile, objName}")            
-            me = bpy.data.meshes.new(objName)  #create empty mesh
+            #me = bpy.data.meshes.new(objName)  #create empty mesh
             tag = goz_file.read(4)
             while tag:
                 #print('tags: ', tag)
@@ -155,10 +155,11 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Unpack Mesh Data")
 
             # if obj already exist do code below
-            if objName in bpy.data.objects.keys():                  
+            if objName in bpy.data.objects.keys(): 
+                
                 obj = bpy.data.objects[objName]
-                instances = [ob for ob in bpy.data.objects if ob.data == obj.data] 
-
+                instances = [ob for ob in bpy.data.objects if ob.data == obj.data ] 
+                print("instances: ", instances, obj)
                 for instance in instances:
                     me = instance.data
                     bm = bmesh.new()
@@ -171,6 +172,12 @@ class GoB_OT_import(bpy.types.Operator):
                     # update mesh data after transformations to fix normals
                     me.update(calc_edges=True, calc_edges_loose=True)               
                     bm.free()                                                      
+
+                    '''
+                    me.from_pydata(vertsData, [], [])
+                    me.validate()
+                    me.update()
+                    '''
 
                 obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
                 obj.select_set(True)
