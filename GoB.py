@@ -101,7 +101,6 @@ class GoB_OT_import(bpy.types.Operator):
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             print(f"Importing: {pathFile, objName}")            
-            #me = bpy.data.meshes.new(objName)  #create empty mesh
             tag = goz_file.read(4)
             while tag:
                 #print('tags: ', tag)
@@ -154,40 +153,14 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:  
                 start_time = profiler(start_time, "Unpack Mesh Data")
 
-            # if obj already exist do code below
-            if objName in bpy.data.objects.keys(): 
-                
-                obj = bpy.data.objects[objName]
-                instances = [ob for ob in bpy.data.objects if ob.data == obj.data ] 
-                print("instances: ", instances, obj)
-                for instance in instances:
-                    me = instance.data
-                    bm = bmesh.new()
-                    bm.from_mesh(me)
-                    bm.faces.ensure_lookup_table() 
-                    #udpate vertex positions
-                    for i, v in enumerate(bm.verts):
-                        v.co = vertsData[i]                    
-                    bm.to_mesh(me)  
-                    # update mesh data after transformations to fix normals
-                    me.update(calc_edges=True, calc_edges_loose=True)               
-                    bm.free()                                                      
-
-                    '''
-                    me.from_pydata(vertsData, [], [])
-                    me.validate()
-                    me.update()
-                    '''
-
-                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
-                obj.select_set(True)
-                               
-                if pref.performance_profiling: 
-                    start_time = profiler(start_time, "Udpate Object")
-
+            
+            
+            
             
             # create new object
-            else:                
+            if not objName in bpy.data.objects.keys():
+
+                me = bpy.data.meshes.new(objName)  #create empty mesh  
                 me.from_pydata(vertsData, [], facesData)
                 obj = bpy.data.objects.new(objName, me)
                 # link object to active collection
@@ -199,9 +172,62 @@ class GoB_OT_import(bpy.types.Operator):
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Create New Object")
             
+
+            # if obj already exist with same mesh data
+            else:
+                if len(bpy.data.objects[objName].data.vertices) == len(vertsData):  
+                    obj = bpy.data.objects[objName]
+                    me = obj.data
+                    bm = bmesh.new()
+                    bm.from_mesh(me)
+                    bm.faces.ensure_lookup_table() 
+                    #udpate vertex positions
+                    for i, v in enumerate(bm.verts):
+                        v.co = vertsData[i]                    
+                    bm.to_mesh(me)  
+                    # update mesh data after transformations to fix normals
+                    me.update(calc_edges=True, calc_edges_loose=True)               
+                    bm.free()     
+
+                else:  
+                    obj = bpy.data.objects[objName]  
+                    me = bpy.data.meshes.new(objName)  #create empty mesh              
+                    me.from_pydata(vertsData, [], facesData)
+                    obj.data = me
+                    #obj = bpy.data.objects.new(objName, me)
+                    # link object to active collection
+                    #bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
+                    #objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                    #obj.data.materials.append(objMat)
+                    obj.select_set(True)
+
+
+                            
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Create New Object") 
+
+                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
+                obj.select_set(True)
+                               
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Udpate Object")
+
+            
+              
+            
             me,_ = apply_transformation(me, is_import=True)  
             del vertsData
             del facesData
+
+
+
+
+
+
+
+
+
+            
 
             if not pref.import_material == 'NONE':
                 if len(obj.material_slots) > 0:
