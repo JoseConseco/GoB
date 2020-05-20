@@ -167,10 +167,8 @@ class GoB_OT_import(bpy.types.Operator):
                 bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
                 objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                 obj.data.materials.append(objMat)
-                obj.select_set(True)
                 
-                if pref.performance_profiling: 
-                    start_time = profiler(start_time, "Create New Object")
+                print("mesh used: ", me.name)
             
 
             # if obj already exist with same mesh data
@@ -187,7 +185,8 @@ class GoB_OT_import(bpy.types.Operator):
                     bm.to_mesh(me)  
                     # update mesh data after transformations to fix normals
                     me.update(calc_edges=True, calc_edges_loose=True)               
-                    bm.free()     
+                    bm.free()  
+                    print("mesh used: ", me.name)   
 
                 else:  
                     obj = bpy.data.objects[objName]  
@@ -199,21 +198,11 @@ class GoB_OT_import(bpy.types.Operator):
                     #bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
                     #objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
                     #obj.data.materials.append(objMat)
-                    obj.select_set(True)
 
 
-                            
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Create New Object") 
 
-                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
-                obj.select_set(True)
-                               
-                if pref.performance_profiling: 
-                    start_time = profiler(start_time, "Udpate Object")
-
-            
-              
+            obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
+            obj.select_set(True)
             
             me,_ = apply_transformation(me, is_import=True)  
             del vertsData
