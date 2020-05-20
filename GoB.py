@@ -154,26 +154,18 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Unpack Mesh Data")
 
             
-            
-            
-            
             # create new object
             if not objName in bpy.data.objects.keys():
-
                 me = bpy.data.meshes.new(objName)  #create empty mesh  
                 me.from_pydata(vertsData, [], facesData)
                 obj = bpy.data.objects.new(objName, me)
                 # link object to active collection
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
-                objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
-                obj.data.materials.append(objMat)
-                
-                print("mesh used: ", me.name)
-            
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)          
 
-            # if obj already exist with same mesh data
+            # object already exist
             else:
-                if len(bpy.data.objects[objName].data.vertices) == len(vertsData):  
+                #mesh has same vertex count
+                if len(bpy.data.objects[objName].data.vertices) == len(vertsData): 
                     obj = bpy.data.objects[objName]
                     me = obj.data
                     bm = bmesh.new()
@@ -182,33 +174,27 @@ class GoB_OT_import(bpy.types.Operator):
                     #udpate vertex positions
                     for i, v in enumerate(bm.verts):
                         v.co = vertsData[i]                    
-                    bm.to_mesh(me)  
-                    # update mesh data after transformations to fix normals
-                    me.update(calc_edges=True, calc_edges_loose=True)               
-                    bm.free()  
-                    print("mesh used: ", me.name)   
-
+                    bm.to_mesh(me)        
+                    bm.free() 
+                #mesh has different vertex count
                 else:  
-                    obj = bpy.data.objects[objName]  
-                    me = bpy.data.meshes.new(objName)  #create empty mesh              
+                    obj = bpy.data.objects[objName]                    
+                    obj.data.clear_geometry()
+                    me = obj.data                              
                     me.from_pydata(vertsData, [], facesData)
                     obj.data = me
-                    #obj = bpy.data.objects.new(objName, me)
-                    # link object to active collection
-                    #bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
-                    #objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
-                    #obj.data.materials.append(objMat)
-
-
-
-            obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
-            obj.select_set(True)
             
-            me,_ = apply_transformation(me, is_import=True)  
+            # update mesh data after transformations to fix normals     
+            me.update(calc_edges=True, calc_edges_loose=True)    
+            me,_ = apply_transformation(me, is_import=True)
+
+            #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
+            obj.select_set(True)     
             del vertsData
             del facesData
 
-
+            if pref.performance_profiling:  
+                start_time = profiler(start_time, "Make Mesh")
 
 
 

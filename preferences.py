@@ -41,7 +41,7 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: bpy.props.BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
-        default=False)
+        default=True)
 
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
