@@ -41,7 +41,7 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: bpy.props.BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
-        default=True)
+        default=False)
 
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
@@ -61,7 +61,7 @@ class GoBPreferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='FACE_MAPS')
+        default='NONE')
     # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
 
 
@@ -106,11 +106,21 @@ class GoBPreferences(AddonPreferences):
         default=1.0, min=0, soft_max=2, step=0.1, precision=2,
         subtype='FACTOR')
 
+    import_polypaint: bpy.props.BoolProperty(
+        name="Polypaint to Vertex Color",
+        description="Import Polypaint as Vertex Color",
+        default=True)
+    
+    import_polypaint_name: bpy.props.StringProperty(
+        name="Vertex Color Name", 
+        description="Set name for Vertex Color Layer", 
+        default="zbrush")
+
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
         default=True)
-
+       
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
@@ -144,8 +154,7 @@ class GoBPreferences(AddonPreferences):
 
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')  
-        
+        layout.prop(self, 'show_button_text')        
         layout.prop(self, 'performance_profiling')      
            
 
@@ -170,14 +179,19 @@ class GoBPreferences(AddonPreferences):
         col = box.column(align=True)
         col.prop(self, 'import_mask')
         col.prop(self, 'import_uv')
+        col.prop(self, 'import_polypaint')
+        col.prop(self, 'import_polypaint_name')        
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')
-        
-        if self.import_polygroups_to_facemaps:            
+          
+        col.prop(self, 'apply_facemaps_to_facesets')
+        col.prop(self, 'switch_to_sculpt_mode')
+
+        """ if self.import_polygroups_to_facemaps:            
             col.prop(self, 'apply_facemaps_to_facesets')
             col.prop(self, 'switch_to_sculpt_mode')
         else:
             self.apply_facemaps_to_facesets = False
-            self.switch_to_sculpt_mode = False
+            self.switch_to_sculpt_mode = False """
 
 
