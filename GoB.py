@@ -216,19 +216,20 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:  
                 start_time = profiler(start_time, "Make Mesh")
                 
-
+            
             if pref.import_material == 'NONE':
                 print("Import Material: ", pref.import_material) 
             else:
+                
                 if len(obj.material_slots) > 0:
                     #print("material slot: ", obj.material_slots[0])
                     if obj.material_slots[0].material is not None:
                         objMat = obj.material_slots[0].material
                     else:
-                        objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                        objMat = bpy.data.materials.new(objName)
                         obj.material_slots[0].material = objMat
                 else:
-                    objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                    objMat = bpy.data.materials.new(objName)
                     obj.data.materials.append(objMat)
 
                 if pref.import_material == 'POLYPAINT':
@@ -257,14 +258,13 @@ class GoB_OT_import(bpy.types.Operator):
                         bm = bmesh.new()
                         bm.from_mesh(me)
                         bm.faces.ensure_lookup_table()
-                        uvmap = "UVMap"
                         if me.uv_layers:
-                            if uvmap in me.uv_layers:                            
-                                uv_layer = bm.loops.layers.uv.get(uvmap)
+                            if pref.import_uv_name in me.uv_layers:                            
+                                uv_layer = bm.loops.layers.uv.get(pref.import_uv_name)
                             else:
-                                uv_layer = bm.loops.layers.uv.new(uvmap)
+                                uv_layer = bm.loops.layers.uv.new(pref.import_uv_name)
                         else:
-                            uv_layer = bm.loops.layers.uv.new(uvmap) 
+                            uv_layer = bm.loops.layers.uv.new(pref.import_uv_name) 
                         uv_layer = bm.loops.layers.uv.verify()
 
                         for face in bm.faces:
@@ -344,7 +344,7 @@ class GoB_OT_import(bpy.types.Operator):
                         #print("Mask:", tag)
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]
-
+                        
                         if 'mask' in obj.vertex_groups:
                             obj.vertex_groups.remove(obj.vertex_groups['mask'])
                         groupMask = obj.vertex_groups.new(name='mask')
@@ -424,7 +424,7 @@ class GoB_OT_import(bpy.types.Operator):
                     diff = True
 
                     prefix = obj.name
-                    suffix = "diffuse"
+                    suffix = pref.imp_tex_diffuse_suffix
                     texture_name = (prefix + "_" + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -442,7 +442,7 @@ class GoB_OT_import(bpy.types.Operator):
                     disp = True
                     
                     prefix = obj.name
-                    suffix = "displacement"
+                    suffix = pref.imp_tex_displace_suffix
                     texture_name = (prefix + "_" + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -459,7 +459,7 @@ class GoB_OT_import(bpy.types.Operator):
                     nmp = True
                     
                     prefix = obj.name
-                    suffix = "normal"
+                    suffix = pref.imp_tex_normal_suffix
                     texture_name = (prefix + "_" + suffix)
                     if not texture_name in bpy.data.textures:
                         txtNmp = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -499,8 +499,8 @@ class GoB_OT_import(bpy.types.Operator):
 
                 if pref.performance_profiling: 
                     profiler(start_time, "Face Maps")
-                    profiler(start_total_time, "Total Import")
-                             
+                    profiler(start_total_time, "Total Import")         
+       
         return
              
 
@@ -521,7 +521,6 @@ class GoB_OT_import(bpy.types.Operator):
 
         for ztool_path in goz_obj_paths:
             self.GoZit(ztool_path)
-
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
@@ -682,7 +681,7 @@ class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to Zbrush"
     bl_description = "Export to Zbrush"
-
+    
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()

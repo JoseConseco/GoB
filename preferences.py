@@ -41,7 +41,7 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: bpy.props.BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
-        default=False)
+        default=True)
 
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
@@ -114,7 +114,7 @@ class GoBPreferences(AddonPreferences):
     import_polypaint_name: bpy.props.StringProperty(
         name="Vertex Color Name", 
         description="Set name for Vertex Color Layer", 
-        default="zbrush")
+        default="Col")
 
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
@@ -145,6 +145,26 @@ class GoBPreferences(AddonPreferences):
         name="UV Map",
         description="Import Uv Map from Zbrush",
         default=True)
+        
+    import_uv_name: bpy.props.StringProperty(
+        name="UV Map Name", 
+        description="Set name for the UV Map", 
+        default="UVMap")
+
+
+        
+    imp_tex_diffuse_suffix: bpy.props.StringProperty(
+        name="Diffuse Suffix", 
+        description="Set Suffix for Diffuse Texture", 
+        default="diff")
+    imp_tex_displace_suffix: bpy.props.StringProperty(
+        name="Displacement Suffix", 
+        description="Set Suffix for Displace Texture", 
+        default="disp")
+    imp_tex_normal_suffix: bpy.props.StringProperty(
+        name="Normal Suffix", 
+        description="Set Suffix for Normal Texture", 
+        default="norm")
     
   
     def draw(self, context):
@@ -174,18 +194,28 @@ class GoBPreferences(AddonPreferences):
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
-        box.prop(self, 'import_material')              
+        box.prop(self, 'import_material')         
         
-        col = box.column(align=True)
+        col = box.column(align=True)            
+
         #col.prop(self, 'import_mask')
         #col.prop(self, 'import_uv')
-        #col.prop(self, 'import_polypaint')
-        col.prop(self, 'import_polypaint_name')        
+        col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')
           
         col.prop(self, 'apply_facemaps_to_facesets')
-        col.prop(self, 'switch_to_sculpt_mode')
+        #col.prop(self, 'switch_to_sculpt_mode')
+
+
+        col = box.column(align=True) 
+        col.prop(self, 'imp_tex_diffuse_suffix') 
+        col.prop(self, 'imp_tex_displace_suffix') 
+        col.prop(self, 'imp_tex_normal_suffix')
+
+        col = box.column(align=True) 
+        col.prop(self, 'import_uv_name') 
+        col.prop(self, 'import_polypaint_name') 
 
         """ if self.import_polygroups_to_facemaps:            
             col.prop(self, 'apply_facemaps_to_facesets')
