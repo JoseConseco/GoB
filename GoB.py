@@ -515,12 +515,16 @@ class GoB_OT_import(bpy.types.Operator):
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
             return{'CANCELLED'}
 
+        currentContext = context.object.mode
         if context.object and context.object.mode != 'OBJECT':
+            currentContext = context.object.mode
+            print("currentContext: ", currentContext)
             # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
             bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
-
+        
         for ztool_path in goz_obj_paths:
             self.GoZit(ztool_path)
+            bpy.ops.object.mode_set(context.copy(), mode=currentContext)
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
@@ -1030,7 +1034,10 @@ class GoB_OT_export(bpy.types.Operator):
         if not exists:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your Zbrush GOZ installation')
             return {"CANCELLED"}
-        if context.object and context.object.mode != 'OBJECT':
+          
+        currentContext = context.object.mode
+        if context.object and context.object.mode != 'OBJECT':            
+            currentContext = context.object.mode
             bpy.ops.object.mode_set(mode='OBJECT')
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
@@ -1044,6 +1051,8 @@ class GoB_OT_export(bpy.types.Operator):
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
+        
+        bpy.ops.object.mode_set(mode=currentContext)  
         return{'FINISHED'}
 
 
