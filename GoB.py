@@ -424,9 +424,14 @@ class GoB_OT_import(bpy.types.Operator):
                     print(diffName.decode('utf-8'))
                     img = bpy.data.images.load(diffName.strip().decode('utf-8'))
                     diff = True
-                    txtDiff = bpy.data.textures.new("GoB_diffuse", 'IMAGE')
-                    txtDiff.image = img
-                    # me.uv_textures[0].data[0].image = img
+
+                    prefix = obj.name
+                    suffix = "diffuse"
+                    texture_name = (prefix + "_" + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtDiff.image = img
+                        # me.uv_textures[0].data[0].image = img
 
                 # Disp map 
                 elif tag == b'\xd9\xd6\x00\x00':  
@@ -437,8 +442,13 @@ class GoB_OT_import(bpy.types.Operator):
                     print(dispName.decode('utf-8'))
                     img = bpy.data.images.load(dispName.strip().decode('utf-8'))
                     disp = True
-                    txtDisp = bpy.data.textures.new("GoB_displacement", 'IMAGE')
-                    txtDisp.image = img
+                    
+                    prefix = obj.name
+                    suffix = "displacement"
+                    texture_name = (prefix + "_" + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtDisp.image = img
                 
                 # Normal map
                 elif tag == b'\x51\xc3\x00\x00':   
@@ -449,9 +459,14 @@ class GoB_OT_import(bpy.types.Operator):
                     print(nmpName.decode('utf-8'))
                     img = bpy.data.images.load(nmpName.strip().decode('utf-8'))
                     nmp = True
-                    txtNmp = bpy.data.textures.new("GoB_normal", 'IMAGE')
-                    txtNmp.image = img
-                    txtNmp.use_normal_map = True
+                    
+                    prefix = obj.name
+                    suffix = "normal"
+                    texture_name = (prefix + "_" + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtNmp = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtNmp.image = img
+                        txtNmp.use_normal_map = True
                 
                 else: 
                     print("Unknown tag:{0}".format(tag))
@@ -487,28 +502,7 @@ class GoB_OT_import(bpy.types.Operator):
                 if pref.performance_profiling: 
                     profiler(start_time, "Face Maps")
                     profiler(start_total_time, "Total Import")
-
-        # if diff:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtDiff
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_color_diffuse = True
-        # if disp:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtDisp
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_color_diffuse = False
-        #     mtex.use_map_displacement = True
-        # if nmp:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtNmp
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_normal = True
-        #     mtex.use_map_color_diffuse = False
-        #     mtex.normal_factor = 1.
-        #     mtex.normal_map_space = 'TANGENT'
-        # me.materials.append(objMat)
-         
+                             
         return
              
 
