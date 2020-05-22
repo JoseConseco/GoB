@@ -492,14 +492,13 @@ class GoB_OT_import(bpy.types.Operator):
                             override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
-                            break
-                                 
-                if not pref.switch_to_sculpt_mode:
-                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
+                            break                                 
 
                 if pref.performance_profiling: 
                     profiler(start_time, "Face Maps")
-                    profiler(start_total_time, "Total Import")         
+                    print(30*"-")
+                    profiler(start_total_time, "Total Import Time")  
+                    print(30*"=")       
        
         return
              
@@ -515,7 +514,7 @@ class GoB_OT_import(bpy.types.Operator):
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
             return{'CANCELLED'}
 
-        currentContext = context.object.mode
+        currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':
             currentContext = context.object.mode
             print("currentContext: ", currentContext)
@@ -649,7 +648,7 @@ def apply_transformation(me, is_import=True):
 def profiler(start_time=0, string=None):               
     
     elapsed = time.time()
-    print("TIME> ", string, "> ", "{:.4f}".format(elapsed-start_time))  
+    print("{:.4f}".format(elapsed-start_time), "<< ", string)  
     start_time = time.time()
     return start_time  
 
@@ -1024,7 +1023,9 @@ class GoB_OT_export(bpy.types.Operator):
             
             if pref.performance_profiling: 
                 profiler(start_time, "Write Textures")
-                profiler(start_total_time, "Total Export")
+                print(30*"-")
+                profiler(start_total_time, "Total Export Time")
+                print(30*"=")
 
         bpy.data.meshes.remove(me)
         return
@@ -1035,7 +1036,7 @@ class GoB_OT_export(bpy.types.Operator):
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your Zbrush GOZ installation')
             return {"CANCELLED"}
           
-        currentContext = context.object.mode
+        currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
             bpy.ops.object.mode_set(mode='OBJECT')

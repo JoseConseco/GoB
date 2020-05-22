@@ -130,11 +130,6 @@ class GoBPreferences(AddonPreferences):
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
         default=True)
-
-    switch_to_sculpt_mode: bpy.props.BoolProperty(
-        name="Sculpt Mode after import", 
-        description="Go to Sculpt Mode after Face Maps import",
-        default=False)
         
     import_mask: bpy.props.BoolProperty(
         name="Mask to Vertex Group",
@@ -202,10 +197,8 @@ class GoBPreferences(AddonPreferences):
         #col.prop(self, 'import_uv')
         col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
-        col.prop(self, 'import_polygroups_to_facemaps')
-          
+        col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')
-        #col.prop(self, 'switch_to_sculpt_mode')
 
 
         col = box.column(align=True) 
@@ -216,12 +209,5 @@ class GoBPreferences(AddonPreferences):
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
-
-        """ if self.import_polygroups_to_facemaps:            
-            col.prop(self, 'apply_facemaps_to_facesets')
-            col.prop(self, 'switch_to_sculpt_mode')
-        else:
-            self.apply_facemaps_to_facesets = False
-            self.switch_to_sculpt_mode = False """
 
 
