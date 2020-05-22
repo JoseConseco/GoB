@@ -103,11 +103,9 @@ class GoB_OT_import(bpy.types.Operator):
             print(f"Importing: {pathFile, objName}")            
             tag = goz_file.read(4)
 
-            while tag:
-                
-                print("\ntag 0:", tag)
-
-                # name
+            while tag:                
+                #print("\ntag 0:", tag)
+                # Name
                 if tag == b'\x89\x13\x00\x00':
                     print("name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
@@ -115,7 +113,7 @@ class GoB_OT_import(bpy.types.Operator):
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
-                    print("Vertices:", tag)
+                    #print("Vertices:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -126,7 +124,7 @@ class GoB_OT_import(bpy.types.Operator):
                 
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
-                    print("Faces:", tag)
+                    #print("Faces:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -142,23 +140,23 @@ class GoB_OT_import(bpy.types.Operator):
                             facesData.append((v1, v2, v3, v4))
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
-                    print("UVs:", tag)
+                    #print("UVs:", tag)
                     break
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00':  
-                    print("Polypainting:", tag)
+                    #print("Polypainting:", tag)
                     break
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':  
-                    print("Mask:", tag)
+                    #print("Mask:", tag)
                     break
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00': 
-                    print("Polyroups:", tag) 
+                    #print("Polyroups:", tag) 
                     break
                 # End
                 elif tag == b'\x00\x00\x00\x00':  
-                    print("tag 8:", tag)
+                    #print("End:", tag)
                     break
                 else:
                     print("Unknown tag:{0}".format(tag))
@@ -247,12 +245,12 @@ class GoB_OT_import(bpy.types.Operator):
 
 
             while tag:
-                print("\ntag 00:", tag)
+                #print("\ntag 00:", tag)
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':
                     print("Import UV: ", pref.import_uv)
                     if pref.import_uv:  
-                        print("UVs:", tag)
+                        #print("UVs:", tag)
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]     # face count.. 
                         
@@ -343,7 +341,7 @@ class GoB_OT_import(bpy.types.Operator):
                     print("Import Mask: ", pref.import_mask)
                     
                     if pref.import_mask:
-                        print("Mask:", tag)
+                        #print("Mask:", tag)
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]
 
@@ -417,7 +415,7 @@ class GoB_OT_import(bpy.types.Operator):
                 
                 # Diff map 
                 elif tag == b'\xc9\xaf\x00\x00':  
-                    print("Diff map:", tag)
+                    #print("Diff map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
@@ -435,7 +433,7 @@ class GoB_OT_import(bpy.types.Operator):
 
                 # Disp map 
                 elif tag == b'\xd9\xd6\x00\x00':  
-                    print("Disp map:", tag)
+                    #print("Disp map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
@@ -452,7 +450,7 @@ class GoB_OT_import(bpy.types.Operator):
                 
                 # Normal map
                 elif tag == b'\x51\xc3\x00\x00':   
-                    print("Normal map:", tag)
+                    #print("Normal map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     nmpName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
@@ -723,7 +721,7 @@ class GoB_OT_export(bpy.types.Operator):
         
         #mask
         if pref.export_mask:
-            print("exporting mask")
+            print("Export Mask: ", pref.export_mask)
 
         print("Export polygroups: ", pref.export_polygroups)
         if pref.export_polygroups == 'NONE': 

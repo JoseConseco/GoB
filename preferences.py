@@ -177,9 +177,9 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'import_material')              
         
         col = box.column(align=True)
-        col.prop(self, 'import_mask')
-        col.prop(self, 'import_uv')
-        col.prop(self, 'import_polypaint')
+        #col.prop(self, 'import_mask')
+        #col.prop(self, 'import_uv')
+        #col.prop(self, 'import_polypaint')
         col.prop(self, 'import_polypaint_name')        
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')
