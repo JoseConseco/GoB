@@ -57,11 +57,11 @@ class GoBPreferences(AddonPreferences):
         name="Polygroups",
         description="Polygroups mode",
         items=[ ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
-                ('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
-                ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
+                #('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+                #('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='NONE')
+        default='FACE_MAPS')
     # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
 
 
@@ -86,7 +86,7 @@ class GoBPreferences(AddonPreferences):
             name="Create material",
             description="choose source for material import",
             items=[('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),        #TODO
-                   ('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
+                   #('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
@@ -193,8 +193,8 @@ class GoBPreferences(AddonPreferences):
         
         col = box.column(align=True)            
 
-        #col.prop(self, 'import_mask')
-        #col.prop(self, 'import_uv')
+        col.prop(self, 'import_mask')
+        col.prop(self, 'import_uv')
         col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          

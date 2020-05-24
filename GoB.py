@@ -87,7 +87,7 @@ class GoB_OT_import(bpy.types.Operator):
         objMat = None
         diff = False
         disp = False
-        nmp = False
+        norm = False
         exists = os.path.isfile(pathFile)
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
@@ -294,9 +294,10 @@ class GoB_OT_import(bpy.types.Operator):
                     
                     for i in range(cnt): 
                         data = unpack('<3B', goz_file.read(3))
+                        
                         unpack('<B', goz_file.read(1))  # Alpha
                         if data[0] < min:
-                            min = data[0]   #TODO: we assing data to min, what is this data?                          
+                            min = data[0]   #TODO: assing data to min, what is this data?                          
                         else:                            
                             #print("polypaint min: ", min, data[0])  
                             pass
@@ -366,10 +367,12 @@ class GoB_OT_import(bpy.types.Operator):
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                   
+                    print("polygroup data:", cnt)
+
                     for i in range(cnt):    # faces of each polygroup
-                        #print("faceIndex: ", i)
                         group = unpack('<H', goz_file.read(2))[0]
+                        print("polygroup data:", i, group)
+
 
                         # vertex groups import
                         if pref.import_polygroups_to_vertexgroups:
@@ -392,7 +395,6 @@ class GoB_OT_import(bpy.types.Operator):
                             else:
                                 fm = obj.face_maps[str(group)]
                             fm.add([i])     # add faces to facemap
-
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
@@ -453,18 +455,18 @@ class GoB_OT_import(bpy.types.Operator):
                     #print("Normal map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
-                    nmpName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(nmpName.decode('utf-8'))
-                    img = bpy.data.images.load(nmpName.strip().decode('utf-8'))
-                    nmp = True
+                    normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
+                    print(normName.decode('utf-8'))
+                    img = bpy.data.images.load(normName.strip().decode('utf-8'))
+                    norm = True
                     
                     prefix = obj.name
                     suffix = pref.imp_tex_normal_suffix
                     texture_name = (prefix + "_" + suffix)
                     if not texture_name in bpy.data.textures:
-                        txtNmp = bpy.data.textures.new(texture_name, 'IMAGE')
-                        txtNmp.image = img
-                        txtNmp.use_normal_map = True
+                        txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtNorm.image = img
+                        txtNorm.use_normal_map = True
                 
                 else: 
                     print("Unknown tag:{0}".format(tag))
@@ -721,7 +723,7 @@ class GoB_OT_export(bpy.types.Operator):
         dg = bpy.context.evaluated_depsgraph_get()
         me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
         
-        #mask
+        # mask
         if pref.export_mask:
             print("Export Mask: ", pref.export_mask)
 
@@ -735,6 +737,8 @@ class GoB_OT_export(bpy.types.Operator):
 
         #face maps to polygroups       
         elif pref.export_polygroups == 'FACE_MAPS':
+            pass
+            """ 
             for facemap in obj.face_maps:
                 #print("map name and index: ", facemap.name, facemap.index)
                 if not facemap:
@@ -749,7 +753,8 @@ class GoB_OT_export(bpy.types.Operator):
                     vg = obj.vertex_groups.get(facemap.name)                
                     if vg is None:               
                         vg = obj.vertex_groups.new(name=facemap.name) 
-                        vg.add(verts, 1.0, 'ADD')
+                        vg.add(verts, 1.0, 'ADD') 
+            """
 
         #materials to polygroups
         elif pref.export_polygroups == 'MATERIALS':
@@ -801,29 +806,48 @@ class GoB_OT_export(bpy.types.Operator):
             start_time = profiler(start_time, "Make Mesh")
 
 
-        with open(pathImport+'/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
+        with open(pathImport + '/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
+            
+            numFaces = len(me.polygons)
+            numVertices = len(me.vertices)
+
+
+            # --File Header--
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
             goz_file.write(pack('<6B', 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E))
             goz_file.write(pack('<I', 1))  # obj tag
             goz_file.write(pack('<I', len(obj.name)+24))
             goz_file.write(pack('<Q', 1))
-            goz_file.write(b'GoZMesh_'+obj.name.encode('U8'))
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write File Header")
+
+            # --Object Name--
+            goz_file.write(b'GoZMesh_' + obj.name.encode('utf-8'))
             goz_file.write(pack('<4B', 0x89, 0x13, 0x00, 0x00))
             goz_file.write(pack('<I', 20))
             goz_file.write(pack('<Q', 1))
-            goz_file.write(pack('<I', 0))
-            nbFaces = len(me.polygons)
-            nbVertices = len(me.vertices)
+            goz_file.write(pack('<I', 0))           
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Object Name")
+            
+
+            # --Vertices--
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
-            goz_file.write(pack('<I', nbVertices*3*4+16))
-            goz_file.write(pack('<Q', nbVertices))
+            goz_file.write(pack('<I', numVertices*3*4+16))
+            goz_file.write(pack('<Q', numVertices))            
             for vert in me.vertices:
                 modif_coo = obj.matrix_world @ vert.co
                 modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
+                
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Vertices")
+            
+
+            # --Faces--
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
-            goz_file.write(pack('<I', nbFaces*4*4+16))
-            goz_file.write(pack('<Q', nbFaces))
+            goz_file.write(pack('<I', numFaces*4*4+16))
+            goz_file.write(pack('<Q', numFaces))
             for face in me.polygons:
                 if len(face.vertices) == 4:
                     goz_file.write(pack('<4I', face.vertices[0],
@@ -835,9 +859,10 @@ class GoB_OT_export(bpy.types.Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
-                                
+
             if pref.performance_profiling: 
-                start_time = profiler(start_time, "Write Mesh Data")
+                start_time = profiler(start_time, "Write Faces")
+
 
             # --UVs--
             if me.uv_layers.active:
@@ -856,10 +881,10 @@ class GoB_OT_export(bpy.types.Operator):
                 start_time = profiler(start_time, "Write UV")
 
 
-            # --Polypainting--
+            # --Polypaint--
             if me.vertex_colors.active:
                 vcoldata = me.vertex_colors.active.data # color[loop_id]
-                vcolArray = bytearray([0] * nbVertices * 3)
+                vcolArray = bytearray([0] * numVertices * 3)
                 #fill vcArray(vert_idx + rgb_offset) = color_xyz
                 for loop in me.loops: #in the end we will fill verts with last vert_loop color
                     vert_idx = loop.vertex_index
@@ -868,8 +893,9 @@ class GoB_OT_export(bpy.types.Operator):
                     vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
-                goz_file.write(pack('<I', nbVertices*4+16))
-                goz_file.write(pack('<Q', nbVertices))
+                goz_file.write(pack('<I', numVertices*4+16))
+                goz_file.write(pack('<Q', numVertices))
+
                 for i in range(0, len(vcolArray), 3):
                     goz_file.write(pack('<B', vcolArray[i+2]))
                     goz_file.write(pack('<B', vcolArray[i+1]))
@@ -884,73 +910,123 @@ class GoB_OT_export(bpy.types.Operator):
             for vertexGroup in obj.vertex_groups:
                 if vertexGroup.name.lower() == 'mask':
                     goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
-                    goz_file.write(pack('<I', nbVertices*2+16))
-                    goz_file.write(pack('<Q', nbVertices))
-                    for i in range(nbVertices):
+                    goz_file.write(pack('<I', numVertices*2+16))
+                    goz_file.write(pack('<Q', numVertices))
+                    for i in range(numVertices):
                         try:
-                            goz_file.write(pack('<H', int((1.-vertexGroup.weight(i))*65535)))
+                            goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
                         except:
                             goz_file.write(pack('<H', 255))
             
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Write Mask")
 
-            # --Polygroups--
-            vertWeight = []   
-            faceMaps = [] 
+           
+           
+            # --Polygroups--                        
+            goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+            goz_file.write(pack('<I', numFaces*2+16))
+            goz_file.write(pack('<Q', numFaces)) 
 
-            #populate vertex groups 
+            if obj.face_maps.items is not None:
+                
+                bm = bmesh.new()
+                bm.from_mesh(me)
+                bm.faces.ensure_lookup_table()
+                
+                for index, map in enumerate(obj.data.face_maps[0].data):
+                    map_layer = bm.faces.layers.face_map
+                bm.free()
+
+                print("test", obj.face_maps[0].name)
+                   
+                import random
+                numrand = random.randint(1, 40)
+
+                for map in obj.face_maps:
+                    print("maps: ", map.name, map.index) 
+                
+                def convert_string_to_int(text):
+                    return int("".join(str(ord(char)) for char in text))
+                         
+                for index, map in enumerate(obj.data.face_maps[0].data):                                                  
+                    for face in obj.data.polygons:                             
+                        if face.index==index and map.value >= 0:    
+                            print("face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name) 
+                            goz_file.write(pack('<H', (map.value + 1)*numrand))                           
+                        elif face.index==index and map.value < 0:
+                            print("no group: face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name, "\n")
+                            goz_file.write(pack('<H', 0))  
+                        
+            
+            """  vertWeight = []   
             for i in range(len(me.vertices)):
                 vertWeight.append([])
                 for group in me.vertices[i].groups:
                     try:
-                        if group.weight == 1. and obj.vertex_groups[group.group].name.lower() != 'mask':
+                        if group.weight == 1.0 and obj.vertex_groups[group.group].name.lower() != 'mask':
                             vertWeight[i].append(group.weight)
+                            #print("group, weight", group.group, group.weight)
                     except:
                         print('error reading vertex group data')
                         
-            goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-            goz_file.write(pack('<I', nbFaces*2+16))
-            goz_file.write(pack('<Q', nbFaces))
+            #print("vertWeight: ", len(vertWeight), vertWeight)
 
+            #OLD METHOD
             import random
             numrand = random.randint(1, 40)
             for face in me.polygons:
                 group = []
                 for vert in face.vertices:
                     group.extend(vertWeight[vert])
+                    #print("index: ", face.index, vert, vertWeight[vert])
                 group.sort()
                 group.reverse()
                 tmp = {}
                 groupVal = int(0)
+
                 for val in group:
+                    #print("val0: ", val)
                     if val not in tmp:
                         tmp[val] = 1
                     else:
                         tmp[val] += 1
+
+                        #print("val: ", int(val), tmp[val], len(face.vertices))
                         if tmp[val] == len(face.vertices):
                             groupVal = int(val)
+                            #print("groupVal", groupVal)
                             break
-                
-                # write group names
+                                    
                 if obj.vertex_groups.items() != []:
                     groupName = obj.vertex_groups[groupVal].name
+                    #print("groupName 00: ", face.index , groupName, "groupVal: ", groupVal)
+
                     if groupName.lower() == 'mask':
                         goz_file.write(pack('<H', 0))
                     else:
-                        groupName = obj.vertex_groups[groupVal].index * numrand
+                        groupName = obj.vertex_groups[1].index*numrand
                         goz_file.write(pack('<H', groupName))
+                        print("groupName 01: ", face.index, obj.vertex_groups[1].index)
                 else:
-                    goz_file.write(pack('<H', 0))
+                    goz_file.write(pack('<H', 0)) 
+                    print("groupName 02: ", face.index , groupName)
+                #print("\n")
+           
+                print("group:", face.index, len(group), group)
+
                     
             if pref.performance_profiling: 
-                start_time = profiler(start_time, "Write Polygroups")
+                start_time = profiler(start_time, "Write Polygroups") """
 
 
-            # Diff, disp and nm maps
+
+
+
+            # Diff, disp and norm maps
             diff = 0
             disp = 0
-            nm = 0
+            norm = 0
             GoBmat = False
             for matslot in obj.material_slots:
                 if matslot.material:
@@ -966,9 +1042,10 @@ class GoB_OT_export(bpy.types.Operator):
             #                     if texslot.use_map_displacement:
             #                         disp = texslot
             #                     if texslot.use_map_normal:
-            #                         nm = texslot
+            #                         norm = texslot
             formatRender = scn.render.image_settings.file_format
             scn.render.image_settings.file_format = 'BMP'
+
             if diff:
                 name = diff.texture.image.filepath.replace('\\', '/')
                 name = name.rsplit('/')[-1]
@@ -985,6 +1062,10 @@ class GoB_OT_export(bpy.types.Operator):
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write diff")
+
             if disp:
                 name = disp.texture.image.filepath.replace('\\', '/')
                 name = name.rsplit('/')[-1]
@@ -1001,8 +1082,12 @@ class GoB_OT_export(bpy.types.Operator):
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
-            if nm:
-                name = nm.texture.image.filepath.replace('\\', '/')
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write disp")
+
+            if norm:
+                name = norm.texture.image.filepath.replace('\\', '/')
                 name = name.rsplit('/')[-1]
                 name = name.rsplit('.')[0]
                 if len(name) > 3:
@@ -1010,13 +1095,17 @@ class GoB_OT_export(bpy.types.Operator):
                         name = path + '/GoZProjects/Default/' + name + '.bmp'
                     else:
                         name = path + '/GoZProjects/Default/' + name + '_NM.bmp'
-                nm.texture.image.save_render(name)
+                norm.texture.image.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write norm")
+
             # end
             scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
@@ -1039,7 +1128,7 @@ class GoB_OT_export(bpy.types.Operator):
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
                 if obj.type == 'MESH':
@@ -1053,7 +1142,7 @@ class GoB_OT_export(bpy.types.Operator):
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
         
-        bpy.ops.object.mode_set(mode=currentContext)  
+        bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
 
