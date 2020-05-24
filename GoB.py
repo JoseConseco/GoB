@@ -367,11 +367,11 @@ class GoB_OT_import(bpy.types.Operator):
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                    print("polygroup data:", cnt)
+                    #print("polygroup data:", cnt)
 
                     for i in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        print("polygroup data:", i, group)
+                        #print("polygroup data:", i, group)
 
 
                         # vertex groups import
@@ -929,36 +929,23 @@ class GoB_OT_export(bpy.types.Operator):
             goz_file.write(pack('<Q', numFaces)) 
 
             if obj.face_maps.items is not None:
-                
-                bm = bmesh.new()
-                bm.from_mesh(me)
-                bm.faces.ensure_lookup_table()
-                
-                for index, map in enumerate(obj.data.face_maps[0].data):
-                    map_layer = bm.faces.layers.face_map
-                bm.free()
-
-                print("test", obj.face_maps[0].name)
-                   
+                                  
                 import random
-                numrand = random.randint(1, 40)
-
-                for map in obj.face_maps:
-                    print("maps: ", map.name, map.index) 
-                
-                def convert_string_to_int(text):
-                    return int("".join(str(ord(char)) for char in text))
-                         
+                randcolor = random.randint(1, 40)
+                print("import face maps")
                 for index, map in enumerate(obj.data.face_maps[0].data):                                                  
                     for face in obj.data.polygons:                             
                         if face.index==index and map.value >= 0:    
-                            print("face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name) 
-                            goz_file.write(pack('<H', (map.value + 1)*numrand))                           
+                            #print("face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name) 
+                            goz_file.write(pack('<H', (map.value + 1) * randcolor))                           
                         elif face.index==index and map.value < 0:
-                            print("no group: face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name, "\n")
+                            #print("no group: face.index:",face.index, "map:",map.value, obj.face_maps[map.value].name, "\n")
                             goz_file.write(pack('<H', 0))  
                         
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write FaceMaps to Polygroups") 
             
+            #OLD METHOD
             """  vertWeight = []   
             for i in range(len(me.vertices)):
                 vertWeight.append([])
@@ -972,9 +959,6 @@ class GoB_OT_export(bpy.types.Operator):
                         
             #print("vertWeight: ", len(vertWeight), vertWeight)
 
-            #OLD METHOD
-            import random
-            numrand = random.randint(1, 40)
             for face in me.polygons:
                 group = []
                 for vert in face.vertices:
