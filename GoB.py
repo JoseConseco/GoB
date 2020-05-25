@@ -371,7 +371,7 @@ class GoB_OT_import(bpy.types.Operator):
 
                     for i in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        #print("polygroup data:", i, group)
+                        #print("polygroup data:", i, group, hex(group))
 
 
                         # vertex groups import
@@ -928,14 +928,20 @@ class GoB_OT_export(bpy.types.Operator):
             goz_file.write(pack('<I', numFaces*2+16))
             goz_file.write(pack('<Q', numFaces)) 
 
-            if obj.face_maps.items is not None:                                  
+            if obj.face_maps.items is not None:  
                 import random
-                randcolor = random.randint(1, 40)
+                #create a color for each facemap (0xffff)
+                colorData=[]
+                for fm in obj.face_maps:
+                    randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                    color = int(randcolor, 16)
+                    colorData.append(color)
+
                 print("import face maps")
                 for index, map in enumerate(me.face_maps[0].data):
                     if map.value >= 0:
-                        goz_file.write(pack('<H', (map.value + 1) * randcolor)) 
-                    else:
+                        goz_file.write(pack('<H', colorData[map.value]))  
+                    else: #face without facemaps (value = -1)
                         goz_file.write(pack('<H', 0))
                         
             if pref.performance_profiling: 
