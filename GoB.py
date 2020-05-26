@@ -266,7 +266,7 @@ class GoB_OT_import(bpy.types.Operator):
                         uv_layer = bm.loops.layers.uv.verify()
 
                         for face in bm.faces:
-                            print(face.index)
+                            #print(face.index)
                             for index, loop in enumerate(face.loops):                            
                                 #print("", face.index, index, loop[uv_layer].uv)
                                 x, y = unpack('<2f', goz_file.read(8)) 
