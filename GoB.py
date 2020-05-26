@@ -246,12 +246,10 @@ class GoB_OT_import(bpy.types.Operator):
 
 
             while tag:
-                #print("\ntag 00:", tag)
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':
-                    print("Import UV: ", pref.import_uv)
                     if pref.import_uv:  
-                        #print("UVs:", tag)
+                        print("Import UV: ", pref.import_uv, tag)
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]     # face count.. 
                         
@@ -268,15 +266,22 @@ class GoB_OT_import(bpy.types.Operator):
                         uv_layer = bm.loops.layers.uv.verify()
 
                         for face in bm.faces:
-                            for i, loop in enumerate(face.loops):
-                                x,y = unpack('<2f', goz_file.read(8)) 
+                            print(face.index)
+                            for index, loop in enumerate(face.loops):                            
+                                #print("", face.index, index, loop[uv_layer].uv)
+                                x, y = unpack('<2f', goz_file.read(8)) 
                                 loop[uv_layer].uv = x, 1.0-y
+                                    
+                            if index < 3:  # cos uv always have 4 coords... ??                                
+                                #print("--", face.index, index, loop[uv_layer].uv, "\n")
+                                x, y = unpack('<2f', goz_file.read(8))  
+                            
+                            #print(face.indexindex, loop[uv_layer].uv)
 
                         bm.to_mesh(me)   
                         bm.free()                       
-                        me.update(calc_edges=True, calc_edges_loose=True)  
-                    else:
-                        break
+                        me.update(calc_edges=True, calc_edges_loose=True)   
+                        
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "UV Map")
 
