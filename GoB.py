@@ -916,21 +916,23 @@ class GoB_OT_export(bpy.types.Operator):
             goz_file.write(pack('<I', numFaces*2+16))
             goz_file.write(pack('<Q', numFaces)) 
 
-            if obj.face_maps.items is not None:  
+            if obj.face_maps.items:  
                 import random
                 #create a color for each facemap (0xffff)
                 colorData=[]
+                
                 for fm in obj.face_maps:
                     randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
                     color = int(randcolor, 16)
                     colorData.append(color)
 
                 print("import face maps")
-                for index, map in enumerate(me.face_maps[0].data):
-                    if map.value >= 0:
-                        goz_file.write(pack('<H', colorData[map.value]))  
-                    else: #face without facemaps (value = -1)
-                        goz_file.write(pack('<H', 0))
+                if me.face_maps:
+                    for index, map in enumerate(me.face_maps[0].data):
+                        if map.value >= 0:
+                            goz_file.write(pack('<H', colorData[map.value]))  
+                        else: #face without facemaps (value = -1)
+                            goz_file.write(pack('<H', 0))
                         
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Write FaceMaps to Polygroups") 
