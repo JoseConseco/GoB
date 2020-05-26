@@ -738,23 +738,6 @@ class GoB_OT_export(bpy.types.Operator):
         #face maps to polygroups       
         elif pref.export_polygroups == 'FACE_MAPS':
             pass
-            """ 
-            for facemap in obj.face_maps:
-                #print("map name and index: ", facemap.name, facemap.index)
-                if not facemap:
-                    continue            
-                verts = [v for index, map in enumerate(obj.data.face_maps[0].data)
-                                if map.value == facemap.index  
-                                    for f in obj.data.polygons 
-                                        if f.index==index
-                                            for v in f.vertices]                                                                        
-                verts = list(set(verts)) 
-                if len(verts):
-                    vg = obj.vertex_groups.get(facemap.name)                
-                    if vg is None:               
-                        vg = obj.vertex_groups.new(name=facemap.name) 
-                        vg.add(verts, 1.0, 'ADD') 
-            """
 
         #materials to polygroups
         elif pref.export_polygroups == 'MATERIALS':
