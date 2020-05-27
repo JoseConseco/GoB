@@ -61,7 +61,7 @@ class GoBPreferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='FACE_MAPS')
+        default='NONE')
     # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
 
 
