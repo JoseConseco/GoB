@@ -364,16 +364,21 @@ class GoB_OT_import(bpy.types.Operator):
                 elif tag == b'\x41\x9c\x00\x00':   
                     print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
                     
+                    #wipe face maps before importing new ones due to random naming
+                    if pref.import_polygroups_to_facemaps:
+                        for i,facemap in enumerate(obj.face_maps):                              
+                            obj.face_maps.remove(facemap)
+
+
                     groupsData = []
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
                     #print("polygroup data:", cnt)
-
+                    
                     for i in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
                         #print("polygroup data:", i, group, hex(group))
-
 
                         # vertex groups import
                         if pref.import_polygroups_to_vertexgroups:
@@ -393,8 +398,8 @@ class GoB_OT_import(bpy.types.Operator):
                                     obj.face_maps.remove(obj.face_maps[str(group)])
                                 fm = obj.face_maps.new(name=str(group))
                                 facemapsData.append(group)
-                            else:
-                                fm = obj.face_maps[str(group)]
+                            else:                                
+                                fm = obj.face_maps[str(group)] 
                             fm.add([i])     # add faces to facemap
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
