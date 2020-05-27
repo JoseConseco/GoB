@@ -266,17 +266,13 @@ class GoB_OT_import(bpy.types.Operator):
                         uv_layer = bm.loops.layers.uv.verify()
 
                         for face in bm.faces:
-                            #print(face.index)
-                            for index, loop in enumerate(face.loops):                            
-                                #print("", face.index, index, loop[uv_layer].uv)
+                            for index, loop in enumerate(face.loops):            
                                 x, y = unpack('<2f', goz_file.read(8)) 
                                 loop[uv_layer].uv = x, 1.0-y
-                                    
-                            if index < 3:  # cos uv always have 4 coords... ??                                
-                                #print("--", face.index, index, loop[uv_layer].uv, "\n")
-                                x, y = unpack('<2f', goz_file.read(8))  
-                            
-                            #print(face.indexindex, loop[uv_layer].uv)
+                            #uv's always have 4 coords so its required to read one more if a trinalge is in the mesh
+                            # zbrush seems to always write out 4 coords            
+                            if index < 3:       
+                                x, y = unpack('<2f', goz_file.read(8))
 
                         bm.to_mesh(me)   
                         bm.free()                       
