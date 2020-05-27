@@ -724,44 +724,6 @@ class GoB_OT_export(bpy.types.Operator):
 
         return export_mesh
 
-    @staticmethod
-    def make_polygroups(obj, pref):        
-        dg = bpy.context.evaluated_depsgraph_get()
-        me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
-        
-        # mask
-        if pref.export_mask:
-            print("Export Mask: ", pref.export_mask)
-
-        print("Export polygroups: ", pref.export_polygroups)
-        if pref.export_polygroups == 'NONE': 
-            pass 
-                  
-        #vertex weights to polygroups
-        elif pref.export_polygroups == 'VERTEX_GROUPS':
-            pass
-
-        #face maps to polygroups       
-        elif pref.export_polygroups == 'FACE_MAPS':
-            pass
-
-        #materials to polygroups
-        elif pref.export_polygroups == 'MATERIALS':
-            for index, slot in enumerate(obj.material_slots):
-                if not slot.material:
-                    continue
-                verts = [v for f in obj.data.polygons
-                         if f.material_index == index for v in f.vertices]
-                if len(verts):
-                    vg = obj.vertex_groups.get(slot.material.name)
-                    if vg is None:
-                        vg = obj.vertex_groups.new(name=slot.material.name)
-                        vg.add(verts, 1.0, 'ADD')
-        
-        else:        
-            for vertexGroup in obj.vertex_groups:
-                #obj.vertex_groups.remove(vertexGroup)
-                pass
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
@@ -785,8 +747,7 @@ class GoB_OT_export(bpy.types.Operator):
 
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Linked Object")
-
-        self.make_polygroups(obj, pref)                
+               
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
         me, mat_transform = apply_transformation(me, is_import=False)
@@ -912,90 +873,119 @@ class GoB_OT_export(bpy.types.Operator):
 
            
            
-            # --Polygroups--                        
-            goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-            goz_file.write(pack('<I', numFaces*2+16))
-            goz_file.write(pack('<Q', numFaces)) 
-
-            if obj.face_maps.items:  
+            # --Polygroups--     
+            if not pref.export_polygroups == 'NONE':  
+                print("Export Polygroups: ", pref.export_polygroups)
                 import random
-                #create a color for each facemap (0xffff)
-                colorData=[]
+
+                #Polygroups from Face Maps
+                if pref.export_polygroups == 'FACE_MAPS':
+                    if obj.face_maps.items:                         
+                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                        goz_file.write(pack('<I', numFaces*2+16))
+                        goz_file.write(pack('<Q', numFaces))  
+                                                
+                        colorData=[]                        
+                        #create a color for each facemap (0xffff)
+                        for fm in obj.face_maps:
+                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                            color = int(randcolor, 16)
+                            colorData.append(color)
+
+                        if me.face_maps:
+                            for index, map in enumerate(me.face_maps[0].data):
+                                if map.value >= 0:
+                                    goz_file.write(pack('<H', colorData[map.value]))  
+                                else: #face without facemaps (value = -1)
+                                    goz_file.write(pack('<H', 0))
+                                
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Write FaceMaps to Polygroups") 
                 
-                for fm in obj.face_maps:
-                    randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                    color = int(randcolor, 16)
-                    colorData.append(color)
 
-                print("import face maps")
-                if me.face_maps:
-                    for index, map in enumerate(me.face_maps[0].data):
-                        if map.value >= 0:
-                            goz_file.write(pack('<H', colorData[map.value]))  
-                        else: #face without facemaps (value = -1)
-                            goz_file.write(pack('<H', 0))
-                        
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Write FaceMaps to Polygroups") 
-            
-            #OLD METHOD
-            """  vertWeight = []   
-            for i in range(len(me.vertices)):
-                vertWeight.append([])
-                for group in me.vertices[i].groups:
-                    try:
-                        if group.weight == 1.0 and obj.vertex_groups[group.group].name.lower() != 'mask':
-                            vertWeight[i].append(group.weight)
-                            #print("group, weight", group.group, group.weight)
-                    except:
-                        print('error reading vertex group data')
-                        
-            #print("vertWeight: ", len(vertWeight), vertWeight)
+                # Polygroups from Vertex Groups
+                if pref.export_polygroups == 'VERTEX_GROUPS':
+                    goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                    goz_file.write(pack('<I', numFaces*2+16))
+                    goz_file.write(pack('<Q', numFaces)) 
 
-            for face in me.polygons:
-                group = []
-                for vert in face.vertices:
-                    group.extend(vertWeight[vert])
-                    #print("index: ", face.index, vert, vertWeight[vert])
-                group.sort()
-                group.reverse()
-                tmp = {}
-                groupVal = int(0)
+                    vertWeight = []   
+                    for i in range(len(me.vertices)):
+                        vertWeight.append([])
+                        for group in me.vertices[i].groups:
+                            try:
+                                if group.weight == 1.0 and obj.vertex_groups[group.group].name.lower() != 'mask':
+                                    vertWeight[i].append(group.weight)
+                                    #print("group, weight", group.group, group.weight)
+                            except:
+                                print('error reading vertex group data')
+                                
+                    #print("vertWeight: ", len(vertWeight), vertWeight)
 
-                for val in group:
-                    #print("val0: ", val)
-                    if val not in tmp:
-                        tmp[val] = 1
-                    else:
-                        tmp[val] += 1
+                    for face in me.polygons:
 
-                        #print("val: ", int(val), tmp[val], len(face.vertices))
-                        if tmp[val] == len(face.vertices):
-                            groupVal = int(val)
-                            #print("groupVal", groupVal)
-                            break
-                                    
-                if obj.vertex_groups.items() != []:
-                    groupName = obj.vertex_groups[groupVal].name
-                    #print("groupName 00: ", face.index , groupName, "groupVal: ", groupVal)
+                        colorData=[]                        
+                        #create a color for each facemap (0xffff)
+                        for fm in obj.vertex_groups:
+                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                            color = int(randcolor, 16)
+                            colorData.append(color)
 
-                    if groupName.lower() == 'mask':
-                        goz_file.write(pack('<H', 0))
-                    else:
-                        groupName = obj.vertex_groups[1].index*numrand
-                        goz_file.write(pack('<H', groupName))
-                        print("groupName 01: ", face.index, obj.vertex_groups[1].index)
+
+                        group = []
+                        for vert in face.vertices:
+                            group.extend(vertWeight[vert])
+                            #print("index: ", face.index, vert, vertWeight[vert])
+                        group.sort()
+                        group.reverse()
+                        tmp = {}
+                        groupVal = int(0)
+
+                        for val in group:
+                            #print("val0: ", val)
+                            if val not in tmp:
+                                tmp[val] = 1
+                            else:
+                                tmp[val] += 1
+
+                                #print("val: ", int(val), tmp[val], len(face.vertices))
+                                if tmp[val] == len(face.vertices):
+                                    groupVal = int(val)
+                                    #print("groupVal", groupVal)
+                                    break
+                                            
+                        if obj.vertex_groups.items() != []:
+                            groupName = obj.vertex_groups[groupVal].name
+                            #print("groupName 00: ", face.index , groupName, "groupVal: ", groupVal)
+                            if groupName.lower() == 'mask':
+                                goz_file.write(pack('<H', 0))
+                            else:
+                                groupName = obj.vertex_groups[1].index * 10 
+                                goz_file.write(pack('<H', groupName))
+                                print("groupName 01: ", face.index, obj.vertex_groups[1].index)
+                        else:
+                            goz_file.write(pack('<H', 0)) 
+                            print("groupName 02: ", face.index , groupName)
+                        #print("\n")                
+                        print("group:", face.index, len(group), group)
+                            
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Write Polygroups")
+
+                # Polygroups from materials
+                if pref.export_polygroups == 'MATERIALS':
+                    for index, slot in enumerate(obj.material_slots):
+                        if not slot.material:
+                            continue
+                        verts = [v for f in obj.data.polygons
+                                if f.material_index == index for v in f.vertices]
+                        if len(verts):
+                            vg = obj.vertex_groups.get(slot.material.name)
+                            if vg is None:
+                                vg = obj.vertex_groups.new(name=slot.material.name)
+                                vg.add(verts, 1.0, 'ADD')
                 else:
-                    goz_file.write(pack('<H', 0)) 
-                    print("groupName 02: ", face.index , groupName)
-                #print("\n")
-           
-                print("group:", face.index, len(group), group)
-
-                    
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Write Polygroups") """
-
+                    print("Export Polygroups: ", pref.export_polygroups)
 
 
 
