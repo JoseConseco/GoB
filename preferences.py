@@ -52,7 +52,6 @@ class GoBPreferences(AddonPreferences):
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
-
     export_polygroups: bpy.props.EnumProperty(
         name="Polygroups",
         description="Polygroups mode",
@@ -61,10 +60,7 @@ class GoBPreferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='NONE')
-    # ('FACEMAPS', 'from ** Face Maps', 'Create Polygroups from Face Maps'),
-
-
+        default='VERTEX_GROUPS')
     export_scale_factor: bpy.props.FloatProperty(
         name="** Scale",
         description="export_scale_factor",
@@ -73,8 +69,7 @@ class GoBPreferences(AddonPreferences):
         soft_max=2,
         step=0.1,
         precision=2,
-        subtype='FACTOR')    
-    
+        subtype='FACTOR') 
     export_mask: bpy.props.BoolProperty(
         name="Mask",
         description="Export Maks",
@@ -90,8 +85,7 @@ class GoBPreferences(AddonPreferences):
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='POLYPAINT')
-            
+            default='POLYPAINT')            
     import_method: bpy.props.EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
@@ -99,43 +93,35 @@ class GoBPreferences(AddonPreferences):
                    ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
                    ],
             default='AUTOMATIC')
-
     import_scale_factor: bpy.props.FloatProperty(
         name="** Scale",
         description="import_scale_factor",
         default=1.0, min=0, soft_max=2, step=0.1, precision=2,
         subtype='FACTOR')
-
     import_polypaint: bpy.props.BoolProperty(
-        name="Polypaint to Vertex Color",
+        name="Polypaint",
         description="Import Polypaint as Vertex Color",
-        default=True)
-    
+        default=True)    
     import_polypaint_name: bpy.props.StringProperty(
         name="Vertex Color Name", 
         description="Set name for Vertex Color Layer", 
         default="Col")
-
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
-        default=True)
-       
+        default=True)       
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
         default=True)
-
     apply_facemaps_to_facesets: bpy.props.BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
-        default=True)
-        
+        default=True)        
     import_mask: bpy.props.BoolProperty(
-        name="Mask to Vertex Group",
+        name="Mask",
         description="Import Mask to Vertex Group",
         default=True)
-
     import_uv: bpy.props.BoolProperty(
         name="UV Map",
         description="Import Uv Map from Zbrush",
@@ -144,7 +130,6 @@ class GoBPreferences(AddonPreferences):
         name="UV Map Name", 
         description="Set name for the UV Map", 
         default="UVMap")
-
     imp_tex_diffuse_suffix: bpy.props.StringProperty(
         name="Diffuse Suffix", 
         description="Set Suffix for Diffuse Texture", 
@@ -166,8 +151,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
-        layout.prop(self, 'performance_profiling')      
-           
+        layout.prop(self, 'performance_profiling')
 
         #EXPORT
         col = layout.column()
@@ -176,7 +160,7 @@ class GoBPreferences(AddonPreferences):
         #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
-        #box.prop(self, 'export_mask')       #TODO: not yet supported by blender (16.5.2020)
+        box.prop(self, 'export_mask')
 
 
         # IMPORT
