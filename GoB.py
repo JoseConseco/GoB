@@ -433,7 +433,7 @@ class GoB_OT_import(bpy.types.Operator):
 
                     prefix = obj.name
                     suffix = pref.imp_tex_diffuse_suffix
-                    texture_name = (prefix + "_" + suffix)
+                    texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDiff.image = img
@@ -451,7 +451,7 @@ class GoB_OT_import(bpy.types.Operator):
                     
                     prefix = obj.name
                     suffix = pref.imp_tex_displace_suffix
-                    texture_name = (prefix + "_" + suffix)
+                    texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDisp.image = img
@@ -468,7 +468,7 @@ class GoB_OT_import(bpy.types.Operator):
                     
                     prefix = obj.name
                     suffix = pref.imp_tex_normal_suffix
-                    texture_name = (prefix + "_" + suffix)
+                    texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtNorm.image = img

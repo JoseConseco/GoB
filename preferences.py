@@ -139,34 +139,30 @@ class GoBPreferences(AddonPreferences):
     import_uv: bpy.props.BoolProperty(
         name="UV Map",
         description="Import Uv Map from Zbrush",
-        default=True)
-        
+        default=True)        
     import_uv_name: bpy.props.StringProperty(
         name="UV Map Name", 
         description="Set name for the UV Map", 
         default="UVMap")
 
-
-        
     imp_tex_diffuse_suffix: bpy.props.StringProperty(
         name="Diffuse Suffix", 
         description="Set Suffix for Diffuse Texture", 
-        default="diff")
+        default="_diff")
     imp_tex_displace_suffix: bpy.props.StringProperty(
         name="Displacement Suffix", 
         description="Set Suffix for Displace Texture", 
-        default="disp")
+        default="_disp")
     imp_tex_normal_suffix: bpy.props.StringProperty(
         name="Normal Suffix", 
         description="Set Suffix for Normal Texture", 
-        default="norm")
+        default="_norm")
     
   
     def draw(self, context):
         #GLOBAL
         layout = self.layout
         layout.use_property_split = True
-
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
@@ -189,23 +185,18 @@ class GoBPreferences(AddonPreferences):
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
-        box.prop(self, 'import_material')         
-        
-        col = box.column(align=True)            
-
+        box.prop(self, 'import_material')  
+        col = box.column(align=True)  
         col.prop(self, 'import_mask')
         col.prop(self, 'import_uv')
         col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')
-
-
         col = box.column(align=True) 
         col.prop(self, 'imp_tex_diffuse_suffix') 
         col.prop(self, 'imp_tex_displace_suffix') 
         col.prop(self, 'imp_tex_normal_suffix')
-
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
