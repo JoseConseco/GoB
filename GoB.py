@@ -343,7 +343,6 @@ class GoB_OT_import(bpy.types.Operator):
                     print("Import Mask: ", pref.import_mask)
                     
                     if pref.import_mask:
-                        #print("Mask:", tag)
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]
                         
@@ -885,17 +884,17 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<I', numFaces*2+16))
                         goz_file.write(pack('<Q', numFaces))  
                                                 
-                        colorData=[]                        
+                        groupColor=[]                        
                         #create a color for each facemap (0xffff)
                         for fm in obj.face_maps:
                             randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
                             color = int(randcolor, 16)
-                            colorData.append(color)
+                            groupColor.append(color)
 
                         if me.face_maps:
                             for index, map in enumerate(me.face_maps[0].data):
                                 if map.value >= 0:
-                                    goz_file.write(pack('<H', colorData[map.value]))  
+                                    goz_file.write(pack('<H', groupColor[map.value]))  
                                 else: #face without facemaps (value = -1)
                                     goz_file.write(pack('<H', 0))
                                 
@@ -909,68 +908,66 @@ class GoB_OT_export(bpy.types.Operator):
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces)) 
 
-                    vertWeight = []   
+
+                    import random
+                    groupColor=[]                        
+                        #create a color for each facemap (0xffff)
+                    for vg in obj.vertex_groups:
+                        randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                        color = int(randcolor, 16)
+                        groupColor.append(color)
+                    #add a color for elements that are not part of a vertex group
+                    groupColor.append(0)
+
+                    vertWeight = []  
+                    print(len(me.vertices))   
                     for i in range(len(me.vertices)):
-                        vertWeight.append([])
+                        vertWeight.append([-1]) #set every group to default -1 (not in vertex group)
+                                               
                         for group in me.vertices[i].groups:
-                            try:
-                                if group.weight == 1.0 and obj.vertex_groups[group.group].name.lower() != 'mask':
-                                    vertWeight[i].append(group.weight)
-                                    #print("group, weight", group.group, group.weight)
-                            except:
-                                print('error reading vertex group data')
-                                
-                    #print("vertWeight: ", len(vertWeight), vertWeight)
+                            if obj.vertex_groups[group.group].name.lower() != 'mask':
+                                vertWeight[i].pop(0)
+                                vertWeight[i].append(group.group)
+                                #print("adding vertex: ", i, group.weight, group.group)
+                        #vertWeight.sort()
+                    #print(len(vertWeight), vertWeight[:])
+                    groupData = []
+                    for index, group in enumerate(obj.vertex_groups):
+                        print(index, group.name)
 
                     for face in me.polygons:
-
-                        colorData=[]                        
-                        #create a color for each facemap (0xffff)
-                        for fm in obj.vertex_groups:
-                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                            color = int(randcolor, 16)
-                            colorData.append(color)
-
-
                         group = []
                         for vert in face.vertices:
                             group.extend(vertWeight[vert])
-                            #print("index: ", face.index, vert, vertWeight[vert])
+                            #print("verts: ", vert, vertWeight[vert])
                         group.sort()
                         group.reverse()
-                        tmp = {}
-                        groupVal = int(0)
 
+                        tmp = {}
+                        groupVal = 0
                         for val in group:
-                            #print("val0: ", val)
                             if val not in tmp:
                                 tmp[val] = 1
                             else:
                                 tmp[val] += 1
-
-                                #print("val: ", int(val), tmp[val], len(face.vertices))
                                 if tmp[val] == len(face.vertices):
-                                    groupVal = int(val)
-                                    #print("groupVal", groupVal)
+                                    groupVal = val
                                     break
-                                            
-                        if obj.vertex_groups.items() != []:
-                            groupName = obj.vertex_groups[groupVal].name
-                            #print("groupName 00: ", face.index , groupName, "groupVal: ", groupVal)
-                            if groupName.lower() == 'mask':
+                        
+                        #print(group[:], "\n")
+                        if obj.vertex_groups.items():
+                            if -1 in group:
                                 goz_file.write(pack('<H', 0))
                             else:
-                                groupName = obj.vertex_groups[1].index * 10 
+                                groupName = groupColor[groupVal]
                                 goz_file.write(pack('<H', groupName))
-                                print("groupName 01: ", face.index, obj.vertex_groups[1].index)
+                                #print("face.index:", face.index, "group index:", groupColor[groupVal], "groupVal:", groupVal, "groupName:", groupName, obj.vertex_groups[groupVal].name)
                         else:
-                            goz_file.write(pack('<H', 0)) 
-                            print("groupName 02: ", face.index , groupName)
-                        #print("\n")                
-                        print("group:", face.index, len(group), group)
-                            
+                            goz_file.write(pack('<H', 0))
+
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroups")
+
 
                 # Polygroups from materials
                 if pref.export_polygroups == 'MATERIALS':
