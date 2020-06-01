@@ -863,7 +863,7 @@ class GoB_OT_export(bpy.types.Operator):
                         try:
                             goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
                         except:
-                            goz_file.write(pack('<H', 255))
+                            goz_file.write(pack('<H', 65535))
             
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Write Mask")
