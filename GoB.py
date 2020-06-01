@@ -925,7 +925,7 @@ class GoB_OT_export(bpy.types.Operator):
                             if group.weight >= pref.export_weight_threshold and obj.vertex_groups[group.group].name.lower() != 'mask':
                                 vertWeight[i].pop(0)
                                 vertWeight[i].append(group.group)
-                                print("adding vertex: ", i, group.weight, group.group)
+                                #print("adding vertex: ", i, group.weight, group.group)
                     #print(len(vertWeight), vertWeight[:])
 
                     for index, group in enumerate(obj.vertex_groups):
@@ -936,7 +936,7 @@ class GoB_OT_export(bpy.types.Operator):
                         group = []
                         for vert in face.vertices:
                             group.extend(vertWeight[vert])
-                            print("verts: ", vert, vertWeight[vert])
+                            #print("verts: ", vert, vertWeight[vert])
                         group.sort()
                         group.reverse()
                         print("group: ", group)
@@ -944,12 +944,13 @@ class GoB_OT_export(bpy.types.Operator):
                         tmp = {}
                         groupVal = 0
                         for val in group:
-                            print("val: ", val)
+                            #print("val: ", val)
                             if val not in tmp:
                                 tmp[val] = 1
                             else:
                                 tmp[val] += 1
-                                print("face verts: ", len(face.vertices))
+                                
+                                print("face verts: ", tmp[val], len(face.vertices))
                                 if tmp[val] == len(face.vertices):
                                     groupVal = val
                                     print("val2: ", val)
@@ -957,7 +958,7 @@ class GoB_OT_export(bpy.types.Operator):
                         
                         #print(group[:], "\n")
                         if obj.vertex_groups.items():
-                            print("groupval: ", groupVal) #why is this never 1?
+                            #print("groupval: ", groupVal) #why is this never 1?
                             if -1 in group:
                                 goz_file.write(pack('<H', 0))
                             else:
