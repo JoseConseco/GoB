@@ -922,43 +922,48 @@ class GoB_OT_export(bpy.types.Operator):
                         vertWeight.append([-1]) #set every group to default -1 (not in vertex group)
                                                
                         for group in me.vertices[i].groups:
-                            if group.weight > pref.export_weight_threshold and obj.vertex_groups[group.group].name.lower() != 'mask':
+                            if group.weight >= pref.export_weight_threshold and obj.vertex_groups[group.group].name.lower() != 'mask':
                                 vertWeight[i].pop(0)
                                 vertWeight[i].append(group.group)
-                                #print("adding vertex: ", i, group.weight, group.group)
-                        #vertWeight.sort()
+                                print("adding vertex: ", i, group.weight, group.group)
                     #print(len(vertWeight), vertWeight[:])
-                    groupData = []
+
                     for index, group in enumerate(obj.vertex_groups):
                         print(index, group.name)
 
+                    groupData = []
                     for face in me.polygons:
                         group = []
                         for vert in face.vertices:
                             group.extend(vertWeight[vert])
-                            #print("verts: ", vert, vertWeight[vert])
+                            print("verts: ", vert, vertWeight[vert])
                         group.sort()
                         group.reverse()
+                        print("group: ", group)
 
                         tmp = {}
                         groupVal = 0
                         for val in group:
+                            print("val: ", val)
                             if val not in tmp:
                                 tmp[val] = 1
                             else:
                                 tmp[val] += 1
+                                print("face verts: ", len(face.vertices))
                                 if tmp[val] == len(face.vertices):
                                     groupVal = val
+                                    print("val2: ", val)
                                     break
                         
                         #print(group[:], "\n")
                         if obj.vertex_groups.items():
+                            print("groupval: ", groupVal) #why is this never 1?
                             if -1 in group:
                                 goz_file.write(pack('<H', 0))
                             else:
                                 groupName = groupColor[groupVal]
                                 goz_file.write(pack('<H', groupName))
-                                #print("face.index:", face.index, "group index:", groupColor[groupVal], "groupVal:", groupVal, "groupName:", groupName, obj.vertex_groups[groupVal].name)
+                                print("face.index:", face.index, "group index:", groupColor[groupVal], "groupVal:", groupVal, "groupName:", groupName, obj.vertex_groups[groupVal].name, "\n")
                         else:
                             goz_file.write(pack('<H', 0))
 
