@@ -60,7 +60,18 @@ class GoBPreferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')
+        default='VERTEX_GROUPS')  
+
+    export_weight_threshold: bpy.props.FloatProperty(
+        name="Weight Threshold",
+        description="Only vertex weight higher than the threshold are converted to polygroups",
+        default=0.1,
+        min=0.01,
+        max=1.0,
+        step=0.01,
+        precision=2,
+        subtype='FACTOR') 
+
     export_scale_factor: bpy.props.FloatProperty(
         name="** Scale",
         description="export_scale_factor",
@@ -109,7 +120,7 @@ class GoBPreferences(AddonPreferences):
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
-        default=True)       
+        default=False)       
     import_polygroups_to_facemaps: bpy.props.BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
@@ -151,7 +162,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
-        layout.prop(self, 'performance_profiling')
+        layout.prop(self, 'performance_profiling') 
 
         #EXPORT
         col = layout.column()
@@ -160,7 +171,9 @@ class GoBPreferences(AddonPreferences):
         #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
-        box.prop(self, 'export_mask')
+        box.prop(self, 'export_mask')  
+        box.prop(self, 'export_weight_threshold')
+        
 
 
         # IMPORT

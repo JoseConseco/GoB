@@ -26,8 +26,6 @@ from struct import pack, unpack
 from copy import deepcopy
 import string
 
-
-
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
@@ -925,7 +923,7 @@ class GoB_OT_export(bpy.types.Operator):
                         vertWeight.append([-1]) #set every group to default -1 (not in vertex group)
                                                
                         for group in me.vertices[i].groups:
-                            if obj.vertex_groups[group.group].name.lower() != 'mask':
+                            if group.weight > pref.export_weight_threshold and obj.vertex_groups[group.group].name.lower() != 'mask':
                                 vertWeight[i].pop(0)
                                 vertWeight[i].append(group.group)
                                 #print("adding vertex: ", i, group.weight, group.group)
@@ -1104,6 +1102,7 @@ class GoB_OT_export(bpy.types.Operator):
 
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+        
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
         
         bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
