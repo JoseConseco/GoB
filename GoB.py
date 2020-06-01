@@ -860,14 +860,13 @@ class GoB_OT_export(bpy.types.Operator):
                     goz_file.write(pack('<I', numVertices*2+16))
                     goz_file.write(pack('<Q', numVertices))
                     for i in range(numVertices):
-                        try:
+                        if me.vertices[i].groups:
                             goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
-                        except:
+                        else:
                             goz_file.write(pack('<H', 65535))
             
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Write Mask")
-
            
            
             # --Polygroups--     
@@ -965,6 +964,9 @@ class GoB_OT_export(bpy.types.Operator):
 
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroups")
+
+
+
 
 
                 # Polygroups from materials
