@@ -918,7 +918,13 @@ class GoB_OT_export(bpy.types.Operator):
                     groupColor.append(0)
                     
 
+                    ''' 
+                        # create a list of each vertex group assignement so one vertex can be in x amount of groups 
+                        # then check for each face to which groups their vertices are MOST assigned to 
+                        # and choose that group for the polygroup color if its on all vertices of the face
+                    '''
                     vgData = []  
+                    print(len(me.polygons))
                     for face in me.polygons:
                         vgData.append([])
                         for vert in face.vertices:
@@ -926,68 +932,25 @@ class GoB_OT_export(bpy.types.Operator):
                                 if vg.weight >= pref.export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
                                     vgData[face.index].append(vg.group)
                         
-                        if vgData[face.index]:
-                            vgData[face.index] = max(vgData[face.index])  
-                            goz_file.write(pack('<H', groupColor[vgData[face.index]]))
-
-                            #print(vgData[face.index],  groupColor[vgData[face.index]]) 
+                        if vgData[face.index]:                            
+                            group =  max(vgData[face.index], key = vgData[face.index].count)
+                            count = vgData[face.index].count(group)
+                            #print(vgData[face.index])
+                            #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
+                            #"\ngroup:", group, "color:", groupColor[group] )                            
+                            if len(face.vertices) == count:
+                                #print("full:", face.index,  "\n")
+                                goz_file.write(pack('<H', groupColor[group]))
+                            else:
+                                goz_file.write(pack('<H', 0))
                         else:
                             goz_file.write(pack('<H', 0))
 
                     #print(vgData)
-
-                    print(groupColor)
+                    #print(groupColor)
 
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroups")
-
-
-
-
-                    '''
-                    vertWeight = []  
-                    print(len(me.vertices))   
-                    for i in range(len(me.vertices)):
-                        vertWeight.append([-1]) #set every group to default -1 (not in vertex group)
-                                               
-                        for group in me.vertices[i].groups:
-                            if group.weight >= pref.export_weight_threshold and obj.vertex_groups[group.group].name.lower() != 'mask':
-                                vertWeight[i].pop(0)
-                                vertWeight[i].append(group.group)
-                                #print("adding vertex: ", i, group.weight, group.group)
-                    #print(len(vertWeight), vertWeight[:])
-
-                        for key, index in  enumerate(me.vertices[i].groups):
-                            print(i, key)
-
-                    for index, group in enumerate(obj.vertex_groups):
-                        print(index, group.name)
-                        
-                        
-
-                    groupData = []
-                    for face in me.polygons:
-                        group = []
-                        for vert in face.vertices:
-                            group.extend(vertWeight[vert])
-                            #print("verts: ", vert, vertWeight[vert])
-                        group.sort()
-                        group.reverse()
-                        
-                        if obj.vertex_groups.items():
-                            #print("groupval: ", groupVal) #why is this never 1?
-                            if -1 in group:
-                                goz_file.write(pack('<H', 0))
-                            else:
-                                groupName = groupColor[0]
-                                goz_file.write(pack('<H', groupName))
-                                #print("face.index:", face.index, "group index:", groupColor[groupVal], "groupVal:", groupVal, "groupName:", groupName, obj.vertex_groups[groupVal].name, "\n")
-                        else:
-                            goz_file.write(pack('<H', 0))
-                    '''
-
-
-
 
 
                 # Polygroups from materials
@@ -1004,9 +967,7 @@ class GoB_OT_export(bpy.types.Operator):
                                 vg.add(verts, 1.0, 'ADD')
                 else:
                     print("Export Polygroups: ", pref.export_polygroups)
-
-
-
+                    
 
             # Diff, disp and norm maps
             diff = 0
