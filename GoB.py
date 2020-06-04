@@ -924,7 +924,6 @@ class GoB_OT_export(bpy.types.Operator):
                         # and choose that group for the polygroup color if its on all vertices of the face
                     '''
                     vgData = []  
-                    print(len(me.polygons))
                     for face in me.polygons:
                         vgData.append([])
                         for vert in face.vertices:
@@ -942,9 +941,9 @@ class GoB_OT_export(bpy.types.Operator):
                                 #print("full:", face.index,  "\n")
                                 goz_file.write(pack('<H', groupColor[group]))
                             else:
-                                goz_file.write(pack('<H', 0))
+                                goz_file.write(pack('<H', 65535))
                         else:
-                            goz_file.write(pack('<H', 0))
+                            goz_file.write(pack('<H', 65535))
 
                     #print(vgData)
                     #print(groupColor)
