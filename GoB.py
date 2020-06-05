@@ -897,7 +897,7 @@ class GoB_OT_export(bpy.types.Operator):
                                     goz_file.write(pack('<H', 0))
                                 
                     if pref.performance_profiling: 
-                        start_time = profiler(start_time, "Write FaceMaps to Polygroups") 
+                        start_time = profiler(start_time, "Write FaceMaps") 
                 
 
                 # Polygroups from Vertex Groups
