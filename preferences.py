@@ -60,7 +60,7 @@ class GoBPreferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')  
+        default='FACE_MAPS')  
 
     export_weight_threshold: bpy.props.FloatProperty(
         name="Weight Threshold",
@@ -171,14 +171,15 @@ class GoBPreferences(AddonPreferences):
         #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
-        box.prop(self, 'export_mask')  
-        box.prop(self, 'export_weight_threshold')
+        if self.export_polygroups == 'VERTEX_GROUPS':  
+            box.prop(self, 'export_weight_threshold')
+        box.prop(self, 'export_mask') 
         
 
 
         # IMPORT
         col = layout.column(align=True)
-        box = layout.box()
+        box = layout.box() 
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
         #box.prop(self, 'import_scale_factor')      #TODO
