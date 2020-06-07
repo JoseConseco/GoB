@@ -286,6 +286,7 @@ class GoB_OT_import(bpy.types.Operator):
                         print("Polypainting:", tag)
                     else:
                         break
+
                     polypaintData = []
                     min = 255 #TODO: why is this called min? what is this?
                     goz_file.seek(4, 1)
@@ -429,7 +430,7 @@ class GoB_OT_import(bpy.types.Operator):
                     diff = True
 
                     prefix = obj.name
-                    suffix = pref.imp_tex_diffuse_suffix
+                    suffix = pref.import_diffuse_suffix
                     texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -447,7 +448,7 @@ class GoB_OT_import(bpy.types.Operator):
                     disp = True
                     
                     prefix = obj.name
-                    suffix = pref.imp_tex_displace_suffix
+                    suffix = pref.import_displace_suffix
                     texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -464,7 +465,7 @@ class GoB_OT_import(bpy.types.Operator):
                     norm = True
                     
                     prefix = obj.name
-                    suffix = pref.imp_tex_normal_suffix
+                    suffix = pref.import_normal_suffix
                     texture_name = (prefix + suffix)
                     if not texture_name in bpy.data.textures:
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
@@ -562,19 +563,22 @@ def create_node_material(mat, pref):
     nodes = mat.node_tree.nodes
     output_node = nodes.get('Principled BSDF')    
     
-    #check if we have a vc node assigned 
-    vcol_node = False   
-    for node in nodes:
-        if node.bl_idname == 'ShaderNodeAttribute':
-            if pref.import_polypaint_name in node.attribute_name:
-                vcol_node = nodes.get(node.name)  
-    #create new node if none is assigned/exists
-    if not vcol_node:
-        vcol_node = nodes.new('ShaderNodeAttribute')
-        vcol_node.location = -300, 200
-        vcol_node.attribute_name = pref.import_polypaint_name    
-        mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+    if pref.import_material == 'POLYPAINT':
+        #check if a vertex color node is assigned 
+        vcol_node = False   
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeAttribute':
+                if pref.import_polypaint_name in node.attribute_name:
+                    vcol_node = nodes.get(node.name)  
+        #create new node if none is assigned/exists
+        if not vcol_node:
+            vcol_node = nodes.new('ShaderNodeAttribute')
+            vcol_node.location = -300, 200
+            vcol_node.attribute_name = pref.import_polypaint_name    
+            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
     
+    if pref.import_material == 'TEXTURE':
+        pass
 
            
 def apply_transformation(me, is_import=True): 
@@ -972,35 +976,33 @@ class GoB_OT_export(bpy.types.Operator):
             diff = 0
             disp = 0
             norm = 0
-            GoBmat = False
-            for matslot in obj.material_slots:
-                if matslot.material:
-                    GoBmat = matslot
-                    break
-            # if GoBmat:
-            #     for texslot in GoBmat.material.texture_slots:
-            #         if texslot:
-            #             if texslot.texture:
-            #                 if texslot.texture.type == 'IMAGE' and texslot.texture_coords == 'UV' and texslot.texture.image:
-            #                     if texslot.use_map_color_diffuse:
-            #                         diff = texslot
-            #                     if texslot.use_map_displacement:
-            #                         disp = texslot
-            #                     if texslot.use_map_normal:
-            #                         norm = texslot
-            formatRender = scn.render.image_settings.file_format
+
+            for mat in obj.material_slots:
+                material = bpy.data.materials[mat.name]
+                if material.use_nodes:
+                    #print("material:", mat.name, "using nodes \n")
+                    for node in material.node_tree.nodes:	
+                        #print("node: ", node.type)
+                        	
+                        if node.type == 'TEX_IMAGE':
+                            #print("IMAGES: ", node.image.name, node.image)	
+                            if (pref.import_diffuse_suffix) in node.image.name:                                
+                                diff = node.image
+                                print("diff", diff)
+                            if (pref.import_displace_suffix) in node.image.name:
+                                disp = node.image
+                            if (pref.import_normal_suffix) in node.image.name:
+                                norm = node.image
+                        elif node.type == 'GROUP':
+                            print("group found")
+            
             scn.render.image_settings.file_format = 'BMP'
+            #fileExt = ('.' + pref.texture_format.lower())
+            fileExt = '.bmp'
 
             if diff:
-                name = diff.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 5:
-                    if name[-5:] == "_TXTR":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_TXTR.bmp'
-                diff.texture.image.save_render(name)
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
+                diff.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
@@ -1012,15 +1014,8 @@ class GoB_OT_export(bpy.types.Operator):
                     start_time = profiler(start_time, "Write diff")
 
             if disp:
-                name = disp.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 3:
-                    if name[-3:] == "_DM":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_DM.bmp'
-                disp.texture.image.save_render(name)
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
+                disp.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
@@ -1032,15 +1027,8 @@ class GoB_OT_export(bpy.types.Operator):
                     start_time = profiler(start_time, "Write disp")
 
             if norm:
-                name = norm.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 3:
-                    if name[-3:] == "_NM":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_NM.bmp'
-                norm.texture.image.save_render(name)
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
+                norm.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
@@ -1052,7 +1040,6 @@ class GoB_OT_export(bpy.types.Operator):
                     start_time = profiler(start_time, "Write norm")
 
             # end
-            scn.render.image_settings.file_format = formatRender
             goz_file.write(pack('16x'))
             
             if pref.performance_profiling: 
@@ -1087,6 +1074,9 @@ class GoB_OT_export(bpy.types.Operator):
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
+        
+        #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
+        #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
         
         bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}

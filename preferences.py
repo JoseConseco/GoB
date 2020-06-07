@@ -42,6 +42,17 @@ class GoBPreferences(AddonPreferences):
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
         default=True)
+    """      
+    texture_format: bpy.props.EnumProperty(
+        name="Image Format",
+        description=" Output image format",
+        items=[ ('TIFF', '.tif', ' Output image in TIFF format'), 
+                ('BMP', '.bmp', ' Output image in BMP format'), 
+                ('JPEG', '.jpg', ' Output image in JPEG format'), 
+                ('PNG', '.png', ' Output image in PNG format'), 
+               ],
+        default='BMP')   
+        """
 
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
@@ -91,12 +102,11 @@ class GoBPreferences(AddonPreferences):
     import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
-            items=[('TEXTURES', '** from Textures', 'Create mateial inputs from textures'),        #TODO
-                   #('POLYGROUPS', '** from Polygroup', 'Create material inputs from polygroups'),  #TODO
+            items=[('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),        #TODO
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='POLYPAINT')            
+            default='TEXTURES')            
     import_method: bpy.props.EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
@@ -141,18 +151,18 @@ class GoBPreferences(AddonPreferences):
         name="UV Map Name", 
         description="Set name for the UV Map", 
         default="UVMap")
-    imp_tex_diffuse_suffix: bpy.props.StringProperty(
+    import_diffuse_suffix: bpy.props.StringProperty(
         name="Diffuse Suffix", 
         description="Set Suffix for Diffuse Texture", 
-        default="_diff")
-    imp_tex_displace_suffix: bpy.props.StringProperty(
+        default="_TXTR")
+    import_displace_suffix: bpy.props.StringProperty(
         name="Displacement Suffix", 
         description="Set Suffix for Displace Texture", 
-        default="_disp")
-    imp_tex_normal_suffix: bpy.props.StringProperty(
+        default="_DM")
+    import_normal_suffix: bpy.props.StringProperty(
         name="Normal Suffix", 
         description="Set Suffix for Normal Texture", 
-        default="_norm")
+        default="_NM")
     
   
     def draw(self, context):
@@ -163,6 +173,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
         layout.prop(self, 'performance_profiling') 
+        #layout.prop(self, 'texture_format')
 
         #EXPORT
         col = layout.column()
@@ -192,9 +203,9 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')
         col = box.column(align=True) 
-        col.prop(self, 'imp_tex_diffuse_suffix') 
-        col.prop(self, 'imp_tex_displace_suffix') 
-        col.prop(self, 'imp_tex_normal_suffix')
+        col.prop(self, 'import_diffuse_suffix') 
+        col.prop(self, 'import_displace_suffix') 
+        col.prop(self, 'import_normal_suffix')
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
