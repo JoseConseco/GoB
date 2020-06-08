@@ -57,15 +57,15 @@ class GoBPreferences(AddonPreferences):
     # EXPORT
     export_modifiers: bpy.props.EnumProperty(
         name='Modifiers',
-        description='How to handle exported object modifiers',
-        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply modifiers to object and export them to zbrush'),
-               ('ONLY_EXPORT', 'Only Export', 'Export modifiers to zbrush but do not apply them to mesh'),
+        description='Modifiers Mode',
+        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to Zbrush'),
+               ('ONLY_EXPORT', 'Only Export', 'Export Modifiers to Zbrush but do not apply them in Blender'),
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
     export_polygroups: bpy.props.EnumProperty(
         name="Polygroups",
-        description="Polygroups mode",
+        description="Create Polygroups",
         items=[ ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
                 #('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
@@ -100,10 +100,10 @@ class GoBPreferences(AddonPreferences):
 
     # IMPORT
     import_material: bpy.props.EnumProperty(
-            name="Create material",
-            description="choose source for material import",
-            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),        #TODO
-                   ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
+            name="Material",
+            description="Create Material",
+            items=[#('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
+                   ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
             default='POLYPAINT')            
@@ -124,7 +124,7 @@ class GoBPreferences(AddonPreferences):
         description="Import Polypaint as Vertex Color",
         default=True)    
     import_polypaint_name: bpy.props.StringProperty(
-        name="Vertex Color Name", 
+        name="Vertex Color", 
         description="Set name for Vertex Color Layer", 
         default="Col")
     import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
@@ -148,21 +148,21 @@ class GoBPreferences(AddonPreferences):
         description="Import Uv Map from Zbrush",
         default=True)        
     import_uv_name: bpy.props.StringProperty(
-        name="UV Map Name", 
+        name="UV Map", 
         description="Set name for the UV Map", 
         default="UVMap")
     import_diffuse_suffix: bpy.props.StringProperty(
-        name="Diffuse Suffix", 
-        description="Set Suffix for Diffuse Texture", 
-        default="_TXTR")
+        name="Base Color", 
+        description="Set Suffix for Base Color Map", 
+        default="_diff")
     import_displace_suffix: bpy.props.StringProperty(
-        name="Displacement Suffix", 
-        description="Set Suffix for Displace Texture", 
-        default="_DM")
+        name="Displacement Map", 
+        description="Set Suffix for Displacement Map", 
+        default="_disp")
     import_normal_suffix: bpy.props.StringProperty(
-        name="Normal Suffix", 
-        description="Set Suffix for Normal Texture", 
-        default="_NM")
+        name="Normal Map", 
+        description="Set Suffix for Normal Map", 
+        default="_norm")
     
   
     def draw(self, context):
@@ -186,26 +186,25 @@ class GoBPreferences(AddonPreferences):
             box.prop(self, 'export_weight_threshold')
         #box.prop(self, 'export_mask') 
         
-
-
         # IMPORT
         col = layout.column(align=True)
         box = layout.box() 
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
-        #box.prop(self, 'import_scale_factor')      #TODO
+        #box.prop(self, 'import_scale_factor')      #TODO: add scaling
         box.prop(self, 'import_material')  
-        col = box.column(align=True)  
+        col = box.column(align=True)  #TODO: add heading ="" in 2.9
         #col.prop(self, 'import_mask')
-        col.prop(self, 'import_uv')
-        col.prop(self, 'import_polypaint')       
+        #col.prop(self, 'import_uv')
+        #col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')
-        #col = box.column(align=True) 
-        #col.prop(self, 'import_diffuse_suffix') 
-        #col.prop(self, 'import_displace_suffix') 
-        #col.prop(self, 'import_normal_suffix')
+        
+        col = box.column(align=True)  
+        col.prop(self, 'import_diffuse_suffix') 
+        col.prop(self, 'import_displace_suffix') 
+        col.prop(self, 'import_normal_suffix')
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
