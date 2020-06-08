@@ -102,11 +102,11 @@ class GoBPreferences(AddonPreferences):
     import_material: bpy.props.EnumProperty(
             name="Create material",
             description="choose source for material import",
-            items=[('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),        #TODO
+            items=[#('TEXTURES', 'from Textures', 'Create mateial inputs from textures'),        #TODO
                    ('POLYPAINT', 'from Polypaint', 'Create material inputs from polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='TEXTURES')            
+            default='POLYPAINT')            
     import_method: bpy.props.EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
@@ -172,7 +172,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
-        layout.prop(self, 'performance_profiling') 
+        #layout.prop(self, 'performance_profiling') 
         #layout.prop(self, 'texture_format')
 
         #EXPORT
@@ -184,7 +184,7 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
             box.prop(self, 'export_weight_threshold')
-        box.prop(self, 'export_mask') 
+        #box.prop(self, 'export_mask') 
         
 
 
@@ -196,16 +196,16 @@ class GoBPreferences(AddonPreferences):
         #box.prop(self, 'import_scale_factor')      #TODO
         box.prop(self, 'import_material')  
         col = box.column(align=True)  
-        col.prop(self, 'import_mask')
+        #col.prop(self, 'import_mask')
         col.prop(self, 'import_uv')
         col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')
-        col = box.column(align=True) 
-        col.prop(self, 'import_diffuse_suffix') 
-        col.prop(self, 'import_displace_suffix') 
-        col.prop(self, 'import_normal_suffix')
+        #col = box.column(align=True) 
+        #col.prop(self, 'import_diffuse_suffix') 
+        #col.prop(self, 'import_displace_suffix') 
+        #col.prop(self, 'import_normal_suffix')
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
