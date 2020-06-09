@@ -26,8 +26,6 @@ from struct import pack, unpack
 from copy import deepcopy
 import string
 
-
-
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
@@ -65,24 +63,30 @@ def draw_goz_buttons(self, context):
             else:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
-
+start_time = None
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
     bl_description = "GOZ import background listener"
     
-    def GoZit(self, pathFile):
-        scn = bpy.context.scene
+    
+    def GoZit(self, pathFile):     
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-        diff = False
-        disp = False
-        nmp = False
+        
+        if pref.performance_profiling: 
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "Start Import Profiling")
+            start_total_time = profiler(time.time(), "")
+
+        scn = bpy.context.scene
         utag = 0
         vertsData = []
         facesData = []
-        polypaint = []
-        exists = os.path.isfile(pathFile)
         objMat = None
+        diff = False
+        disp = False
+        norm = False
+        exists = os.path.isfile(pathFile)
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
             return
@@ -94,15 +98,20 @@ class GoB_OT_import(bpy.types.Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
-            print(f"Importing: {pathFile, objName}")
-            me = bpy.data.meshes.new(objName)
+            print(f"Importing: {pathFile, objName}")            
             tag = goz_file.read(4)
-            while tag:
-                print('tags: ', tag)
+
+            while tag:                
+                #print("\ntag 0:", tag)
+                # Name
                 if tag == b'\x89\x13\x00\x00':
+                    print("name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
-                elif tag == b'\x11\x27\x00\x00':  # Vertices
+
+                # Vertices
+                elif tag == b'\x11\x27\x00\x00':  
+                    #print("Vertices:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -110,7 +119,10 @@ class GoB_OT_import(bpy.types.Operator):
                         co2 = unpack('<f', goz_file.read(4))[0]
                         co3 = unpack('<f', goz_file.read(4))[0]
                         vertsData.append((co1, co2, co3))
-                elif tag == b'\x21\x4e\x00\x00':  # Faces
+                
+                # Faces
+                elif tag == b'\x21\x4e\x00\x00':  
+                    #print("Faces:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -124,197 +136,269 @@ class GoB_OT_import(bpy.types.Operator):
                             facesData.append((v4, v1, v2, v3))
                         else:
                             facesData.append((v1, v2, v3, v4))
-
-                elif tag == b'\xa9\x61\x00\x00':  # UVs
+                # UVs
+                elif tag == b'\xa9\x61\x00\x00':  
+                    #print("UVs:", tag)
                     break
-                elif tag == b'\xb9\x88\x00\x00':  # Polypainting
+                # Polypainting
+                elif tag == b'\xb9\x88\x00\x00':  
+                    #print("Polypainting:", tag)
                     break
-                elif tag == b'\x32\x75\x00\x00':  # Mask
+                # Mask
+                elif tag == b'\x32\x75\x00\x00':  
+                    #print("Mask:", tag)
                     break
-                elif tag == b'\x41\x9c\x00\x00':  # Polyroups
+                # Polyroups
+                elif tag == b'\x41\x9c\x00\x00': 
+                    #print("Polyroups:", tag) 
                     break
-                elif tag == b'\x00\x00\x00\x00':  # End
+                # End
+                elif tag == b'\x00\x00\x00\x00':  
+                    #print("End:", tag)
                     break
                 else:
-                    # print(f"unknown tag:{tag}. Skip it...")
+                    print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many mesh tags unknown...")
+                        print("...Too many mesh tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
-            me.from_pydata(vertsData, [], facesData)  # Assume mesh data in ready to write to mesh..
-            del vertsData
-            del facesData
-            # TODO: do we add scaling here?
-            if pref.flip_up_axis:  # fixes bad mesh orientation for some people
-                if pref.flip_forward_axis:
-                    me.transform(mathutils.Matrix([
-                        (-1., 0., 0., 0.),
-                        (0., 0., -1., 0.),
-                        (0., 1., 0., 0.),
-                        (0., 0., 0., 1.)]))
-                    me.flip_normals()
-                else:
-                    me.transform(mathutils.Matrix([
-                        (-1., 0., 0., 0.),
-                        (0., 0., 1., 0.),
-                        (0., 1., 0., 0.),
-                        (0., 0., 0., 1.)]))
-
-            else:
-                if pref.flip_forward_axis:
-                    me.transform(mathutils.Matrix([
-                        (1., 0., 0., 0.),
-                        (0., 0., -1., 0.),
-                        (0., -1., 0., 0.),
-                        (0., 0., 0., 1.)]))
-                    me.flip_normals()
-                else:
-                    me.transform(mathutils.Matrix([
-                        (1., 0., 0., 0.),
-                        (0., 0., 1., 0.),
-                        (0., -1., 0., 0.),
-                        (0., 0., 0., 1.)]))
-
-            # useful for development when the mesh may be invalid.
-            me.validate(verbose=True)
-            # update mesh data after transformations to fix normals
-            me.update(calc_edges=True, calc_edges_loose=True)
-
-            # if obj already exist do code below
-            if objName in bpy.data.objects.keys():
-                obj = bpy.data.objects[objName]
-                oldMesh = obj.data
-                instances = [ob for ob in bpy.data.objects if ob.data == obj.data]                
                 
-                ## keep users smoothing groups
-                # transfer old face smooth data to new mesh
-                bm = bmesh.new()
-                bm.from_mesh(me)
-                bm.faces.ensure_lookup_table()
-                bm_old = bmesh.new()
-                bm_old.from_mesh(oldMesh)
-                for f in bm_old.faces:
-                    bm.faces[f.index].smooth = f.smooth
-                bm.to_mesh(me)               
-                bm_old.free()              
-                bm.free()                
+            if pref.performance_profiling:  
+                start_time = profiler(start_time, "Unpack Mesh Data")
 
-                for old_mat in oldMesh.materials:
-                    me.materials.append(old_mat)
+            
+            # create new object
+            if not objName in bpy.data.objects.keys():
+                me = bpy.data.meshes.new(objName)  #create empty mesh  
+                me.from_pydata(vertsData, [], facesData)
+                obj = bpy.data.objects.new(objName, me)
+                # link object to active collection
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)          
 
-                for instance in instances:
-                    instance.data = me
+            # object already exist
+            else:
+                #mesh has same vertex count
+                if len(bpy.data.objects[objName].data.vertices) == len(vertsData): 
+                    obj = bpy.data.objects[objName]
+                    me = obj.data
+                    bm = bmesh.new()
+                    bm.from_mesh(me)
+                    bm.faces.ensure_lookup_table() 
+                    #udpate vertex positions
+                    for i, v in enumerate(bm.verts):
+                        v.co = vertsData[i]                    
+                    bm.to_mesh(me)        
+                    bm.free() 
+                #mesh has different vertex count
+                else:  
+                    obj = bpy.data.objects[objName]                    
+                    obj.data.clear_geometry()
+                    me = obj.data                              
+                    me.from_pydata(vertsData, [], facesData)
+                    obj.data = me
+            
+            # update mesh data after transformations to fix normals     
+            me.update(calc_edges=True, calc_edges_loose=True)    
+            me,_ = apply_transformation(me, is_import=True)
 
-                bpy.data.meshes.remove(oldMesh)
+            #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
+            obj.select_set(True)      # make object active
+            bpy.context.view_layer.objects.active = obj
+            utag = 0  #TODO: why do we need this? 
+            vertsData.clear()
+            facesData.clear()
 
-                obj.data.transform(obj.matrix_world.inverted())     # assume we have to rever transformation from obj mode
-                obj.select_set(True)
+            if pref.performance_profiling:  
+                start_time = profiler(start_time, "Make Mesh")
+                
+            
+            if pref.import_material == 'NONE':
+                print("Import Material: ", pref.import_material) 
+            else:
+                
                 if len(obj.material_slots) > 0:
+                    #print("material slot: ", obj.material_slots[0])
                     if obj.material_slots[0].material is not None:
                         objMat = obj.material_slots[0].material
                     else:
-                        objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                        objMat = bpy.data.materials.new(objName)
                         obj.material_slots[0].material = objMat
                 else:
-                    objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
+                    objMat = bpy.data.materials.new(objName)
                     obj.data.materials.append(objMat)
 
-                # if pref.import_material == 'POLYPAINT':
-                #     create_node_material(objMat, pref)
+                if pref.import_material == 'POLYPAINT':
+                    create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'TEXTURES':
+                    create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'POLYGROUPS':
+                    create_node_material(objMat, pref)  
+          
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Material Node")
 
-            # create new object
-            else:
-                obj = bpy.data.objects.new(objName, me)
-                # link object to active collection
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
-                objMat = bpy.data.materials.new('GoB_{0}'.format(objName))
-                obj.data.materials.append(objMat)
-                obj.select_set(True)
-
-            if pref.import_material == 'POLYPAINT':
-                create_node_material(objMat, pref)
-
-            # make object active
-            bpy.context.view_layer.objects.active = obj
-            utag = 0
 
             while tag:
-                if tag == b'\xa9\x61\x00\x00':  # UVs
-                    me.uv_layers.new()
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count..
-                    uv_layer = me.uv_layers[0]
-                    for tri in me.polygons:
-                        for i, loop_index in enumerate(tri.loop_indices):
-                            x, y = unpack('<2f', goz_file.read(8))
-                            uv_layer.data[loop_index].uv = x, 1. - y
-                        if i < 3:  # cos uv always have 4 coords... ??
-                            x, y = unpack('<2f', goz_file.read(8))
+                # UVs
+                if tag == b'\xa9\x61\x00\x00':
+                    if pref.import_uv:  
+                        print("Import UV: ", pref.import_uv, tag)
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count.. 
+                        
+                        bm = bmesh.new()
+                        bm.from_mesh(me)
+                        bm.faces.ensure_lookup_table()
+                        if me.uv_layers:
+                            if pref.import_uv_name in me.uv_layers:                            
+                                uv_layer = bm.loops.layers.uv.get(pref.import_uv_name)
+                            else:
+                                uv_layer = bm.loops.layers.uv.new(pref.import_uv_name)
+                        else:
+                            uv_layer = bm.loops.layers.uv.new(pref.import_uv_name) 
+                        uv_layer = bm.loops.layers.uv.verify()
 
-                elif tag == b'\xb9\x88\x00\x00':  # Polypainting
-                    min = 255
+                        for face in bm.faces:
+                            for index, loop in enumerate(face.loops):            
+                                x, y = unpack('<2f', goz_file.read(8)) 
+                                loop[uv_layer].uv = x, 1.0-y
+                            #uv's always have 4 coords so its required to read one more if a trinalge is in the mesh
+                            # zbrush seems to always write out 4 coords            
+                            if index < 3:       
+                                x, y = unpack('<2f', goz_file.read(8))
+
+                        bm.to_mesh(me)   
+                        bm.free()                       
+                        me.update(calc_edges=True, calc_edges_loose=True)   
+                        
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "UV Map")
+
+                # Polypainting
+                elif tag == b'\xb9\x88\x00\x00': 
+                    print("Import Polypaint: ", pref.import_polypaint)  
+                    if pref.import_polypaint:
+                        print("Polypainting:", tag)
+                    else:
+                        break
+
+                    polypaintData = []
+                    min = 255 #TODO: why is this called min? what is this?
                     goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]
-                    for i in range(cnt):
+                    cnt = unpack('<Q', goz_file.read(8))[0]                   
+                    
+                    for i in range(cnt): 
                         data = unpack('<3B', goz_file.read(3))
+                        
                         unpack('<B', goz_file.read(1))  # Alpha
                         if data[0] < min:
-                            min = data[0]
-                        polypaint.append(data)
-                    if min < 250:
-                        vertexColor = me.vertex_colors.new()
-                        iv = 0
-                        for poly in me.polygons:
-                            for loop_index in poly.loop_indices:
-                                loop = me.loops[loop_index]
-                                v = loop.vertex_index
-                                color = polypaint[v]
-                                if bpy.app.version > (2, 79, 0):
-                                    vertexColor.data[iv].color = [color[2]/255, color[1]/255, color[0]/255, 1]
-                                else:
-                                    vertexColor.data[iv].color = [color[2]/255, color[1]/255, color[0]/255]
-                                iv += 1
-                    del polypaint
+                            min = data[0]   #TODO: assing data to min, what is this data?                          
+                        else:                            
+                            #print("polypaint min: ", min, data[0])  
+                            pass
+                        alpha = 1                        
 
-                elif tag == b'\x32\x75\x00\x00':  # Mask
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]
-                    if 'mask' in obj.vertex_groups:
-                        obj.vertex_groups.remove(obj.vertex_groups['mask'])
-                    groupMask = obj.vertex_groups.new(name='mask')
-                    for i in range(cnt):
-                        data = unpack('<H', goz_file.read(2))[0] / 65535.
-                        groupMask.add([i], 1.-data, 'ADD')
+                        #convert color to vector                         
+                        rgb = [x / 255.0 for x in data]    
+                        rgb.reverse()                    
+                        rgba = rgb + [alpha]                                          
+                        polypaintData.append(tuple(rgba))                      
+                    
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Polypaint Unpack")
 
-                elif tag == b'\x41\x9c\x00\x00':  # Polyroups
-                    groups = []
-                    facemaps = []
+                    if min < 250: #TODO: whats this 250?                      
+                        bm = bmesh.new()
+                        bm.from_mesh(me)
+                        bm.faces.ensure_lookup_table()
+                        if me.vertex_colors:                            
+                            if pref.import_polypaint_name in me.vertex_colors: 
+                                color_layer = bm.loops.layers.color.get(pref.import_polypaint_name)
+                            else:
+                                color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                                    
+                        else:
+                            color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                
+                        
+                        for face in bm.faces:
+                            for loop in face.loops:
+                                loop[color_layer] = polypaintData[loop.vert.index]
+
+                        bm.to_mesh(me)                        
+                        me.update(calc_edges=True, calc_edges_loose=True)  
+                        bm.free()
+                    polypaintData.clear()
+
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Polypaint Assign")
+
+
+                # Mask
+                elif tag == b'\x32\x75\x00\x00':   
+                    print("Import Mask: ", pref.import_mask)
+                    
+                    if pref.import_mask:
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]
+                        
+                        if 'mask' in obj.vertex_groups:
+                            obj.vertex_groups.remove(obj.vertex_groups['mask'])
+                        groupMask = obj.vertex_groups.new(name='mask')
+
+                        for faceIndex in range(cnt):
+                            weight = unpack('<H', goz_file.read(2))[0] / 65535                          
+                            groupMask.add([faceIndex], 1.-weight, 'ADD')  
+
+                        if pref.performance_profiling: 
+                            start_time = profiler(start_time, "Mask")
+                    else:
+                        break
+
+                # Polyroups
+                elif tag == b'\x41\x9c\x00\x00':   
+                    print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
+                    
+                    #wipe face maps before importing new ones due to random naming
+                    if pref.import_polygroups_to_facemaps:
+                        for i,facemap in enumerate(obj.face_maps):                              
+                            obj.face_maps.remove(facemap)
+
+
+                    groupsData = []
+                    facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                    for faceindex in range(cnt):    # faces of each polygroup
+                    #print("polygroup data:", cnt)
+                    
+                    for i in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
+                        #print("polygroup data:", i, group, hex(group))
+
+                        # vertex groups import
                         if pref.import_polygroups_to_vertexgroups:
-                            if group not in groups:
+                            if group not in groupsData: #this only works if mask is already there
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
                                 vg = obj.vertex_groups.new(name=str(group))
-                                groups.append(group)
+                                groupsData.append(group)
                             else:
                                 vg = obj.vertex_groups[str(group)]
-                            vg.add(list(me.polygons[faceindex].vertices), 1., 'ADD')    # add vertices to vertex group
-
+                            vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
+                        
+                        # Face maps import
                         if pref.import_polygroups_to_facemaps:
-                            if group not in facemaps:
+                            if group not in facemapsData:
                                 if str(group) in obj.face_maps:
                                     obj.face_maps.remove(obj.face_maps[str(group)])
                                 fm = obj.face_maps.new(name=str(group))
-                                facemaps.append(group)
-                            else:
-                                fm = obj.face_maps[str(group)]
-                            fm.add([faceindex])     # add faces to facemap
+                                facemapsData.append(group)
+                            else:                                
+                                fm = obj.face_maps[str(group)] 
+                            fm.add([i])     # add faces to facemap
                     try:
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
@@ -324,49 +408,83 @@ class GoB_OT_import(bpy.types.Operator):
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
+                    
+                    groupsData.clear()
+                    facemapsData.clear()
 
-                elif tag == b'\x00\x00\x00\x00':
-                    break  # End
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Polyroups")
 
-                elif tag == b'\xc9\xaf\x00\x00':  # Diff map
+                # End
+                elif tag == b'\x00\x00\x00\x00': 
+                    break
+                
+                # Diff map 
+                elif tag == b'\xc9\xaf\x00\x00':  
+                    #print("Diff map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(diffName.decode('utf-8'))
                     img = bpy.data.images.load(diffName.strip().decode('utf-8'))
                     diff = True
-                    txtDiff = bpy.data.textures.new("GoB_diffuse", 'IMAGE')
-                    txtDiff.image = img
-                    # me.uv_textures[0].data[0].image = img
-                elif tag == b'\xd9\xd6\x00\x00':  # Disp map
+
+                    prefix = obj.name
+                    suffix = pref.import_diffuse_suffix
+                    texture_name = (prefix + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtDiff.image = img
+                        # me.uv_textures[0].data[0].image = img
+
+                # Disp map 
+                elif tag == b'\xd9\xd6\x00\x00':  
+                    #print("Disp map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(dispName.decode('utf-8'))
                     img = bpy.data.images.load(dispName.strip().decode('utf-8'))
                     disp = True
-                    txtDisp = bpy.data.textures.new("GoB_displacement", 'IMAGE')
-                    txtDisp.image = img
-                elif tag == b'\x51\xc3\x00\x00':  # Normal map
+                    
+                    prefix = obj.name
+                    suffix = pref.import_displace_suffix
+                    texture_name = (prefix + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtDisp.image = img
+                
+                # Normal map
+                elif tag == b'\x51\xc3\x00\x00':   
+                    #print("Normal map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
-                    nmpName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(nmpName.decode('utf-8'))
-                    img = bpy.data.images.load(nmpName.strip().decode('utf-8'))
-                    nmp = True
-                    txtNmp = bpy.data.textures.new("GoB_normal", 'IMAGE')
-                    txtNmp.image = img
-                    txtNmp.use_normal_map = True
-                else:
-                    print("unknown tag:{0}\ntry to skip it...".format(tag))
+                    normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
+                    print(normName.decode('utf-8'))
+                    img = bpy.data.images.load(normName.strip().decode('utf-8'))
+                    norm = True
+                    
+                    prefix = obj.name
+                    suffix = pref.import_normal_suffix
+                    texture_name = (prefix + suffix)
+                    if not texture_name in bpy.data.textures:
+                        txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
+                        txtNorm.image = img
+                        txtNorm.use_normal_map = True
+                
+                else: 
+                    print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many object tags unknown...")
+                        print("...Too many object tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
-                tag = goz_file.read(4)
 
+                tag = goz_file.read(4)                
+                
+            if pref.performance_profiling:                
+                start_time = profiler(start_time, "Textures")
 
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
@@ -380,33 +498,16 @@ class GoB_OT_import(bpy.types.Operator):
                             override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
-                            break
-                                 
-                if not pref.switch_to_sculpt_mode:
-                    bpy.ops.object.mode_set(bpy.context.copy(), mode=current_mode)
+                            break                                 
 
-
-        # if diff:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtDiff
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_color_diffuse = True
-        # if disp:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtDisp
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_color_diffuse = False
-        #     mtex.use_map_displacement = True
-        # if nmp:
-        #     mtex = objMat.texture_slots.add()
-        #     mtex.texture = txtNmp
-        #     mtex.texture_coords = 'UV'
-        #     mtex.use_map_normal = True
-        #     mtex.use_map_color_diffuse = False
-        #     mtex.normal_factor = 1.
-        #     mtex.normal_map_space = 'TANGENT'
-        # me.materials.append(objMat)
+                if pref.performance_profiling: 
+                    profiler(start_time, "Face Maps")
+                    print(30*"-")
+                    profiler(start_total_time, "Total Import Time")  
+                    print(30*"=")       
+       
         return
+             
 
 
     def execute(self, context):
@@ -419,13 +520,16 @@ class GoB_OT_import(bpy.types.Operator):
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
             return{'CANCELLED'}
 
+        currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':
+            currentContext = context.object.mode
+            print("currentContext: ", currentContext)
             # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
             bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
-
+        
         for ztool_path in goz_obj_paths:
             self.GoZit(ztool_path)
-
+            bpy.ops.object.mode_set(context.copy(), mode=currentContext)
         self.report({'INFO'}, "Done")
         return{'FINISHED'}
 
@@ -455,20 +559,107 @@ class GoB_OT_import(bpy.types.Operator):
 
 
 def create_node_material(mat, pref):
-    # enable nodes
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
-    output_node = nodes.get('Principled BSDF')
-    vcol_node = nodes.get('ShaderNodeAttribute')
-    # create new node
-    if not vcol_node:
-        vcol_node = nodes.new('ShaderNodeAttribute')
-        vcol_node.location = -300, 200
-        vcol_node.attribute_name = 'Col'  # TODO: replace with vertex color group name
+    output_node = nodes.get('Principled BSDF')    
+    
+    if pref.import_material == 'POLYPAINT':
+        #check if a vertex color node is assigned 
+        vcol_node = False   
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeAttribute':
+                if pref.import_polypaint_name in node.attribute_name:
+                    vcol_node = nodes.get(node.name)  
+        #create new node if none is assigned/exists
+        if not vcol_node:
+            vcol_node = nodes.new('ShaderNodeAttribute')
+            vcol_node.location = -300, 200
+            vcol_node.attribute_name = pref.import_polypaint_name    
+            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+    
+    if pref.import_material == 'TEXTURE':
+        pass
 
-        # link nodes
-        mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+           
+def apply_transformation(me, is_import=True): 
+    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    mat_transform = None
 
+    # TODO: do we add scaling here?
+    
+    #import
+    if pref.flip_up_axis:  # fixes bad mesh orientation for some people
+        if pref.flip_forward_axis:
+            if is_import:
+                me.transform(mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]))
+                me.flip_normals()
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)])
+        else:
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]))
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)])
+
+    else:
+        if pref.flip_forward_axis:            
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]))
+                me.flip_normals()
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)])
+        else:
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]))
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)])
+    return me, mat_transform
+                
+def profiler(start_time=0, string=None):               
+    
+    elapsed = time.time()
+    print("{:.4f}".format(elapsed-start_time), "<< ", string)  
+    start_time = time.time()
+    return start_time  
 
 def run_import_periodically():
     # print("Runing timers update check")
@@ -502,7 +693,7 @@ class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to Zbrush"
     bl_description = "Export to Zbrush"
-
+    
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()
@@ -522,7 +713,6 @@ class GoB_OT_export(bpy.types.Operator):
         #join traingles only that are result of ngon triangulation        
         for f in bm.faces:
             if len(f.edges) > 4:
-                print("test")   
                 result = bmesh.ops.triangulate(bm, faces=[f])
                 bmesh.ops.join_triangles(bm, faces= result['faces'], 
                                         cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
@@ -535,62 +725,14 @@ class GoB_OT_export(bpy.types.Operator):
 
         return export_mesh
 
-    @staticmethod
-    def make_polygroups(obj, pref):        
-        dg = bpy.context.evaluated_depsgraph_get()
-        me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
-        
-        #mask
-        if pref.export_mask == 'MASK':
-            print("exporting mask")
-
-        if pref.export_polygroups == 'NONE':
-            pass
-
-        #vertex weights to polygroups
-        if pref.export_polygroups == 'VERTEX_GROUPS':
-            print("exporting vertex groups to polypaint")
-        else:        
-            for vertexGroup in obj.vertex_groups:
-                obj.vertex_groups.remove(vertexGroup)
-            
-        #face maps to polygroups       
-        if pref.export_polygroups == 'FACE_MAPS':
-            print("exporting face maps to polypaint")
-            for facemap in obj.face_maps:
-                #print("map name and index: ", facemap.name, facemap.index)
-                if not facemap:
-                    continue            
-                verts = [v for index, map in enumerate(obj.data.face_maps[0].data)
-                                if map.value == facemap.index  
-                                    for f in obj.data.polygons 
-                                        if f.index==index
-                                            for v in f.vertices]                                                                        
-                verts = list(set(verts)) 
-                if len(verts):
-                    vg = obj.vertex_groups.get(facemap.name)                
-                    if vg is None:               
-                        vg = obj.vertex_groups.new(name=facemap.name) 
-                        vg.add(verts, 1.0, 'ADD')
-
-        #materials to polygroups
-        if pref.export_polygroups == 'MATERIALS':
-            print("exporting materials to polypaint")
-            for index, slot in enumerate(obj.material_slots):
-                if not slot.material:
-                    continue
-                verts = [v for f in obj.data.polygons
-                         if f.material_index == index for v in f.vertices]
-                if len(verts):
-                    vg = obj.vertex_groups.get(slot.material.name)
-                    if vg is None:
-                        vg = obj.vertex_groups.new(name=slot.material.name)
-                        vg.add(verts, 1.0, 'ADD')
-
 
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
 
+        if pref.performance_profiling: 
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "Start Export Profiling")
+            start_total_time = profiler(time.time(), "")
         
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -604,61 +746,59 @@ class GoB_OT_export(bpy.types.Operator):
                 obj.select_set(state=False)
                 bpy.context.view_layer.objects.active = new_ob
 
-
-        self.make_polygroups(obj, pref)                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Linked Object")
+               
         me = self.apply_modifiers(obj, pref)
         me.calc_loop_triangles()
+        me, mat_transform = apply_transformation(me, is_import=False)
 
-        if pref.flip_up_axis:
-            if pref.flip_forward_axis:
-                mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
-            else:
-                mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
-        else:
-            if pref.flip_forward_axis:
-                mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
-            else:
-                mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
+        if pref.performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh")
 
-        with open(pathImport+'/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
+
+        with open(pathImport + '/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
+            
+            numFaces = len(me.polygons)
+            numVertices = len(me.vertices)
+
+
+            # --File Header--
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
             goz_file.write(pack('<6B', 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E))
             goz_file.write(pack('<I', 1))  # obj tag
             goz_file.write(pack('<I', len(obj.name)+24))
             goz_file.write(pack('<Q', 1))
-            goz_file.write(b'GoZMesh_'+obj.name.encode('U8'))
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write File Header")
+
+            # --Object Name--
+            goz_file.write(b'GoZMesh_' + obj.name.encode('utf-8'))
             goz_file.write(pack('<4B', 0x89, 0x13, 0x00, 0x00))
             goz_file.write(pack('<I', 20))
             goz_file.write(pack('<Q', 1))
-            goz_file.write(pack('<I', 0))
-            nbFaces = len(me.polygons)
-            nbVertices = len(me.vertices)
+            goz_file.write(pack('<I', 0))           
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Object Name")
+            
+
+            # --Vertices--
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
-            goz_file.write(pack('<I', nbVertices*3*4+16))
-            goz_file.write(pack('<Q', nbVertices))
+            goz_file.write(pack('<I', numVertices*3*4+16))
+            goz_file.write(pack('<Q', numVertices))            
             for vert in me.vertices:
                 modif_coo = obj.matrix_world @ vert.co
                 modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
+                
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Vertices")
+            
+
+            # --Faces--
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
-            goz_file.write(pack('<I', nbFaces*4*4+16))
-            goz_file.write(pack('<Q', nbFaces))
+            goz_file.write(pack('<I', numFaces*4*4+16))
+            goz_file.write(pack('<Q', numFaces))
             for face in me.polygons:
                 if len(face.vertices) == 4:
                     goz_file.write(pack('<4I', face.vertices[0],
@@ -670,6 +810,11 @@ class GoB_OT_export(bpy.types.Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
+
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Faces")
+
+
             # --UVs--
             if me.uv_layers.active:
                 uv_layer = me.uv_layers[0]
@@ -682,12 +827,15 @@ class GoB_OT_export(bpy.types.Operator):
                         goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
                     if i == 2:
                         goz_file.write(pack('<2f', 0., 1.))
+                        
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write UV")
 
 
-            # --Polypainting--
+            # --Polypaint--
             if me.vertex_colors.active:
                 vcoldata = me.vertex_colors.active.data # color[loop_id]
-                vcolArray = bytearray([0] * nbVertices * 3)
+                vcolArray = bytearray([0] * numVertices * 3)
                 #fill vcArray(vert_idx + rgb_offset) = color_xyz
                 for loop in me.loops: #in the end we will fill verts with last vert_loop color
                     vert_idx = loop.vertex_index
@@ -696,147 +844,210 @@ class GoB_OT_export(bpy.types.Operator):
                     vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
-                goz_file.write(pack('<I', nbVertices*4+16))
-                goz_file.write(pack('<Q', nbVertices))
+                goz_file.write(pack('<I', numVertices*4+16))
+                goz_file.write(pack('<Q', numVertices))
+
                 for i in range(0, len(vcolArray), 3):
                     goz_file.write(pack('<B', vcolArray[i+2]))
                     goz_file.write(pack('<B', vcolArray[i+1]))
                     goz_file.write(pack('<B', vcolArray[i]))
                     goz_file.write(pack('<B', 0))
-                del vcolArray
+                vcolArray.clear()
+            
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Polypaint")
 
             # --Mask--
             for vertexGroup in obj.vertex_groups:
                 if vertexGroup.name.lower() == 'mask':
                     goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
-                    goz_file.write(pack('<I', nbVertices*2+16))
-                    goz_file.write(pack('<Q', nbVertices))
-                    for i in range(nbVertices):
+                    goz_file.write(pack('<I', numVertices*2+16))
+                    goz_file.write(pack('<Q', numVertices))
+                    for i in range(numVertices):
+
                         try:
-                            goz_file.write(pack('<H', int((1.-vertexGroup.weight(i))*65535)))
+                            goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
                         except:
-                            goz_file.write(pack('<H', 255))
-                    break
+                            goz_file.write(pack('<H', 65535))
+            
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Write Mask")
+           
+           
+            # --Polygroups--     
+            if not pref.export_polygroups == 'NONE':  
+                print("Export Polygroups: ", pref.export_polygroups)
+                import random
 
-            # --Polygroups--
-            vertWeight = []     
-            for i in range(len(me.vertices)):
-                vertWeight.append([])
-                for group in me.vertices[i].groups:
-                    try:
-                        if group.weight == 1. and obj.vertex_groups[group.group].name.lower() != 'mask':
-                            vertWeight[i].append(group.group)
-                    except:
-                        print('error reading vertex group data')
-                        
-            goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-            goz_file.write(pack('<I', nbFaces*2+16))
-            goz_file.write(pack('<Q', nbFaces))
+                #Polygroups from Face Maps
+                if pref.export_polygroups == 'FACE_MAPS':
+                    if obj.face_maps.items:                         
+                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                        goz_file.write(pack('<I', numFaces*2+16))
+                        goz_file.write(pack('<Q', numFaces))  
+                                                
+                        groupColor=[]                        
+                        #create a color for each facemap (0xffff)
+                        for fm in obj.face_maps:
+                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                            color = int(randcolor, 16)
+                            groupColor.append(color)
 
-            import random
-            numrand = random.randint(1, 40)
-            for face in me.polygons:
-                group = []
-                for vert in face.vertices:
-                    group.extend(vertWeight[vert])
-                group.sort()
-                group.reverse()
-                tmp = {}
-                groupVal = 0
-                for val in group:
-                    if val not in tmp:
-                        tmp[val] = 1
-                    else:
-                        tmp[val] += 1
-                        if tmp[val] == len(face.vertices):
-                            groupVal = val
-                            break
-                if obj.vertex_groups.items() != []:
-                    groupName = obj.vertex_groups[groupVal].name
-                    if groupName.lower() == 'mask':
-                        goz_file.write(pack('<H', 0))
-                    else:
-                        groupName = obj.vertex_groups[groupVal].index * numrand
-                        goz_file.write(pack('<H', groupName))
-                else:
-                    goz_file.write(pack('<H', 0))
+                        if me.face_maps:
+                            for index, map in enumerate(me.face_maps[0].data):
+                                if map.value >= 0:
+                                    goz_file.write(pack('<H', groupColor[map.value]))  
+                                else: #face without facemaps (value = -1)
+                                    goz_file.write(pack('<H', 0))
+                                
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Write FaceMaps") 
+                
+
+                # Polygroups from Vertex Groups
+                if pref.export_polygroups == 'VERTEX_GROUPS':
+                    goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                    goz_file.write(pack('<I', numFaces*2+16))
+                    goz_file.write(pack('<Q', numFaces)) 
+
+
+                    import random
+                    groupColor=[]                        
+                    #create a color for each facemap (0xffff)
+                    for vg in obj.vertex_groups:
+                        randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                        color = int(randcolor, 16)
+                        groupColor.append(color)
+                    #add a color for elements that are not part of a vertex group
+                    groupColor.append(0)
                     
 
+                    ''' 
+                        # create a list of each vertex group assignement so one vertex can be in x amount of groups 
+                        # then check for each face to which groups their vertices are MOST assigned to 
+                        # and choose that group for the polygroup color if its on all vertices of the face
+                    '''
+                    vgData = []  
+                    for face in me.polygons:
+                        vgData.append([])
+                        for vert in face.vertices:
+                            for vg in me.vertices[vert].groups:
+                                if vg.weight >= pref.export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
+                                    vgData[face.index].append(vg.group)
+                        
+                        if vgData[face.index]:                            
+                            group =  max(vgData[face.index], key = vgData[face.index].count)
+                            count = vgData[face.index].count(group)
+                            #print(vgData[face.index])
+                            #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
+                            #"\ngroup:", group, "color:", groupColor[group] )                            
+                            if len(face.vertices) == count:
+                                #print("full:", face.index,  "\n")
+                                goz_file.write(pack('<H', groupColor[group]))
+                            else:
+                                goz_file.write(pack('<H', 65535))
+                        else:
+                            goz_file.write(pack('<H', 65535))
 
-            # Diff, disp and nm maps
+                    #print(vgData)
+                    #print(groupColor)
+
+                    if pref.performance_profiling: 
+                        start_time = profiler(start_time, "Write Polygroups")
+
+
+                # Polygroups from materials
+                if pref.export_polygroups == 'MATERIALS':
+                    for index, slot in enumerate(obj.material_slots):
+                        if not slot.material:
+                            continue
+                        verts = [v for f in obj.data.polygons
+                                if f.material_index == index for v in f.vertices]
+                        if len(verts):
+                            vg = obj.vertex_groups.get(slot.material.name)
+                            if vg is None:
+                                vg = obj.vertex_groups.new(name=slot.material.name)
+                                vg.add(verts, 1.0, 'ADD')
+                else:
+                    print("Export Polygroups: ", pref.export_polygroups)
+                    
+
+            # Diff, disp and norm maps
             diff = 0
             disp = 0
-            nm = 0
-            GoBmat = False
-            for matslot in obj.material_slots:
-                if matslot.material:
-                    GoBmat = matslot
-                    break
-            # if GoBmat:
-            #     for texslot in GoBmat.material.texture_slots:
-            #         if texslot:
-            #             if texslot.texture:
-            #                 if texslot.texture.type == 'IMAGE' and texslot.texture_coords == 'UV' and texslot.texture.image:
-            #                     if texslot.use_map_color_diffuse:
-            #                         diff = texslot
-            #                     if texslot.use_map_displacement:
-            #                         disp = texslot
-            #                     if texslot.use_map_normal:
-            #                         nm = texslot
-            formatRender = scn.render.image_settings.file_format
+            norm = 0
+
+            for mat in obj.material_slots:
+                material = bpy.data.materials[mat.name]
+                if material.use_nodes:
+                    #print("material:", mat.name, "using nodes \n")
+                    for node in material.node_tree.nodes:	
+                        #print("node: ", node.type)
+                        	
+                        if node.type == 'TEX_IMAGE':
+                            #print("IMAGES: ", node.image.name, node.image)	
+                            if (pref.import_diffuse_suffix) in node.image.name:                                
+                                diff = node.image
+                                print("diff", diff)
+                            if (pref.import_displace_suffix) in node.image.name:
+                                disp = node.image
+                            if (pref.import_normal_suffix) in node.image.name:
+                                norm = node.image
+                        elif node.type == 'GROUP':
+                            print("group found")
+            
             scn.render.image_settings.file_format = 'BMP'
+            #fileExt = ('.' + pref.texture_format.lower())
+            fileExt = '.bmp'
+
             if diff:
-                name = diff.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 5:
-                    if name[-5:] == "_TXTR":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_TXTR.bmp'
-                diff.texture.image.save_render(name)
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
+                diff.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write diff")
+
             if disp:
-                name = disp.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 3:
-                    if name[-3:] == "_DM":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_DM.bmp'
-                disp.texture.image.save_render(name)
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
+                disp.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
-            if nm:
-                name = nm.texture.image.filepath.replace('\\', '/')
-                name = name.rsplit('/')[-1]
-                name = name.rsplit('.')[0]
-                if len(name) > 3:
-                    if name[-3:] == "_NM":
-                        name = path + '/GoZProjects/Default/' + name + '.bmp'
-                    else:
-                        name = path + '/GoZProjects/Default/' + name + '_NM.bmp'
-                nm.texture.image.save_render(name)
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write disp")
+
+            if norm:
+                name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
+                norm.save_render(name)
                 print(name)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))
-            # fin
-            scn.render.image_settings.file_format = formatRender
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write norm")
+
+            # end
             goz_file.write(pack('16x'))
-        
+            
+            if pref.performance_profiling: 
+                profiler(start_time, "Write Textures")
+                print(30*"-")
+                profiler(start_total_time, "Total Export Time")
+                print(30*"=")
+
         bpy.data.meshes.remove(me)
         return
 
@@ -845,8 +1056,11 @@ class GoB_OT_export(bpy.types.Operator):
         if not exists:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your Zbrush GOZ installation')
             return {"CANCELLED"}
-        if context.object and context.object.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
+          
+        currentContext = 'OBJECT'
+        if context.object and context.object.mode != 'OBJECT':            
+            currentContext = context.object.mode
+            bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
                 if obj.type == 'MESH':
@@ -858,7 +1072,13 @@ class GoB_OT_export(bpy.types.Operator):
 
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+        
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
+        
+        #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
+        #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
+        
+        bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
 
