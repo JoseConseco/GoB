@@ -881,7 +881,7 @@ class GoB_OT_export(bpy.types.Operator):
 
                 #Polygroups from Face Maps
                 if pref.export_polygroups == 'FACE_MAPS':
-                    if obj.face_maps.items:                         
+                    if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
                         goz_file.write(pack('<Q', numFaces))  
@@ -893,13 +893,17 @@ class GoB_OT_export(bpy.types.Operator):
                             color = int(randcolor, 16)
                             groupColor.append(color)
 
-                        if me.face_maps:
+                        if me.face_maps: 
                             for index, map in enumerate(me.face_maps[0].data):
                                 if map.value >= 0:
                                     goz_file.write(pack('<H', groupColor[map.value]))  
                                 else: #face without facemaps (value = -1)
-                                    goz_file.write(pack('<H', 0))
-                                
+                                    goz_file.write(pack('<H', 65535))
+                        else:                    
+                            for face in me.polygons:         
+                                goz_file.write(pack('<H', 65535))
+                                 
+
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "Write FaceMaps") 
                 
