@@ -187,9 +187,6 @@ class GoB_OT_import(bpy.types.Operator):
                     #udpate vertex positions
                     for i, v in enumerate(bm.verts):
                         v.co = vertsData[i]
-                        v.hide_set(False)
-                        #v.select = True
-                        print(v.select, v.hide)
                     bm.to_mesh(me)   
                     bm.free() 
 
