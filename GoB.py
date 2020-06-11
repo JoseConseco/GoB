@@ -102,7 +102,6 @@ class GoB_OT_import(bpy.types.Operator):
             tag = goz_file.read(4)
 
             while tag:                
-                #print("\ntag 0:", tag)
                 # Name
                 if tag == b'\x89\x13\x00\x00':
                     print("name:", tag)
@@ -171,19 +170,15 @@ class GoB_OT_import(bpy.types.Operator):
 
             # create new object
             if not objName in bpy.data.objects.keys():
-                print(">>>>>>>>>>>>>>>>> create mesh 1")
-                me = bpy.data.meshes.new(objName)  #create empty mesh  
+                me = bpy.data.meshes.new(objName)  
                 obj = bpy.data.objects.new(objName, me)
-                # link object to active collection
                 bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
-
-                me.from_pydata(vertsData, [], facesData)           
-
+                me.from_pydata(vertsData, [], facesData)
+           
             # object already exist
             else:
                 #mesh has same vertex count
                 if len(bpy.data.objects[objName].data.vertices) == len(vertsData): 
-                    print(">>>>>>>>>>>>>>>>> create mesh 2")
                     obj = bpy.data.objects[objName]
                     me = obj.data
                     bm = bmesh.new()
@@ -197,13 +192,9 @@ class GoB_OT_import(bpy.types.Operator):
                         print(v.select, v.hide)
                     bm.to_mesh(me)   
                     bm.free() 
-                    # unhide all elements
-                    for verts in me.vertices:
-                        verts.select = True
-                        #verts.hide_set(False)
+
                 #mesh has different vertex count
                 else:  
-                    print(">>>>>>>>>>>>>>>>> create mesh 3")
                     obj = bpy.data.objects[objName]   
                     me = obj.data                     
                     me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
@@ -216,9 +207,11 @@ class GoB_OT_import(bpy.types.Operator):
             me,_ = apply_transformation(me, is_import=True)
 
             #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
-            obj.select_set(True)      # make object active
+            
+            # make object active
+            obj.select_set(True) 
             bpy.context.view_layer.objects.active = obj
-            utag = 0  #TODO: why do we need this? 
+                      
             vertsData.clear()
             facesData.clear()
 
@@ -253,7 +246,8 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
 
-
+  
+            utag = 0
             while tag:
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':
@@ -496,27 +490,39 @@ class GoB_OT_import(bpy.types.Operator):
                 
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
-
+            
             # #apply face maps to sculpt mode face sets
+            current_mode = bpy.context.mode
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
-                current_mode = bpy.context.mode
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')
                 
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
                             override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
-                            break                                 
+                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
+                            break                   
+                if pref.performance_profiling:                
+                    start_time = profiler(start_time, "Init Face Sets")
 
-                if pref.performance_profiling: 
-                    profiler(start_time, "Face Maps")
-                    print(30*"-")
-                    profiler(start_total_time, "Total Import Time")  
-                    print(30*"=")       
-       
+                # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT') 
+                for window in bpy.context.window_manager.windows:
+                    screen = window.screen
+                    for area in screen.areas:
+                        if area.type == 'VIEW_3D':
+                            override = bpy.context.copy()
+                            override = {'window': window, 'screen': screen, 'area': area}
+                            bpy.ops.mesh.reveal(override)
+                            break  
+                if pref.performance_profiling:                
+                    start_time = profiler(start_time, "Reveal Mesh Elements")
+                                           
+            if pref.performance_profiling: 
+                profiler(start_total_time, "Total Import Time")  
+                print(30*"=")
         return
              
 
