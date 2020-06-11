@@ -169,19 +169,21 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:  
                 start_time = profiler(start_time, "Unpack Mesh Data")
 
-            
             # create new object
             if not objName in bpy.data.objects.keys():
+                print(">>>>>>>>>>>>>>>>> create mesh 1")
                 me = bpy.data.meshes.new(objName)  #create empty mesh  
-                me.from_pydata(vertsData, [], facesData)
                 obj = bpy.data.objects.new(objName, me)
                 # link object to active collection
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)          
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
+
+                me.from_pydata(vertsData, [], facesData)           
 
             # object already exist
             else:
                 #mesh has same vertex count
                 if len(bpy.data.objects[objName].data.vertices) == len(vertsData): 
+                    print(">>>>>>>>>>>>>>>>> create mesh 2")
                     obj = bpy.data.objects[objName]
                     me = obj.data
                     bm = bmesh.new()
@@ -189,19 +191,28 @@ class GoB_OT_import(bpy.types.Operator):
                     bm.faces.ensure_lookup_table() 
                     #udpate vertex positions
                     for i, v in enumerate(bm.verts):
-                        v.co = vertsData[i]                    
-                    bm.to_mesh(me)        
+                        v.co = vertsData[i]
+                        v.hide_set(False)
+                        #v.select = True
+                        print(v.select, v.hide)
+                    bm.to_mesh(me)   
                     bm.free() 
+                    # unhide all elements
+                    for verts in me.vertices:
+                        verts.select = True
+                        #verts.hide_set(False)
                 #mesh has different vertex count
                 else:  
-                    obj = bpy.data.objects[objName]                    
-                    obj.data.clear_geometry()
-                    me = obj.data                              
+                    print(">>>>>>>>>>>>>>>>> create mesh 3")
+                    obj = bpy.data.objects[objName]   
+                    me = obj.data                     
+                    me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
                     me.from_pydata(vertsData, [], facesData)
-                    obj.data = me
-            
-            # update mesh data after transformations to fix normals     
-            me.update(calc_edges=True, calc_edges_loose=True)    
+                    #obj.data = me
+               
+            # update mesh data after transformations to fix normals 
+            me.validate(verbose=True)
+            me.update(calc_edges=True, calc_edges_loose=True) 
             me,_ = apply_transformation(me, is_import=True)
 
             #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
@@ -881,6 +892,7 @@ class GoB_OT_export(bpy.types.Operator):
 
                 #Polygroups from Face Maps
                 if pref.export_polygroups == 'FACE_MAPS':
+                    print(obj.face_maps.items)
                     if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
@@ -899,7 +911,7 @@ class GoB_OT_export(bpy.types.Operator):
                                     goz_file.write(pack('<H', groupColor[map.value]))  
                                 else: #face without facemaps (value = -1)
                                     goz_file.write(pack('<H', 65535))
-                        else:                    
+                        else:   #assign empty when no face maps are found                 
                             for face in me.polygons:         
                                 goz_file.write(pack('<H', 65535))
                                  
@@ -1081,7 +1093,7 @@ class GoB_OT_export(bpy.types.Operator):
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
-        
+    
         bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
