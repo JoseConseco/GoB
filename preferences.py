@@ -98,8 +98,8 @@ class GoBPreferences(AddonPreferences):
         precision=2,
         subtype='FACTOR') 
     export_mask: BoolProperty(
-        name="Mask",
-        description="Export Maks",
+        name="Clear Mask",
+        description="When enabled Masks will not be exported an cleared in Zbrush",
         default=False)
 
 
