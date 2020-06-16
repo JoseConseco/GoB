@@ -872,7 +872,7 @@ class GoB_OT_export(bpy.types.Operator):
                 start_time = profiler(start_time, "Write Polypaint")
 
             # --Mask--
-            if not pref.export_mask:
+            if not pref.export_clear_mask:
                 for vertexGroup in obj.vertex_groups:
                     if vertexGroup.name.lower() == 'mask':
                         goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))

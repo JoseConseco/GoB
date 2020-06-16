@@ -97,10 +97,10 @@ class GoBPreferences(AddonPreferences):
         step=0.1,
         precision=2,
         subtype='FACTOR') 
-    export_mask: BoolProperty(
+    export_clear_mask: BoolProperty(
         name="Clear Mask",
         description="When enabled Masks will not be exported an cleared in Zbrush",
-        default=False)
+        default=True)
 
 
     # IMPORT
@@ -189,7 +189,7 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
             box.prop(self, 'export_weight_threshold')
-        box.prop(self, 'export_mask') 
+        box.prop(self, 'export_clear_mask') 
         
         # IMPORT
         col = layout.column(align=True)
