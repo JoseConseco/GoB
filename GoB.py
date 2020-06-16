@@ -102,7 +102,6 @@ class GoB_OT_import(bpy.types.Operator):
             tag = goz_file.read(4)
 
             while tag:                
-                #print("\ntag 0:", tag)
                 # Name
                 if tag == b'\x89\x13\x00\x00':
                     print("name:", tag)
@@ -169,15 +168,13 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:  
                 start_time = profiler(start_time, "Unpack Mesh Data")
 
-            
             # create new object
             if not objName in bpy.data.objects.keys():
-                me = bpy.data.meshes.new(objName)  #create empty mesh  
-                me.from_pydata(vertsData, [], facesData)
+                me = bpy.data.meshes.new(objName)  
                 obj = bpy.data.objects.new(objName, me)
-                # link object to active collection
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)          
-
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
+                me.from_pydata(vertsData, [], facesData)
+           
             # object already exist
             else:
                 #mesh has same vertex count
@@ -189,25 +186,29 @@ class GoB_OT_import(bpy.types.Operator):
                     bm.faces.ensure_lookup_table() 
                     #udpate vertex positions
                     for i, v in enumerate(bm.verts):
-                        v.co = vertsData[i]                    
-                    bm.to_mesh(me)        
+                        v.co = vertsData[i]
+                    bm.to_mesh(me)   
                     bm.free() 
+
                 #mesh has different vertex count
                 else:  
-                    obj = bpy.data.objects[objName]                    
-                    obj.data.clear_geometry()
-                    me = obj.data                              
+                    obj = bpy.data.objects[objName]   
+                    me = obj.data                     
+                    me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
                     me.from_pydata(vertsData, [], facesData)
-                    obj.data = me
-            
-            # update mesh data after transformations to fix normals     
-            me.update(calc_edges=True, calc_edges_loose=True)    
+                    #obj.data = me
+               
+            # update mesh data after transformations to fix normals 
+            me.validate(verbose=True)
+            me.update(calc_edges=True, calc_edges_loose=True) 
             me,_ = apply_transformation(me, is_import=True)
 
             #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
-            obj.select_set(True)      # make object active
+            
+            # make object active
+            obj.select_set(True) 
             bpy.context.view_layer.objects.active = obj
-            utag = 0  #TODO: why do we need this? 
+                      
             vertsData.clear()
             facesData.clear()
 
@@ -242,7 +243,8 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
 
-
+  
+            utag = 0
             while tag:
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':
@@ -485,27 +487,39 @@ class GoB_OT_import(bpy.types.Operator):
                 
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
-
+            
             # #apply face maps to sculpt mode face sets
+            current_mode = bpy.context.mode
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
-                current_mode = bpy.context.mode
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')
                 
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
                             override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')
-                            break                                 
+                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
+                            break                   
+                if pref.performance_profiling:                
+                    start_time = profiler(start_time, "Init Face Sets")
 
-                if pref.performance_profiling: 
-                    profiler(start_time, "Face Maps")
-                    print(30*"-")
-                    profiler(start_total_time, "Total Import Time")  
-                    print(30*"=")       
-       
+                # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
+                bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT') 
+                for window in bpy.context.window_manager.windows:
+                    screen = window.screen
+                    for area in screen.areas:
+                        if area.type == 'VIEW_3D':
+                            override = bpy.context.copy()
+                            override = {'window': window, 'screen': screen, 'area': area}
+                            bpy.ops.mesh.reveal(override)
+                            break  
+                if pref.performance_profiling:                
+                    start_time = profiler(start_time, "Reveal Mesh Elements")
+                                           
+            if pref.performance_profiling: 
+                profiler(start_total_time, "Total Import Time")  
+                print(30*"=")
         return
              
 
@@ -881,7 +895,8 @@ class GoB_OT_export(bpy.types.Operator):
 
                 #Polygroups from Face Maps
                 if pref.export_polygroups == 'FACE_MAPS':
-                    if obj.face_maps.items:                         
+                    print(obj.face_maps.items)
+                    if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
                         goz_file.write(pack('<Q', numFaces))  
@@ -893,13 +908,17 @@ class GoB_OT_export(bpy.types.Operator):
                             color = int(randcolor, 16)
                             groupColor.append(color)
 
-                        if me.face_maps:
+                        if me.face_maps: 
                             for index, map in enumerate(me.face_maps[0].data):
                                 if map.value >= 0:
                                     goz_file.write(pack('<H', groupColor[map.value]))  
                                 else: #face without facemaps (value = -1)
-                                    goz_file.write(pack('<H', 0))
-                                
+                                    goz_file.write(pack('<H', 65535))
+                        else:   #assign empty when no face maps are found                 
+                            for face in me.polygons:         
+                                goz_file.write(pack('<H', 65535))
+                                 
+
                     if pref.performance_profiling: 
                         start_time = profiler(start_time, "Write FaceMaps") 
                 
@@ -1077,7 +1096,7 @@ class GoB_OT_export(bpy.types.Operator):
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
-        
+    
         bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
