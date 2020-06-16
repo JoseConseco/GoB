@@ -188,7 +188,7 @@ class GoB_OT_import(bpy.types.Operator):
                     for i, v in enumerate(bm.verts):
                         v.co = vertsData[i]
                     bm.to_mesh(me)   
-                    bm.free() 
+                    bm.free()
 
                 #mesh has different vertex count
                 else:  
@@ -872,20 +872,20 @@ class GoB_OT_export(bpy.types.Operator):
                 start_time = profiler(start_time, "Write Polypaint")
 
             # --Mask--
-            for vertexGroup in obj.vertex_groups:
-                if vertexGroup.name.lower() == 'mask':
-                    goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
-                    goz_file.write(pack('<I', numVertices*2+16))
-                    goz_file.write(pack('<Q', numVertices))
-                    for i in range(numVertices):
-
-                        try:
-                            goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
-                        except:
-                            goz_file.write(pack('<H', 65535))
-            
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Write Mask")
+            if pref.export_mask:
+                for vertexGroup in obj.vertex_groups:
+                    if vertexGroup.name.lower() == 'mask':
+                        goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
+                        goz_file.write(pack('<I', numVertices*2+16))
+                        goz_file.write(pack('<Q', numVertices))
+                        for i in range(numVertices):
+                            try:
+                                goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
+                            except:
+                                goz_file.write(pack('<H', 65535))
+                
+                if pref.performance_profiling: 
+                    start_time = profiler(start_time, "Write Mask")
            
            
             # --Polygroups--     
