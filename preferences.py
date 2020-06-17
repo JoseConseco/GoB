@@ -148,7 +148,7 @@ class GoBPreferences(AddonPreferences):
     import_uv: BoolProperty(
         name="UV Map",
         description="Import Uv Map from Zbrush",
-        default=False) 
+        default=True) 
     import_uv_name: StringProperty(
         name="UV Map", 
         description="Set name for the UV Map", 
