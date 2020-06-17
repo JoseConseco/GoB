@@ -20,30 +20,35 @@
 """Addon preferences"""
 import bpy
 from bpy.types import AddonPreferences
+from bpy.props import ( StringProperty, 
+                        BoolProperty, 
+                        FloatProperty,
+                        PointerProperty,
+                        EnumProperty)
 
 
 class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
-    flip_up_axis: bpy.props.BoolProperty(
+    flip_up_axis: BoolProperty(
         name="Invert up axis",
         description="Enable this to invert the up axis on import/export",
         default=False)
-    flip_forward_axis: bpy.props.BoolProperty(
+    flip_forward_axis: BoolProperty(
         name="Invert forward axis",
         description="Enable this to invert the forward axis on import/export",
         default=False)
-    show_button_text: bpy.props.BoolProperty(
+    show_button_text: BoolProperty(
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
         default=False)        
-    performance_profiling: bpy.props.BoolProperty(
+    performance_profiling: BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
         default=True)
     """      
-    texture_format: bpy.props.EnumProperty(
+    texture_format: EnumProperty(
         name="Image Format",
         description=" Output image format",
         items=[ ('TIFF', '.tif', ' Output image in TIFF format'), 
@@ -55,7 +60,7 @@ class GoBPreferences(AddonPreferences):
         """
 
     # EXPORT
-    export_modifiers: bpy.props.EnumProperty(
+    export_modifiers: EnumProperty(
         name='Modifiers',
         description='Modifiers Mode',
         items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to Zbrush'),
@@ -63,7 +68,7 @@ class GoBPreferences(AddonPreferences):
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
-    export_polygroups: bpy.props.EnumProperty(
+    export_polygroups: EnumProperty(
         name="Polygroups",
         description="Create Polygroups",
         items=[ ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
@@ -73,7 +78,7 @@ class GoBPreferences(AddonPreferences):
                ],
         default='FACE_MAPS')  
 
-    export_weight_threshold: bpy.props.FloatProperty(
+    export_weight_threshold: FloatProperty(
         name="Weight Threshold",
         description="Only vertex weight higher than the threshold are converted to polygroups",
         default=0.1,
@@ -83,7 +88,7 @@ class GoBPreferences(AddonPreferences):
         precision=2,
         subtype='FACTOR') 
 
-    export_scale_factor: bpy.props.FloatProperty(
+    export_scale_factor: FloatProperty(
         name="** Scale",
         description="export_scale_factor",
         default=1.0,
@@ -92,14 +97,14 @@ class GoBPreferences(AddonPreferences):
         step=0.1,
         precision=2,
         subtype='FACTOR') 
-    export_mask: bpy.props.BoolProperty(
-        name="Mask",
-        description="Export Maks",
-        default=True)
+    export_clear_mask: BoolProperty(
+        name="Clear Mask",
+        description="When enabled Masks will not be exported an cleared in Zbrush",
+        default=False)
 
 
     # IMPORT
-    import_material: bpy.props.EnumProperty(
+    import_material: EnumProperty(
             name="Material",
             description="Create Material",
             items=[#('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
@@ -107,59 +112,59 @@ class GoBPreferences(AddonPreferences):
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
             default='POLYPAINT')            
-    import_method: bpy.props.EnumProperty(
+    import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
             items=[('MANUAL', 'Manual', 'Manual Mode requires to press the import every time you send a model from zbrush to import it.'),
                    ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
                    ],
             default='AUTOMATIC')
-    import_scale_factor: bpy.props.FloatProperty(
+    import_scale_factor: FloatProperty(
         name="** Scale",
         description="import_scale_factor",
         default=1.0, min=0, soft_max=2, step=0.1, precision=2,
         subtype='FACTOR')
-    import_polypaint: bpy.props.BoolProperty(
+    import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
         default=True)    
-    import_polypaint_name: bpy.props.StringProperty(
+    import_polypaint_name: StringProperty(
         name="Vertex Color", 
         description="Set name for Vertex Color Layer", 
         default="Col")
-    import_polygroups_to_vertexgroups: bpy.props.BoolProperty(
+    import_polygroups_to_vertexgroups: BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
         default=False)       
-    import_polygroups_to_facemaps: bpy.props.BoolProperty(
+    import_polygroups_to_facemaps: BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
         default=True)
-    apply_facemaps_to_facesets: bpy.props.BoolProperty(
+    apply_facemaps_to_facesets: BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
         default=True)        
-    import_mask: bpy.props.BoolProperty(
+    import_mask: BoolProperty(
         name="Mask",
         description="Import Mask to Vertex Group",
         default=True)
-    import_uv: bpy.props.BoolProperty(
+    import_uv: BoolProperty(
         name="UV Map",
         description="Import Uv Map from Zbrush",
         default=True)        
-    import_uv_name: bpy.props.StringProperty(
+    import_uv_name: StringProperty(
         name="UV Map", 
         description="Set name for the UV Map", 
         default="UVMap")
-    import_diffuse_suffix: bpy.props.StringProperty(
+    import_diffuse_suffix: StringProperty(
         name="Base Color", 
         description="Set Suffix for Base Color Map", 
         default="_diff")
-    import_displace_suffix: bpy.props.StringProperty(
+    import_displace_suffix: StringProperty(
         name="Displacement Map", 
         description="Set Suffix for Displacement Map", 
         default="_disp")
-    import_normal_suffix: bpy.props.StringProperty(
+    import_normal_suffix: StringProperty(
         name="Normal Map", 
         description="Set Suffix for Normal Map", 
         default="_norm")
@@ -184,7 +189,7 @@ class GoBPreferences(AddonPreferences):
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
             box.prop(self, 'export_weight_threshold')
-        #box.prop(self, 'export_mask') 
+        box.prop(self, 'export_clear_mask') 
         
         # IMPORT
         col = layout.column(align=True)
