@@ -100,7 +100,7 @@ class GoBPreferences(AddonPreferences):
     export_clear_mask: BoolProperty(
         name="Clear Mask",
         description="When enabled Masks will not be exported an cleared in Zbrush",
-        default=True)
+        default=False)
 
 
     # IMPORT
