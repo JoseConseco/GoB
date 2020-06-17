@@ -247,14 +247,14 @@ class GoB_OT_import(bpy.types.Operator):
   
             utag = 0
             while tag:
+                
                 # UVs
-                if tag == b'\xa9\x61\x00\x00':
+                if tag == b'\xa9\x61\x00\x00':                    
                     print("Import UV: ", pref.import_uv)
 
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]     # face count
-
                     if pref.import_uv:  
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count
                         bm = bmesh.new()
                         bm.from_mesh(me)
                         bm.faces.ensure_lookup_table()
@@ -282,18 +282,18 @@ class GoB_OT_import(bpy.types.Operator):
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "UV Map") 
                     else:
-                        print(20*">")
-                        for i in range(cnt): 
-                            data = unpack('<2f', goz_file.read(8))
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
+                        
 
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00': 
                     print("Import Polypaint: ", pref.import_polypaint)  
 
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]  
-
                     if pref.import_polypaint:
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]  
                         polypaintData = []
                         min = 255 #TODO: why is this called min? what is this?
                         for i in range(cnt): 
@@ -338,15 +338,19 @@ class GoB_OT_import(bpy.types.Operator):
                         polypaintData.clear()    
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
+                    else:
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
                     print("Import Mask: ", pref.import_mask)
                     
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]
                     
                     if pref.import_mask:
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]
 
                         if 'mask' in obj.vertex_groups:
                             obj.vertex_groups.remove(obj.vertex_groups['mask'])
@@ -358,6 +362,10 @@ class GoB_OT_import(bpy.types.Operator):
 
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Mask")
+                    else:
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
@@ -483,7 +491,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
 
-                tag = goz_file.read(4)                
+                tag = goz_file.read(4)
                 
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
