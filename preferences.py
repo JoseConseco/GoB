@@ -58,7 +58,6 @@ class GoBPreferences(AddonPreferences):
                ],
         default='BMP')   
         """
-
     # EXPORT
     export_modifiers: EnumProperty(
         name='Modifiers',
@@ -77,7 +76,6 @@ class GoBPreferences(AddonPreferences):
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
         default='FACE_MAPS')  
-
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",
         description="Only vertex weight higher than the threshold are converted to polygroups",
@@ -87,7 +85,6 @@ class GoBPreferences(AddonPreferences):
         step=0.01,
         precision=2,
         subtype='FACTOR') 
-
     export_scale_factor: FloatProperty(
         name="** Scale",
         description="export_scale_factor",
@@ -127,7 +124,7 @@ class GoBPreferences(AddonPreferences):
     import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
-        default=True)    
+        default=True) 
     import_polypaint_name: StringProperty(
         name="Vertex Color", 
         description="Set name for Vertex Color Layer", 
@@ -135,7 +132,7 @@ class GoBPreferences(AddonPreferences):
     import_polygroups_to_vertexgroups: BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
-        default=False)       
+        default=False) 
     import_polygroups_to_facemaps: BoolProperty(
         name="Polygroups to Face Maps",
         description="Import Polygroups as Face Maps",
@@ -143,7 +140,7 @@ class GoBPreferences(AddonPreferences):
     apply_facemaps_to_facesets: BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
-        default=True)        
+        default=True) 
     import_mask: BoolProperty(
         name="Mask",
         description="Import Mask to Vertex Group",
@@ -151,7 +148,7 @@ class GoBPreferences(AddonPreferences):
     import_uv: BoolProperty(
         name="UV Map",
         description="Import Uv Map from Zbrush",
-        default=True)        
+        default=True) 
     import_uv_name: StringProperty(
         name="UV Map", 
         description="Set name for the UV Map", 
@@ -159,7 +156,7 @@ class GoBPreferences(AddonPreferences):
     import_diffuse_suffix: StringProperty(
         name="Base Color", 
         description="Set Suffix for Base Color Map", 
-        default="_diff")
+        default="_diff")        
     import_displace_suffix: StringProperty(
         name="Displacement Map", 
         description="Set Suffix for Displacement Map", 
@@ -177,7 +174,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
-        #layout.prop(self, 'performance_profiling') 
+        layout.prop(self, 'performance_profiling') 
         #layout.prop(self, 'texture_format')
 
         #EXPORT
@@ -199,9 +196,9 @@ class GoBPreferences(AddonPreferences):
         #box.prop(self, 'import_scale_factor')      #TODO: add scaling
         box.prop(self, 'import_material')  
         col = box.column(align=True)  #TODO: add heading ="" in 2.9
-        #col.prop(self, 'import_mask')
-        #col.prop(self, 'import_uv')
-        #col.prop(self, 'import_polypaint')       
+        col.prop(self, 'import_mask')
+        col.prop(self, 'import_uv')
+        col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
         col.prop(self, 'apply_facemaps_to_facesets')

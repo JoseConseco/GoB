@@ -155,6 +155,7 @@ class GoB_OT_import(bpy.types.Operator):
                 elif tag == b'\x00\x00\x00\x00':  
                     #print("End:", tag)
                     break
+                # Unknown tags
                 else:
                     print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
@@ -246,13 +247,14 @@ class GoB_OT_import(bpy.types.Operator):
   
             utag = 0
             while tag:
+                
                 # UVs
-                if tag == b'\xa9\x61\x00\x00':
+                if tag == b'\xa9\x61\x00\x00':                    
+                    print("Import UV: ", pref.import_uv)
+
                     if pref.import_uv:  
-                        print("Import UV: ", pref.import_uv, tag)
                         goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count.. 
-                        
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count
                         bm = bmesh.new()
                         bm.from_mesh(me)
                         bm.faces.ensure_lookup_table()
@@ -276,77 +278,80 @@ class GoB_OT_import(bpy.types.Operator):
 
                         bm.to_mesh(me)   
                         bm.free()                       
-                        me.update(calc_edges=True, calc_edges_loose=True)   
+                        me.update(calc_edges=True, calc_edges_loose=True)  
+                        if pref.performance_profiling: 
+                            start_time = profiler(start_time, "UV Map") 
+                    else:
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
                         
-                    if pref.performance_profiling: 
-                        start_time = profiler(start_time, "UV Map")
 
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00': 
                     print("Import Polypaint: ", pref.import_polypaint)  
+
                     if pref.import_polypaint:
-                        print("Polypainting:", tag)
-                    else:
-                        break
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]  
+                        polypaintData = []
+                        min = 255 #TODO: why is this called min? what is this?
+                        for i in range(cnt): 
+                            data = unpack('<3B', goz_file.read(3))
+                            
+                            unpack('<B', goz_file.read(1))  # Alpha
+                            if data[0] < min:
+                                min = data[0]   #TODO: assing data to min, what is this data?                          
+                            else:                            
+                                #print("polypaint min: ", min, data[0])  
+                                pass
+                            alpha = 1                        
 
-                    polypaintData = []
-                    min = 255 #TODO: why is this called min? what is this?
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]                   
-                    
-                    for i in range(cnt): 
-                        data = unpack('<3B', goz_file.read(3))
+                            #convert color to vector                         
+                            rgb = [x / 255.0 for x in data]    
+                            rgb.reverse()                    
+                            rgba = rgb + [alpha]                                          
+                            polypaintData.append(tuple(rgba))                      
                         
-                        unpack('<B', goz_file.read(1))  # Alpha
-                        if data[0] < min:
-                            min = data[0]   #TODO: assing data to min, what is this data?                          
-                        else:                            
-                            #print("polypaint min: ", min, data[0])  
-                            pass
-                        alpha = 1                        
+                        if pref.performance_profiling: 
+                            start_time = profiler(start_time, "Polypaint Unpack")
 
-                        #convert color to vector                         
-                        rgb = [x / 255.0 for x in data]    
-                        rgb.reverse()                    
-                        rgba = rgb + [alpha]                                          
-                        polypaintData.append(tuple(rgba))                      
-                    
-                    if pref.performance_profiling: 
-                        start_time = profiler(start_time, "Polypaint Unpack")
-
-                    if min < 250: #TODO: whats this 250?                      
-                        bm = bmesh.new()
-                        bm.from_mesh(me)
-                        bm.faces.ensure_lookup_table()
-                        if me.vertex_colors:                            
-                            if pref.import_polypaint_name in me.vertex_colors: 
-                                color_layer = bm.loops.layers.color.get(pref.import_polypaint_name)
+                        if min < 250: #TODO: whats this 250?                      
+                            bm = bmesh.new()
+                            bm.from_mesh(me)
+                            bm.faces.ensure_lookup_table()
+                            if me.vertex_colors:                            
+                                if pref.import_polypaint_name in me.vertex_colors: 
+                                    color_layer = bm.loops.layers.color.get(pref.import_polypaint_name)
+                                else:
+                                    color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                                    
                             else:
-                                color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                                    
-                        else:
-                            color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                
-                        
-                        for face in bm.faces:
-                            for loop in face.loops:
-                                loop[color_layer] = polypaintData[loop.vert.index]
+                                color_layer = bm.loops.layers.color.new(pref.import_polypaint_name)                
+                            
+                            for face in bm.faces:
+                                for loop in face.loops:
+                                    loop[color_layer] = polypaintData[loop.vert.index]
 
-                        bm.to_mesh(me)                        
-                        me.update(calc_edges=True, calc_edges_loose=True)  
-                        bm.free()
-                    polypaintData.clear()
-
-                    if pref.performance_profiling: 
-                        start_time = profiler(start_time, "Polypaint Assign")
-
+                            bm.to_mesh(me)                        
+                            me.update(calc_edges=True, calc_edges_loose=True)  
+                            bm.free()
+                        polypaintData.clear()    
+                        if pref.performance_profiling: 
+                            start_time = profiler(start_time, "Polypaint Assign")
+                    else:
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
                     print("Import Mask: ", pref.import_mask)
                     
+                    
                     if pref.import_mask:
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]
-                        
+
                         if 'mask' in obj.vertex_groups:
                             obj.vertex_groups.remove(obj.vertex_groups['mask'])
                         groupMask = obj.vertex_groups.new(name='mask')
@@ -358,7 +363,9 @@ class GoB_OT_import(bpy.types.Operator):
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Mask")
                     else:
-                        break
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
@@ -474,6 +481,7 @@ class GoB_OT_import(bpy.types.Operator):
                         txtNorm.image = img
                         txtNorm.use_normal_map = True
                 
+                # Unknown tags
                 else: 
                     print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
@@ -483,7 +491,7 @@ class GoB_OT_import(bpy.types.Operator):
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
 
-                tag = goz_file.read(4)                
+                tag = goz_file.read(4)
                 
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
