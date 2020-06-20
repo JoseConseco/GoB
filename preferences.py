@@ -31,14 +31,14 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
-    compensate_unit_scale: BoolProperty(
-        name="compensate_unit_scale",
-        description="compensate_unit_scale",
+    unified_scene_scale: BoolProperty(
+        name="unified_scene_scale",
+        description="unified_scene_scale",
         default=True)
 
     zbrush_scale: FloatProperty(
-        name="zbrush_scale",
-        description="zbrush_scale",
+        name="ZBrush Scene Scale",
+        description="Defines Unified ZBrush Scene Scale",
         default=2.0,
         soft_min=1.0,
         soft_max=2.0,
@@ -77,8 +77,8 @@ class GoBPreferences(AddonPreferences):
     export_modifiers: EnumProperty(
         name='Modifiers',
         description='Modifiers Mode',
-        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to Zbrush'),
-               ('ONLY_EXPORT', 'Only Export', 'Export Modifiers to Zbrush but do not apply them in Blender'),
+        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to ZBrush'),
+               ('ONLY_EXPORT', 'Only Export', 'Export Modifiers to ZBrush but do not apply them in Blender'),
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
@@ -111,7 +111,7 @@ class GoBPreferences(AddonPreferences):
         subtype='FACTOR') 
     export_clear_mask: BoolProperty(
         name="Clear Mask",
-        description="When enabled Masks will not be exported an cleared in Zbrush",
+        description="When enabled Masks will not be exported an cleared in ZBrush",
         default=False)
 
 
@@ -162,7 +162,7 @@ class GoBPreferences(AddonPreferences):
         default=True)
     import_uv: BoolProperty(
         name="UV Map",
-        description="Import Uv Map from Zbrush",
+        description="Import Uv Map from ZBrush",
         default=True) 
     import_uv_name: StringProperty(
         name="UV Map", 
@@ -186,8 +186,8 @@ class GoBPreferences(AddonPreferences):
         #GLOBAL
         layout = self.layout
         layout.use_property_split = True
-        layout.prop(self, 'compensate_unit_scale')
-        if self.compensate_unit_scale:
+        layout.prop(self, 'unified_scene_scale')
+        if self.unified_scene_scale:
             layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
