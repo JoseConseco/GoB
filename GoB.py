@@ -25,6 +25,7 @@ import os
 from struct import pack, unpack
 from copy import deepcopy
 import string
+import numpy
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -117,6 +118,7 @@ class GoB_OT_import(bpy.types.Operator):
                         co1 = unpack('<f', goz_file.read(4))[0]
                         co2 = unpack('<f', goz_file.read(4))[0]
                         co3 = unpack('<f', goz_file.read(4))[0]
+
                         vertsData.append((co1, co2, co3))
                 
                 # Faces
@@ -680,6 +682,11 @@ def profiler(start_time=0, string=None):
     start_time = time.time()
     return start_time  
 
+def max_list_value(list):
+    i = numpy.argmax(list)
+    v = list[i]
+    return (i, v)
+
 def run_import_periodically():
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
@@ -802,11 +809,18 @@ class GoB_OT_export(bpy.types.Operator):
             
 
             # --Vertices--
+            if pref.compensate_unit_scale:
+                i, v = max_list_value(obj.dimensions)
+                ZscaleFactor = pref.zbrush_scale/v
+                print("unit scale: ", obj.dimensions, i, v, 2/v, obj.dimensions*2/v)
+            else:
+                ZscaleFactor = 1.
+
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))            
             for vert in me.vertices:
-                modif_coo = obj.matrix_world @ vert.co
+                modif_coo = obj.matrix_world @ vert.co * ZscaleFactor
                 modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
                 

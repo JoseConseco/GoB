@@ -31,6 +31,21 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
+    compensate_unit_scale: BoolProperty(
+        name="compensate_unit_scale",
+        description="compensate_unit_scale",
+        default=True)
+
+    zbrush_scale: FloatProperty(
+        name="zbrush_scale",
+        description="zbrush_scale",
+        default=2.0,
+        soft_min=1.0,
+        soft_max=2.0,
+        step=0.1,
+        precision=2,
+        subtype='FACTOR') 
+
     flip_up_axis: BoolProperty(
         name="Invert up axis",
         description="Enable this to invert the up axis on import/export",
@@ -171,6 +186,9 @@ class GoBPreferences(AddonPreferences):
         #GLOBAL
         layout = self.layout
         layout.use_property_split = True
+        layout.prop(self, 'compensate_unit_scale')
+        if self.compensate_unit_scale:
+            layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')
         layout.prop(self, 'show_button_text')        
