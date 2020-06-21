@@ -589,14 +589,14 @@ def create_node_material(mat, pref):
         #check if a vertex color node is assigned 
         vcol_node = False   
         for node in nodes:
-            if node.bl_idname == 'ShaderNodeAttribute':
-                if pref.import_polypaint_name in node.attribute_name:
+            if node.bl_idname == 'ShaderNodeVertexColor':
+                if pref.import_polypaint_name in node.layer_name:
                     vcol_node = nodes.get(node.name)  
         #create new node if none is assigned/exists
         if not vcol_node:
-            vcol_node = nodes.new('ShaderNodeAttribute')
+            vcol_node = nodes.new('ShaderNodeVertexColor')
             vcol_node.location = -300, 200
-            vcol_node.attribute_name = pref.import_polypaint_name    
+            vcol_node.layer_name = pref.import_polypaint_name    
             mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
     
     if pref.import_material == 'TEXTURE':
