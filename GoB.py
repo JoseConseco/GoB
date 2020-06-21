@@ -497,15 +497,12 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Textures")
             
             # #apply face maps to sculpt mode face sets
-            current_mode = bpy.context.mode
-            if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
-                
+            if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
-                            override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
                             break                   
@@ -518,10 +515,10 @@ class GoB_OT_import(bpy.types.Operator):
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
-                            override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.mesh.reveal(override)
                             break  
+
                 if pref.performance_profiling:                
                     start_time = profiler(start_time, "Reveal Mesh Elements")
                                            
