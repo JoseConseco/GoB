@@ -174,7 +174,11 @@ class GoB_OT_import(bpy.types.Operator):
                 me = bpy.data.meshes.new(objName)  
                 obj = bpy.data.objects.new(objName, me)
                 bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
-                me.from_pydata(vertsData, [], facesData)
+                me.from_pydata(vertsData, [], facesData)  
+                    
+                me.validate(verbose=True)
+                me.update(calc_edges=True, calc_edges_loose=True) 
+                me,_ = apply_transformation(me, is_import=True)   
            
             # object already exist
             else:
@@ -199,12 +203,12 @@ class GoB_OT_import(bpy.types.Operator):
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
                
-            # update mesh data after transformations to fix normals 
-            me.validate(verbose=True)
-            me.update(calc_edges=True, calc_edges_loose=True) 
-            me,_ = apply_transformation(me, is_import=True)
-            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
-            me.transform(obj.matrix_world.inverted())         
+                # update mesh data after transformations to fix normals 
+                me.validate(verbose=True)
+                me.update(calc_edges=True, calc_edges_loose=True) 
+                me,_ = apply_transformation(me, is_import=True)
+                # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
+                me.transform(obj.matrix_world.inverted())         
            
             # make object active
             obj.select_set(True) 
