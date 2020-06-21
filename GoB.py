@@ -203,9 +203,9 @@ class GoB_OT_import(bpy.types.Operator):
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
             me,_ = apply_transformation(me, is_import=True)
-
-            #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
-            
+            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
+            me.transform(obj.matrix_world.inverted())         
+           
             # make object active
             obj.select_set(True) 
             bpy.context.view_layer.objects.active = obj
