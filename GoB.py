@@ -1104,8 +1104,8 @@ class GoB_OT_export(bpy.types.Operator):
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
-    
-        bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
+        if context.object:
+            bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
 
