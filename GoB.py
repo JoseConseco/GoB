@@ -528,9 +528,12 @@ class GoB_OT_import(bpy.types.Operator):
 
     def execute(self, context):
         goz_obj_paths = []
-        with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
-            for line in goz_objs_list:
-                goz_obj_paths.append(line.strip() + '.GoZ')
+        try:
+            with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
+                for line in goz_objs_list:
+                    goz_obj_paths.append(line.strip() + '.GoZ')
+        except PermissionError:
+            print("File already in use! Try again Later")
 
         if len(goz_obj_paths) == 0:
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
