@@ -197,7 +197,8 @@ class GoB_OT_import(bpy.types.Operator):
                     me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
-               
+           
+
             # update mesh data after transformations to fix normals 
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
@@ -601,9 +602,23 @@ def create_node_material(mat, pref):
 def apply_transformation(me, is_import=True): 
     pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     mat_transform = None
-
-    # TODO: do we add scaling here?
+    scale = 1.0
     
+    if pref.use_scale == 'SCENE':
+        scale = bpy.context.scene.unit_settings.scale_length
+
+    if pref.use_scale == 'MANUAL':        
+        scale =  1/pref.zbrush_scale
+
+    if pref.use_scale == 'EXPERIMENTAL':
+        if bpy.context.active_object:
+            obj = bpy.context.active_object
+            i, max = max_list_value(obj.dimensions)
+            scale =  pref.zbrush_scale * max * 0.5
+            print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+    
+    print("scale: ", scale)
+        
     #import
     if pref.flip_up_axis:  # fixes bad mesh orientation for some people
         if pref.flip_forward_axis:
@@ -612,7 +627,8 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
                 me.flip_normals()
             else:
                 #export
@@ -620,7 +636,7 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
         else:
             if is_import:
                 #import
@@ -628,15 +644,15 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
                     (-1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
-
+                    (0., 0., 0., 1.)]) * (1/scale)
     else:
         if pref.flip_forward_axis:            
             if is_import:
@@ -645,7 +661,8 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
                 me.flip_normals()
             else:
                 #export
@@ -653,7 +670,7 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
         else:
             if is_import:
                 #import
@@ -661,14 +678,15 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
                     (1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
     return me, mat_transform
                 
 def profiler(start_time=0, string=None):               
@@ -813,39 +831,12 @@ class GoB_OT_export(bpy.types.Operator):
             
 
             # --Vertices--
-
-            #compensate blender object scale so we get a normalized scale in zbrush
-
-            #get average objects scale 
-            # take all objects in blend file and use avg Zscale
-            print("selected objects: ", len(bpy.context.selected_objects) )
-            if pref.unified_scene_scale:
-                """ if len(bpy.context.selected_objects) > 1:
-                    
-                    #ZscaleFactor = 3.4
-                    objDimensions = []
-                    for obj in bpy.data.objects:
-                        objDimensions.append(obj.dimensions)
-                    avg = avg_list_value(objDimensions)
-                    ZscaleFactor = pref.zbrush_scale / avg
-                    print("unit scale 1: ", avg, ZscaleFactor) """
-                if len(bpy.context.selected_objects) == 1:
-                    i, max = max_list_value(obj.dimensions)
-                    ZscaleFactor = pref.zbrush_scale / max
-                    print("unit scale 2: ", obj.dimensions, i, max, ZscaleFactor, obj.dimensions*ZscaleFactor)
-                else:
-                    ZscaleFactor = 1.0
-            else:
-                ZscaleFactor = 1.0
-
-
-
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))            
             for vert in me.vertices:
                 modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
-                modif_coo = mat_transform @ modif_coo * ZscaleFactor
+                modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
                 
             if pref.performance_profiling: 
