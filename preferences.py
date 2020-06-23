@@ -38,8 +38,17 @@ class GoBPreferences(AddonPreferences):
                    ('MANUAL', 'Manual', 'Use Manual Factor for Scaling'),
                    ('EXPERIMENTAL', 'Experimental', 'use scaling logic to always get a usable scale in zbrush'),
                    ],
-            default='MANUAL')  
+            default='EXPERIMENTAL')  
     zbrush_scale: FloatProperty(
+        name="ZBrush Scale",
+        description="Target ZBrush Scale",
+        default=2.0,
+        min = 0.1,
+        soft_max=10,
+        step=1.0,
+        precision=1,
+        subtype='FACTOR') 
+    manual_scale: FloatProperty(
         name="Scale Factor",
         description="Change Scale in Zbrush",
         default=1.0,
@@ -179,6 +188,8 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'flip_forward_axis')   
         layout.prop(self, 'use_scale')
         if self.use_scale == 'MANUAL':                   
+            layout.prop(self, 'manual_scale')
+        if self.use_scale == 'EXPERIMENTAL':                   
             layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'performance_profiling')
               
