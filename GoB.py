@@ -174,7 +174,8 @@ class GoB_OT_import(bpy.types.Operator):
                 me = bpy.data.meshes.new(objName)  
                 obj = bpy.data.objects.new(objName, me)
                 bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
-                me.from_pydata(vertsData, [], facesData)
+                me.from_pydata(vertsData, [], facesData)     
+                #me.transform(obj.matrix_world.inverted())      
            
             # object already exist
             else:
@@ -203,9 +204,9 @@ class GoB_OT_import(bpy.types.Operator):
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
             me,_ = apply_transformation(me, is_import=True)
-
-            #obj.data.transform(obj.matrix_world.inverted())     # assume we have to reverse transformation from obj mode #TODO why do we do this?
-            
+            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
+            me.transform(obj.matrix_world.inverted())         
+           
             # make object active
             obj.select_set(True) 
             bpy.context.view_layer.objects.active = obj
@@ -497,15 +498,12 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Textures")
             
             # #apply face maps to sculpt mode face sets
-            current_mode = bpy.context.mode
-            if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):
-                
+            if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
-                            override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
                             break                   
@@ -518,10 +516,10 @@ class GoB_OT_import(bpy.types.Operator):
                     screen = window.screen
                     for area in screen.areas:
                         if area.type == 'VIEW_3D':
-                            override = bpy.context.copy()
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.mesh.reveal(override)
                             break  
+
                 if pref.performance_profiling:                
                     start_time = profiler(start_time, "Reveal Mesh Elements")
                                            

@@ -140,7 +140,7 @@ class GoBPreferences(AddonPreferences):
     apply_facemaps_to_facesets: BoolProperty(
         name="Apply Face Maps to Face Sets",
         description="apply_facemaps_to_facesets",
-        default=True) 
+        default=False) 
     import_mask: BoolProperty(
         name="Mask",
         description="Import Mask to Vertex Group",
@@ -201,7 +201,7 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polypaint')       
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
-        col.prop(self, 'apply_facemaps_to_facesets')
+        #col.prop(self, 'apply_facemaps_to_facesets')
         
         col = box.column(align=True)  
         col.prop(self, 'import_diffuse_suffix') 
