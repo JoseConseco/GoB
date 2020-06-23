@@ -31,21 +31,23 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
-    unified_scene_scale: BoolProperty(
-        name="unified_scene_scale",
-        description="unified_scene_scale",
-        default=True)
-
+    use_scale: EnumProperty(
+            name="Scale",
+            description="Create Material",
+            items=[('SCENE', 'From Scene', 'Changes Scale depending on Blenders Unit Scale '),
+                   ('MANUAL', 'Manual', 'Use Manual Factor for Scaling'),
+                   ('EXPERIMENTAL', 'Experimental', 'use scaling logic to always get a usable scale in zbrush'),
+                   ],
+            default='MANUAL')  
     zbrush_scale: FloatProperty(
-        name="ZBrush Scene Scale",
-        description="Defines Unified ZBrush Scene Scale",
-        default=2.0,
-        soft_min=1.0,
-        soft_max=2.0,
-        step=0.1,
-        precision=2,
+        name="Scale Factor",
+        description="Change Scale in Zbrush",
+        default=1.0,
+        min = 0.1,
+        soft_max=10,
+        step=1.0,
+        precision=1,
         subtype='FACTOR') 
-
     flip_up_axis: BoolProperty(
         name="Invert up axis",
         description="Enable this to invert the up axis on import/export",
@@ -100,15 +102,6 @@ class GoBPreferences(AddonPreferences):
         step=0.01,
         precision=2,
         subtype='FACTOR') 
-    export_scale_factor: FloatProperty(
-        name="** Scale",
-        description="export_scale_factor",
-        default=1.0,
-        min=0,
-        soft_max=2,
-        step=0.1,
-        precision=2,
-        subtype='FACTOR') 
     export_clear_mask: BoolProperty(
         name="Clear Mask",
         description="When enabled Masks will not be exported an cleared in ZBrush",
@@ -131,11 +124,6 @@ class GoBPreferences(AddonPreferences):
                    ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
                    ],
             default='AUTOMATIC')
-    import_scale_factor: FloatProperty(
-        name="** Scale",
-        description="import_scale_factor",
-        default=1.0, min=0, soft_max=2, step=0.1, precision=2,
-        subtype='FACTOR')
     import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
@@ -185,21 +173,21 @@ class GoBPreferences(AddonPreferences):
     def draw(self, context):
         #GLOBAL
         layout = self.layout
-        layout.use_property_split = True
-        layout.prop(self, 'unified_scene_scale')
-        if self.unified_scene_scale:
-            layout.prop(self, 'zbrush_scale')
+        layout.use_property_split = True   
+        layout.prop(self, 'show_button_text')    
         layout.prop(self, 'flip_up_axis')
-        layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')        
-        layout.prop(self, 'performance_profiling') 
+        layout.prop(self, 'flip_forward_axis')   
+        layout.prop(self, 'use_scale')
+        if self.use_scale == 'MANUAL':                   
+            layout.prop(self, 'zbrush_scale')
+        layout.prop(self, 'performance_profiling')
+              
         #layout.prop(self, 'texture_format')
 
         #EXPORT
         col = layout.column()
         box = layout.box()
         box.label(text='Export', icon='EXPORT')  
-        #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
@@ -211,7 +199,6 @@ class GoBPreferences(AddonPreferences):
         box = layout.box() 
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
-        #box.prop(self, 'import_scale_factor')      #TODO: add scaling
         box.prop(self, 'import_material')  
         col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
@@ -230,3 +217,4 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polypaint_name') 
 
 
+ 
