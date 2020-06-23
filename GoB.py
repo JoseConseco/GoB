@@ -608,17 +608,15 @@ def apply_transformation(me, is_import=True):
         scale = bpy.context.scene.unit_settings.scale_length
 
     if pref.use_scale == 'MANUAL':        
-        scale =  1/pref.zbrush_scale
+        scale =  1/pref.manual_scale
 
     if pref.use_scale == 'EXPERIMENTAL':
         if bpy.context.active_object:
             obj = bpy.context.active_object
             i, max = max_list_value(obj.dimensions)
-            scale =  pref.zbrush_scale * max * 0.5
-            print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
-    
-    print("scale: ", scale)
-        
+            scale =  pref.zbrush_scale * max * 0.25
+            #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+            
     #import
     if pref.flip_up_axis:  # fixes bad mesh orientation for some people
         if pref.flip_forward_axis:
