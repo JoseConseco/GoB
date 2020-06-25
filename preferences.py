@@ -121,11 +121,11 @@ class GoBPreferences(AddonPreferences):
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
-            items=[#('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
+            items=[('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
                    ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='POLYPAINT')            
+            default='TEXTURES')            
     import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",

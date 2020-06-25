@@ -26,6 +26,8 @@ from struct import pack, unpack
 from copy import deepcopy
 import string
 import numpy
+from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
+from bpy_extras.image_utils import load_image
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -83,9 +85,7 @@ class GoB_OT_import(bpy.types.Operator):
         vertsData = []
         facesData = []
         objMat = None
-        diff = False
-        disp = False
-        norm = False
+        diff, disp, norm =  None, None, None
         exists = os.path.isfile(pathFile)
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
@@ -401,8 +401,15 @@ class GoB_OT_import(bpy.types.Operator):
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(diffName.decode('utf-8'))
-                    img = bpy.data.images.load(diffName.strip().decode('utf-8'))
-                    diff = True
+                    print("texture name: ", diffName.strip().decode('utf-8'))
+                    img = None
+                    if not bpy.data.images:
+                        img = bpy.data.images.load(diffName.strip().decode('utf-8'))
+                    else:
+                        for i in bpy.data.images:                        
+                            if i.name == diffName.strip().decode('utf-8'):
+                                print("test ", i.name)
+                                img = i.name                                
 
                     prefix = obj.name
                     suffix = pref.import_diffuse_suffix
@@ -410,7 +417,9 @@ class GoB_OT_import(bpy.types.Operator):
                     if not texture_name in bpy.data.textures:
                         txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDiff.image = img
-                        # me.uv_textures[0].data[0].image = img
+                        # me.uv_textures[0].data[0].image = img                    
+                    diff = img
+                
 
                 # Disp map 
                 elif tag == b'\xd9\xd6\x00\x00':  
@@ -420,15 +429,16 @@ class GoB_OT_import(bpy.types.Operator):
                     dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(dispName.decode('utf-8'))
                     img = bpy.data.images.load(dispName.strip().decode('utf-8'))
-                    disp = True
                     
                     prefix = obj.name
                     suffix = pref.import_displace_suffix
                     texture_name = (prefix + suffix)
+
                     if not texture_name in bpy.data.textures:
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDisp.image = img
-                
+                    disp = img
+
                 # Normal map
                 elif tag == b'\x51\xc3\x00\x00':   
                     #print("Normal map:", tag)
@@ -437,7 +447,6 @@ class GoB_OT_import(bpy.types.Operator):
                     normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(normName.decode('utf-8'))
                     img = bpy.data.images.load(normName.strip().decode('utf-8'))
-                    norm = True
                     
                     prefix = obj.name
                     suffix = pref.import_normal_suffix
@@ -445,7 +454,7 @@ class GoB_OT_import(bpy.types.Operator):
                     if not texture_name in bpy.data.textures:
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtNorm.image = img
-                        txtNorm.use_normal_map = True
+                    norm = img
                 
                 # Unknown tags
                 else: 
@@ -576,10 +585,24 @@ class GoB_OT_import(bpy.types.Operator):
             return{'FINISHED'}
 
 
-def create_node_material(mat, pref):
+def create_node(mat, pref, diff, disp, norm):
+
+    
+    # Import
+    #mat = bpy.data.materials.new(name="Material")
     mat.use_nodes = True
+    principled = PrincipledBSDFWrapper(mat, is_readonly=False)
+    principled.base_color_texture.image = diff
+    principled.normalmap_texture.image = norm
+    #XXX disp not supported yet!
+    #principled.displacement_texture.image = disp
+
+
+    """ mat.use_nodes = True
     nodes = mat.node_tree.nodes
-    output_node = nodes.get('Principled BSDF')    
+    output_node = nodes.get('Principled BSDF')   
+
+
     
     if pref.import_material == 'POLYPAINT':
         #check if a vertex color node is assigned to the BSDF shader
@@ -593,7 +616,7 @@ def create_node_material(mat, pref):
             vcol_node = nodes.new('ShaderNodeVertexColor')
             vcol_node.location = -300, 200
             vcol_node.layer_name = pref.import_polypaint_name    
-            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
+            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0]) """
     
     if pref.import_material == 'TEXTURE':
         pass
@@ -706,6 +729,7 @@ def avg_list_value(list):
         avgData.append(obj[i])
     avg = numpy.average(avgData)
     return (avg)
+
 
 def run_import_periodically():
     # print("Runing timers update check")
