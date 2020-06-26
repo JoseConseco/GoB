@@ -233,8 +233,9 @@ class GoB_OT_import(bpy.types.Operator):
                     objMat = bpy.data.materials.new(objName)
                     obj.data.materials.append(objMat)
 
-                if pref.import_material == 'POLYPAINT':
-                    create_node_material(objMat, pref)  
+                if pref.import_material == 'POLYPAINT':                    
+                    if pref.import_polypaint_name in me.vertex_colors:
+                        create_node_material(objMat, pref)  
                     
                 elif pref.import_material == 'TEXTURES':
                     create_node_material(objMat, pref)  
@@ -578,7 +579,7 @@ def create_node_material(mat, pref):
     output_node = nodes.get('Principled BSDF')    
     
     if pref.import_material == 'POLYPAINT':
-        #check if a vertex color node is assigned 
+        #check if a vertex color node is assigned to the BSDF shader
         vcol_node = False   
         for node in nodes:
             if node.bl_idname == 'ShaderNodeVertexColor':
