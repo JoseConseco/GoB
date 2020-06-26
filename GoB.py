@@ -218,35 +218,6 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Make Mesh")
                 
             
-            if pref.import_material == 'NONE':
-                print("Import Material: ", pref.import_material) 
-            else:
-                
-                if len(obj.material_slots) > 0:
-                    #print("material slot: ", obj.material_slots[0])
-                    if obj.material_slots[0].material is not None:
-                        objMat = obj.material_slots[0].material
-                    else:
-                        objMat = bpy.data.materials.new(objName)
-                        obj.material_slots[0].material = objMat
-                else:
-                    objMat = bpy.data.materials.new(objName)
-                    obj.data.materials.append(objMat)
-
-                if pref.import_material == 'POLYPAINT':                    
-                    if pref.import_polypaint_name in me.vertex_colors:
-                        create_node_material(objMat, pref)  
-                    
-                elif pref.import_material == 'TEXTURES':
-                    create_node_material(objMat, pref)  
-                    
-                elif pref.import_material == 'POLYGROUPS':
-                    create_node_material(objMat, pref)  
-          
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Material Node")
-
-  
             utag = 0
             while tag:
                 
@@ -492,6 +463,36 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
             
+            # Materials
+            if pref.import_material == 'NONE':
+                print("Import Material: ", pref.import_material) 
+            else:
+                
+                if len(obj.material_slots) > 0:
+                    #print("material slot: ", obj.material_slots[0])
+                    if obj.material_slots[0].material is not None:
+                        objMat = obj.material_slots[0].material
+                    else:
+                        objMat = bpy.data.materials.new(objName)
+                        obj.material_slots[0].material = objMat
+                else:
+                    objMat = bpy.data.materials.new(objName)
+                    obj.data.materials.append(objMat)
+
+                if pref.import_material == 'POLYPAINT':                    
+                    if pref.import_polypaint_name in me.vertex_colors:
+                        create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'TEXTURES':
+                    create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'POLYGROUPS':
+                    create_node_material(objMat, pref)  
+          
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Material Node")
+                
+
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
