@@ -218,34 +218,6 @@ class GoB_OT_import(bpy.types.Operator):
                 start_time = profiler(start_time, "Make Mesh")
                 
             
-            if pref.import_material == 'NONE':
-                print("Import Material: ", pref.import_material) 
-            else:
-                
-                if len(obj.material_slots) > 0:
-                    #print("material slot: ", obj.material_slots[0])
-                    if obj.material_slots[0].material is not None:
-                        objMat = obj.material_slots[0].material
-                    else:
-                        objMat = bpy.data.materials.new(objName)
-                        obj.material_slots[0].material = objMat
-                else:
-                    objMat = bpy.data.materials.new(objName)
-                    obj.data.materials.append(objMat)
-
-                if pref.import_material == 'POLYPAINT':
-                    create_node_material(objMat, pref)  
-                    
-                elif pref.import_material == 'TEXTURES':
-                    create_node_material(objMat, pref)  
-                    
-                elif pref.import_material == 'POLYGROUPS':
-                    create_node_material(objMat, pref)  
-          
-            if pref.performance_profiling: 
-                start_time = profiler(start_time, "Material Node")
-
-  
             utag = 0
             while tag:
                 
@@ -296,20 +268,13 @@ class GoB_OT_import(bpy.types.Operator):
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]  
                         polypaintData = []
-                        min = 255 #TODO: why is this called min? what is this?
                         for i in range(cnt): 
-                            data = unpack('<3B', goz_file.read(3))
-                            
+                            colordata = unpack('<3B', goz_file.read(3)) # Color
                             unpack('<B', goz_file.read(1))  # Alpha
-                            if data[0] < min:
-                                min = data[0]   #TODO: assing data to min, what is this data?                          
-                            else:                            
-                                #print("polypaint min: ", min, data[0])  
-                                pass
                             alpha = 1                        
 
                             #convert color to vector                         
-                            rgb = [x / 255.0 for x in data]    
+                            rgb = [x / 255.0 for x in colordata]    
                             rgb.reverse()                    
                             rgba = rgb + [alpha]                                          
                             polypaintData.append(tuple(rgba))                      
@@ -317,7 +282,7 @@ class GoB_OT_import(bpy.types.Operator):
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Unpack")
 
-                        if min < 250: #TODO: whats this 250?                      
+                        if colordata:                   
                             bm = bmesh.new()
                             bm.from_mesh(me)
                             bm.faces.ensure_lookup_table()
@@ -336,6 +301,7 @@ class GoB_OT_import(bpy.types.Operator):
                             bm.to_mesh(me)                        
                             me.update(calc_edges=True, calc_edges_loose=True)  
                             bm.free()
+                            
                         polypaintData.clear()    
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
@@ -497,6 +463,36 @@ class GoB_OT_import(bpy.types.Operator):
             if pref.performance_profiling:                
                 start_time = profiler(start_time, "Textures")
             
+            # Materials
+            if pref.import_material == 'NONE':
+                print("Import Material: ", pref.import_material) 
+            else:
+                
+                if len(obj.material_slots) > 0:
+                    #print("material slot: ", obj.material_slots[0])
+                    if obj.material_slots[0].material is not None:
+                        objMat = obj.material_slots[0].material
+                    else:
+                        objMat = bpy.data.materials.new(objName)
+                        obj.material_slots[0].material = objMat
+                else:
+                    objMat = bpy.data.materials.new(objName)
+                    obj.data.materials.append(objMat)
+
+                if pref.import_material == 'POLYPAINT':                    
+                    if pref.import_polypaint_name in me.vertex_colors:
+                        create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'TEXTURES':
+                    create_node_material(objMat, pref)  
+                    
+                elif pref.import_material == 'POLYGROUPS':
+                    create_node_material(objMat, pref)  
+          
+            if pref.performance_profiling: 
+                start_time = profiler(start_time, "Material Node")
+                
+
             # #apply face maps to sculpt mode face sets
             if pref.apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
                 bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
@@ -584,7 +580,7 @@ def create_node_material(mat, pref):
     output_node = nodes.get('Principled BSDF')    
     
     if pref.import_material == 'POLYPAINT':
-        #check if a vertex color node is assigned 
+        #check if a vertex color node is assigned to the BSDF shader
         vcol_node = False   
         for node in nodes:
             if node.bl_idname == 'ShaderNodeVertexColor':
