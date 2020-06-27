@@ -394,23 +394,16 @@ class GoB_OT_import(bpy.types.Operator):
                 elif tag == b'\x00\x00\x00\x00': 
                     break
                 
-                # Diff map 
+                # Diffuse Texture 
                 elif tag == b'\xc9\xaf\x00\x00':  
                     #print("Diff map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(diffName.decode('utf-8'))
-                    print("texture name: ", diffName.strip().decode('utf-8'))
-                    img = None
-                    if not bpy.data.images:
-                        img = bpy.data.images.load(diffName.strip().decode('utf-8'))
-                    else:
-                        for i in bpy.data.images:                        
-                            if i.name == diffName.strip().decode('utf-8'):
-                                print("test ", i.name)
-                                img = i.name                                
-
+                    img = bpy.data.images.load(diffName.strip().decode('utf-8'), check_existing=True)                                       
+                    img.reload()
+                                               
                     prefix = obj.name
                     suffix = pref.import_diffuse_suffix
                     texture_name = (prefix + suffix)
@@ -421,32 +414,34 @@ class GoB_OT_import(bpy.types.Operator):
                     diff = img
                 
 
-                # Disp map 
+                # Displacement Texture 
                 elif tag == b'\xd9\xd6\x00\x00':  
                     #print("Disp map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
-                    dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(dispName.decode('utf-8'))
-                    img = bpy.data.images.load(dispName.strip().decode('utf-8'))
-                    
+                    dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]                    
+                    print(dispName.decode('utf-8'))                    
+                    img = bpy.data.images.load(dispName.strip().decode('utf-8'), check_existing=True)                                       
+                    img.reload()
+
                     prefix = obj.name
                     suffix = pref.import_displace_suffix
                     texture_name = (prefix + suffix)
-
                     if not texture_name in bpy.data.textures:
+                        print("creating new texture")
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDisp.image = img
                     disp = img
 
-                # Normal map
+                # Normal Map Texture
                 elif tag == b'\x51\xc3\x00\x00':   
                     #print("Normal map:", tag)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
                     print(normName.decode('utf-8'))
-                    img = bpy.data.images.load(normName.strip().decode('utf-8'))
+                    img = bpy.data.images.load(normName.strip().decode('utf-8'), check_existing=True)                                      
+                    img.reload()
                     
                     prefix = obj.name
                     suffix = pref.import_normal_suffix
@@ -489,13 +484,13 @@ class GoB_OT_import(bpy.types.Operator):
 
                 if pref.import_material == 'POLYPAINT':                    
                     if pref.import_polypaint_name in me.vertex_colors:
-                        create_node_material(objMat, pref)  
+                        create_node(objMat, pref, diff, norm, disp)  
                     
                 elif pref.import_material == 'TEXTURES':
-                    create_node_material(objMat, pref)  
+                    create_node(objMat, pref, diff, norm, disp)  
                     
                 elif pref.import_material == 'POLYGROUPS':
-                    create_node_material(objMat, pref)  
+                    create_node(objMat, pref, diff, norm, disp)  
           
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
@@ -532,7 +527,6 @@ class GoB_OT_import(bpy.types.Operator):
                 print(30*"=")
         return
              
-
 
     def execute(self, context):
         goz_obj_paths = []
@@ -585,25 +579,21 @@ class GoB_OT_import(bpy.types.Operator):
             return{'FINISHED'}
 
 
-def create_node(mat, pref, diff, disp, norm):
+def create_node(mat, pref, diff, norm, disp):
 
-    
-    # Import
-    #mat = bpy.data.materials.new(name="Material")
     mat.use_nodes = True
-    principled = PrincipledBSDFWrapper(mat, is_readonly=False)
-    principled.base_color_texture.image = diff
-    principled.normalmap_texture.image = norm
-    #XXX disp not supported yet!
-    #principled.displacement_texture.image = disp
-
-
-    """ mat.use_nodes = True
     nodes = mat.node_tree.nodes
-    output_node = nodes.get('Principled BSDF')   
-
-
+    output_node = nodes.get('Principled BSDF')  
     
+    
+    if pref.import_material == 'TEXTURES':
+        principled = PrincipledBSDFWrapper(mat, is_readonly=False)
+        principled.base_color_texture.image = diff
+        principled.normalmap_texture.image = norm
+        #XXX disp not supported yet!
+        #principled.displacement_texture.image = disp
+
+
     if pref.import_material == 'POLYPAINT':
         #check if a vertex color node is assigned to the BSDF shader
         vcol_node = False   
@@ -616,10 +606,8 @@ def create_node(mat, pref, diff, disp, norm):
             vcol_node = nodes.new('ShaderNodeVertexColor')
             vcol_node.location = -300, 200
             vcol_node.layer_name = pref.import_polypaint_name    
-            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0]) """
+            mat.node_tree.links.new(output_node.inputs[0], vcol_node.outputs[0])
     
-    if pref.import_material == 'TEXTURE':
-        pass
 
            
 def apply_transformation(me, is_import=True): 
