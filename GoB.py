@@ -267,20 +267,13 @@ class GoB_OT_import(bpy.types.Operator):
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]  
                         polypaintData = []
-                        min = 255 #TODO: why is this called min? what is this?
                         for i in range(cnt): 
-                            data = unpack('<3B', goz_file.read(3))
-                            
+                            colordata = unpack('<3B', goz_file.read(3)) # Color
                             unpack('<B', goz_file.read(1))  # Alpha
-                            if data[0] < min:
-                                min = data[0]   #TODO: assing data to min, what is this data?                          
-                            else:                            
-                                #print("polypaint min: ", min, data[0])  
-                                pass
                             alpha = 1                        
 
                             #convert color to vector                         
-                            rgb = [x / 255.0 for x in data]    
+                            rgb = [x / 255.0 for x in colordata]    
                             rgb.reverse()                    
                             rgba = rgb + [alpha]                                          
                             polypaintData.append(tuple(rgba))                      
@@ -288,7 +281,7 @@ class GoB_OT_import(bpy.types.Operator):
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Unpack")
 
-                        if min < 250: #TODO: whats this 250?                      
+                        if colordata:                   
                             bm = bmesh.new()
                             bm.from_mesh(me)
                             bm.faces.ensure_lookup_table()
@@ -307,6 +300,7 @@ class GoB_OT_import(bpy.types.Operator):
                             bm.to_mesh(me)                        
                             me.update(calc_edges=True, calc_edges_loose=True)  
                             bm.free()
+                            
                         polypaintData.clear()    
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
