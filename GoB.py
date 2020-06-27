@@ -614,7 +614,7 @@ def apply_transformation(me, is_import=True):
         if bpy.context.active_object:
             obj = bpy.context.active_object
             i, max = max_list_value(obj.dimensions)
-            scale =  pref.zbrush_scale * max * 0.25
+            scale =  1 / pref.zbrush_scale * max
             #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
             
     #import
