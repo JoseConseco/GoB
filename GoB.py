@@ -595,6 +595,7 @@ def create_node(mat, pref, diff=None, norm=None, disp=None):
                 diffTxt_node.location = -700, 500  
                 diffTxt_node.image = diff
                 diffTxt_node.label = 'Diffuse Color Map'
+                diffTxt_node.image.colorspace_settings.name = pref.import_diffuse_colorspace
                 mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
 
         # Normal Map
@@ -615,7 +616,7 @@ def create_node(mat, pref, diff=None, norm=None, disp=None):
                 normTxt_node.location = -700, -100  
                 normTxt_node.image = norm
                 normTxt_node.label = 'Normal Map'
-                normTxt_node.image.colorspace_settings.name = 'Non-Color'
+                normTxt_node.image.colorspace_settings.name = pref.import_normal_colorspace
                 mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
 
         # Displacement Map
@@ -636,7 +637,7 @@ def create_node(mat, pref, diff=None, norm=None, disp=None):
                 dispTxt_node.location = -700, 200  
                 dispTxt_node.image = disp
                 dispTxt_node.label = 'Displacement Map'
-                dispTxt_node.image.colorspace_settings.name = 'Linear'
+                dispTxt_node.image.colorspace_settings.name = pref.import_displace_colorspace
                 mat.node_tree.links.new(disp_node.inputs[3], dispTxt_node.outputs[0])
 
     if pref.import_material == 'POLYPAINT':
@@ -1165,6 +1166,7 @@ class GoB_OT_export(bpy.types.Operator):
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
             bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
+
         with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
                 if obj.type == 'MESH':
