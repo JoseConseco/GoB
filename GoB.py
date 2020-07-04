@@ -604,13 +604,13 @@ def apply_transformation(me, is_import=True):
     mat_transform = None
     scale = 1.0
     
-    if pref.use_scale == 'SCENE':
+    if pref.use_scale == 'BUNITS':
         scale = bpy.context.scene.unit_settings.scale_length
 
     if pref.use_scale == 'MANUAL':        
         scale =  1/pref.manual_scale
 
-    if pref.use_scale == 'EXPERIMENTAL':
+    if pref.use_scale == 'ZUNITS':
         if bpy.context.active_object:
             obj = bpy.context.active_object
             i, max = max_list_value(obj.dimensions)

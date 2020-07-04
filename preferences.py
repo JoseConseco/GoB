@@ -34,11 +34,11 @@ class GoBPreferences(AddonPreferences):
     use_scale: EnumProperty(
             name="Scale",
             description="Create Material",
-            items=[('SCENE', 'From Scene', 'Changes Scale depending on Blenders Unit Scale '),
-                   ('MANUAL', 'Manual', 'Use Manual Factor for Scaling'),
-                   ('EXPERIMENTAL', 'Experimental', 'use scaling logic to always get a usable scale in zbrush'),
+            items=[('MANUAL', 'Manual', 'Use Manual Factor for Scaling'),
+                   ('BUNITS', 'Blender Units', 'Changes Scale depending on Blenders Unit Scale '),
+                   ('ZUNITS', 'ZBrush Units', 'Scale single Object to ZBrush Units'),
                    ],
-            default='EXPERIMENTAL')  
+            default='BUNITS')  
     zbrush_scale: FloatProperty(
         name="ZBrush Scale",
         description="Target ZBrush Scale",
@@ -189,7 +189,7 @@ class GoBPreferences(AddonPreferences):
         layout.prop(self, 'use_scale')
         if self.use_scale == 'MANUAL':                   
             layout.prop(self, 'manual_scale')
-        if self.use_scale == 'EXPERIMENTAL':                   
+        if self.use_scale == 'ZUNITS':                   
             layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'performance_profiling')
               
