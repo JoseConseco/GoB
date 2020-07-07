@@ -1,0 +1,294 @@
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////// Rename a button //
+/////////////////////////////////////////////////////////////////////////////
+// Rename a button
+// @buttonPath: the path of the button to be renamed
+// @str: the new button name
+[RoutineDef, ZFU_RenameButton,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[MemWriteString, ZFU_Mem_Temp, str]
+	[FileExecute, [Var, dllPath], RenameButton, buttonPath,, ZFU_Mem_Temp]
+	[MemDelete, ZFU_Mem_Temp]
+, buttonPath, str]
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////// Dropdowns //
+/////////////////////////////////////////////////////////////////////////////
+// Create a new Dropdown data (Dropdown is not shown, it's only the data)
+// @resultDropdown: the resulting dropdown (or more exactly dropdown id represented as an integer value)
+[RoutineDef, ZFU_DropdownNew,
+	[VarSet, resDropdown, [FileExecute, [Var, dllPath], DropdownNew]]
+, resDropdown]
+
+// Delete a Dropdown (the Dropdown doesn't exist anymore after deletion)
+// @dropdown: the dropdown to delete
+[RoutineDef, ZFU_DropdownDelete,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownDelete]
+	]
+, dropdown]
+
+// Clear a Dropdown (the Dropdown still exists after clearing it, but it's empty)
+// @dropdown: the dropdown to clear
+[RoutineDef, ZFU_DropdownClear,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownClear]
+	]
+, dropdown]
+
+// Get the strings count in a Dropdown
+// @dropdown: the dropdown
+// @resCount: the resulting count
+[RoutineDef, ZFU_DropdownGetCount,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],
+		[VarSet, resCount, 0]
+	,
+		[VarSet, resCount, [FileExecute, [Var, dllPath], DropdownGetCount]]
+	]
+, dropdown, resCount]
+
+// Get a string in a Dropdown
+// @dropdown: the dropdown
+// @index2: the index2 in the dropdown list
+// @resStr: the resulting string
+[RoutineDef, ZFU_DropdownGet,
+	[VarSet, str, ""]
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+		[If, [FileExecute, [Var, dllPath], DropdownGet,, index2, ZFU_Mem_Temp],,
+			[MemReadString, ZFU_Mem_Temp, str]
+		]
+		[MemDelete, ZFU_Mem_Temp]
+	]
+	[VarSet, resStr, str]
+, dropdown, index2, resStr]
+
+// Set a string in a Dropdown
+// @dropdown: the dropdown
+// @index2: the index2 in the dropdown list
+// @str: the new string value
+[RoutineDef, ZFU_DropdownSet,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownSet, str, index2]
+	]
+, dropdown, index2, str]
+
+// Search for a string in a Dropdown
+// @dropdown: the dropdown
+// @str: the string to search for
+// @resIndex: the resulting index2 (-1 if not found)
+[RoutineDef, ZFU_DropdownFind,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],
+		[VarSet, resIndex, -1]
+	,
+		[VarSet, resIndex, [FileExecute, [Var, dllPath], DropdownFind, str]]
+	]
+, dropdown, str, resIndex]
+
+// Append a string at the end of a Dropdown
+// @dropdown: the dropdown
+// @str: the string to add
+[RoutineDef, ZFU_DropdownAdd,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownAdd, str]
+	]
+, dropdown, str]
+
+// Insert a string in a Dropdown
+// @dropdown: the dropdown
+// @index2: the index2 where to insert the string in the dropdown list (if index2 = list count, then the string is appended at the end)
+// @str: the string to insert
+[RoutineDef, ZFU_DropdownInsert,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownInsert, str, index2]
+	]
+, dropdown, index2, str]
+
+// Remove a string from the Dropdown
+// @dropdown: the dropdown
+// @index2: the index2 in the dropdown list
+[RoutineDef, ZFU_DropdownRemove,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownRemove,, index2]
+	]
+, dropdown, index2]
+
+// Set the selected string in a Dropdown
+// @dropdown: the dropdown
+// @index2: the index2 in the dropdown list
+[RoutineDef, ZFU_DropdownSelect,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[FileExecute, [Var, dllPath], DropdownSelect,, index2]
+	]
+, dropdown, index2]
+
+// Get the selected string in a Dropdown
+// @dropdown: the dropdown
+// @resIndex: the resulting index2 of the selected string in the dropdown list
+[RoutineDef, ZFU_DropdownGetSelected,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],
+		[VarSet, resIndex, -1]
+	,
+		[VarSet, resIndex, [FileExecute, [Var, dllPath], DropdownGetSelected]]
+	]
+, dropdown, resIndex]
+
+// Show/open a Dropdown and let the user selecting one of its strings
+// @dropdown: the dropdown
+// @buttonPath: the path to the button where to open the dropdown
+// @resIndex: the resulting index2 of the string selected by the user
+[RoutineDef, ZFU_DropdownShow,
+	[If, [FileExecute, [Var, dllPath], DropdownLoad,, dropdown],,
+		[VarSet, resIndex, [FileExecute, [Var, dllPath], DropdownShow, buttonPath]]
+	]
+, dropdown, buttonPath, resIndex]
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////// Bypass renaming user input box //
+/////////////////////////////////////////////////////////////////////////////
+// Set the name to use instead of asking to the user
+// @str: the text/string that will be substituted to the user input
+[RoutineDef, ZFU_RenameSetNext,
+	[FileExecute, [Var, dllPath], RenameSetNext, str]
+, str]
+
+// Rename "something" by giving the path to the button that ask for the rename box
+// @buttonPath: the path of the button that asks the user to rename "something"
+// @str: the text/string that will be substituted to the user input
+[RoutineDef, ZFU_RenameFromButtonPath,
+	[If, (([IExists, buttonPath]) && ([IsEnabled, buttonPath])),
+		[FileExecute, [Var, dllPath], RenameSetNext, str]
+		[IPress, buttonPath]
+	]
+, buttonPath, str]
+
+// Rename current SubTool
+// @str: the new SubTool name
+[RoutineDef, ZFU_RenameCurrentSubTool,
+	[RoutineCall, ZFU_RenameFromButtonPath, "Tool:SubTool:Rename", str]
+, str]
+
+// Rename current Layer
+// @str: the new Layer name
+[RoutineDef, ZFU_RenameCurrentLayer,
+	[RoutineCall, ZFU_RenameFromButtonPath, "Tool:Layers:Rename", str]
+, str]
+
+// Rename Transpose Units
+// @str: the new Transpose Units
+[RoutineDef, ZFU_RenameTransposeUnits,
+	[RoutineCall, ZFU_RenameFromButtonPath, "Preferences:Transpose Units:Set Units", str]
+, str]
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////// Create blank SubTool //
+/////////////////////////////////////////////////////////////////////////////
+[RoutineDef, ZFU_AppendNewSubTool,
+	[VarSet, resIndex, [FileExecute, [Var, dllPath], AppendNewSubTool, name]]
+, name, resIndex]
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////// Manage localization //
+/////////////////////////////////////////////////////////////////////////////
+// Get current language
+// @returns the current language index2
+[RoutineDef, ZFU_GetCurrentLanguage,
+	[VarSet, lang, [FileExecute, [Var, dllPath], GetCurrentLanguage]]
+, lang]
+
+// Register localization files for the plugin
+// @enFilePath: path to the english xml localization file, must be formated "[name]en.xml"
+//				other languages are deduced as being "[name]fr.xml", "[name]jp.xml", etc...
+[RoutineDef, ZFU_RegisterLocalizationFile,
+	[FileExecute, [Var, dllPath], RegisterLocalizationFile, enFilePath]
+, enFilePath]
+
+// Localize a given text, tag or UI path
+// @text is in/out:
+//	- as an input, it is used to search for the localized item
+//	- as an output, it is replaced by the localized string
+// @text can refer to a tag, a UI path or be any untranslated text:
+//		- a tag:	if it's formated "#[tagname]"
+//		- a path:	if it's a valid path to a UI item
+//		- any text:	if it's not a tag nor a UI path, then it's considered as an untranslated text
+[RoutineDef, ZFU_LocalizeText,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[If, [FileExecute, [Var, dllPath], GetLocalizedText, text,, ZFU_Mem_Temp],,
+		[MemReadString, ZFU_Mem_Temp, text]
+	]
+	[MemDelete, ZFU_Mem_Temp]
+, text]
+
+// Localize a given title
+// @text is in/out:
+//	- as an input, it is used to search for the localized item
+//	- as an output, it is replaced by the localized string
+// @text can refer to a tag, a UI path or be any untranslated title:
+//		- a tag:	if it's formated "#[tagname]"
+//		- a path:	if it's a valid path to a UI item
+//		- a title:	if it's not a tag nor a UI path, then it's considered as an untranslated title
+[RoutineDef, ZFU_LocalizeTitle,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[If, [FileExecute, [Var, dllPath], GetLocalizedTitle, text,, ZFU_Mem_Temp],,
+		[MemReadString, ZFU_Mem_Temp, text]
+	]
+	[MemDelete, ZFU_Mem_Temp]
+, text]
+
+// Localize a given info
+// @text is in/out:
+//	- as an input, it is used to search for the localized item
+//	- as an output, it is replaced by the localized string
+// @text can refer to a tag, a UI path or be any untranslated info:
+//		- a tag:	if it's formated "#[tagname]"
+//		- a path:	if it's a valid path to a UI item
+//		- a info:	if it's not a tag nor a UI path, then it's considered as an untranslated info
+[RoutineDef, ZFU_LocalizeInfo,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[If, [FileExecute, [Var, dllPath], GetLocalizedInfo, text,, ZFU_Mem_Temp],,
+		[MemReadString, ZFU_Mem_Temp, text]
+	]
+	[MemDelete, ZFU_Mem_Temp]
+, text]
+
+// Localize a given descr
+// @text is in/out:
+//	- as an input, it is used to search for the localized item
+//	- as an output, it is replaced by the localized string
+// @text can refer to a tag, a UI path or be any untranslated descr:
+//		- a tag:	if it's formated "#[tagname]"
+//		- a path:	if it's a valid path to a UI item
+//		- a descr:	if it's not a tag nor a UI path, then it's considered as an untranslated description
+[RoutineDef, ZFU_LocalizeDescr,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[If, [FileExecute, [Var, dllPath], GetLocalizedDescr, text,, ZFU_Mem_Temp],,
+		[MemReadString, ZFU_Mem_Temp, text]
+	]
+	[MemDelete, ZFU_Mem_Temp]
+, text]
+
+// Localize a given descr
+// @text is in/out:
+//	- as an input, it is used to search for the localized item
+//	- as an output, it is replaced by the localized string
+// @text can refer to a tag, a UI path or be any untranslated descr:
+//		- a tag:	if it's formated "#[tagname]"
+//		- a path:	if it's a valid path to a UI item
+//		- a descr:	if it's not a tag nor a UI path, then it's considered as an untranslated description
+[RoutineDef, ZFU_StrReplaceArg,
+	[If, [MemGetSize, ZFU_Mem_Temp],, [MemCreate, ZFU_Mem_Temp, 256]]
+	[MemWriteString, ZFU_Mem_Temp, text]
+	[If, [FileExecute, [Var, dllPath], StrReplaceArg, argText, argIndex, ZFU_Mem_Temp],,
+		[MemReadString, ZFU_Mem_Temp, text]
+	]
+	[MemDelete, ZFU_Mem_Temp]
+, text, argIndex, argText]
+

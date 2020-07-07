@@ -1,0 +1,622 @@
+﻿//ZFileUtils test zscript for ZBrush 4R8 by Marcus Civis & Xavier Durand - updated July 2017
+//The ZFileUtils64.dll and ZFileUtils.lib 
+//are provided 'as is' with no warranty of any kind - use at your own risk!
+
+//load this file through the ZScript:Load button
+//a new "ZFileUtilsTests" sub-palette will appear in the Zplugin pallette
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~VARIABLES
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[VarDef,isMac,0]//do we have a Mac or PC
+[VarDef,Zvers,0]//ZBrush version
+[VarDef,dllPath,""]//plugin DLL path
+[VarDef,dllVersion,0]//plugin DLL version
+[VarDef,err,0]//standard error
+[VarDef,folderName,""]//folder path/name
+[VarDef,fileName,""]//file path/name
+[VarDef,fileCount, 0]		// Number of files loaded
+[VarDef,copyFileName, ""]	// Name of file to copy to
+[VarSet,index,0]
+
+[VarDef,gSharedPath,""] //path to shared/public MyPluginData folder
+
+
+<zscriptinsert,"ZFileUtilsInc.txt">
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~ROUTINES
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+//The CheckSystem routine is a standard routine to make sure everything is as it should be. 
+//Call it whenever the plugin is reloaded
+[RoutineDef, CheckSystem,	
+	//check ZBrush version
+	[VarSet,Zvers,[ZBrushInfo,0]]
+	[If,[Val,Zvers] >= 4.8,,		
+		[Note,"\Cff9923This zscript\Cffffff is not designed for this version of \Cff9923ZBrush\Cffffff.",,3,4737096,,300]
+		[Exit]
+	]	
+	[VarSet,isMac, [ZBrushInfo,6]]	//check Mac or PC
+	// Make sure we have the dll and set its path
+	[If,[ZBrushInfo,16]==64,//64 bit
+		[If,isMac,
+			//use the path below for testing only			
+			[VarSet,dllPath,"MyPluginData/ZFileUtils.lib"]	
+			//use the path below for installed plugins
+			//[VarSet,dllPath,"ZBRUSH_ZSTARTUP/ZPlugs64/MyPluginData/ZFileUtils.lib"]						
+			,	
+			//use the path below for testing only	
+			[VarSet,dllPath,"MyPluginData\ZFileUtils64.dll"]
+			//use the path below for installed plugins
+			//[VarSet,dllPath,"ZBRUSH_ZSTARTUP\ZPlugs64\MyPluginData\ZFileUtils64.dll"]		
+		]
+	,//else 32 bit - no longer supported
+		[Note,"\Cff9923This zscript\Cffffff is not designed for this version of \Cff9923ZBrush\Cffffff.",,3,4737096,,300]
+		[Exit]
+	]
+	[If, [FileExists, [Var,dllPath]],
+		//check that correct version
+		[VarSet, dllVersion, [FileExecute, [Var,dllPath], Version]]
+		[If, [Val,dllVersion] >= 4.8,//dll version
+			//OK
+			,//else earlier version			
+			[Note,"\Cff9923Note :\Cc0c0c0 The \Cff9923 ZFileUtils plugin \CffffffDLL\Cc0c0c0 is an earlier version which does not support this plugin.  Please install correct version."]
+			[Exit]
+		]			
+	, // else no DLL.
+		[Note,"\Cff9923Note :\Cc0c0c0 The \Cff9923 ZFileUtils plugin \CffffffDLL\Cc0c0c0 could not be found at the correct location.  Please re-install the plugin, making sure the relevant files and folders are in the \CffffffZStartup/ZPlugs\Cc0c0c0 folder."]
+		[Exit]
+	]
+]//end routine
+
+//call routine here to ensure it's called every time plugin loaded
+[RoutineCall, CheckSystem]
+
+
+//Routine to Initialize ZFUtilsTests, set up dropdown and language file
+[RoutineDef, InitZFUtilsTests,	
+	// Create a new dropdown
+	//***IMPORTANT***to avoid conflicts, please create a new unique name for the memory block!
+	// ~ don't use "ZFUTest_Mem_Dropdown" ***
+	[If, [MemGetSize, ZFUTest_Mem_Dropdown],,
+		[VarSet, dropdown, 0]
+		[VarSet, initName,"My Name"]
+		[RoutineCall, ZFU_DropdownNew, dropdown]
+		[MemCreate, ZFUTest_Mem_Dropdown, 512]
+		[MVarSet, ZFUTest_Mem_Dropdown, 0, dropdown]
+		[MemWriteString, ZFUTest_Mem_Dropdown, initName, 4]
+		[RoutineCall, ZFU_DropdownAdd, [MVarGet, ZFUTest_Mem_Dropdown, 0], initName]
+		[RoutineCall, ZFU_DropdownSelect, [MVarGet, ZFUTest_Mem_Dropdown, 0], 0]
+		
+		// Initialize localization
+		[RoutineCall, ZFU_RegisterLocalizationFile, [FileNameResolvePath, "MyPluginData/lang/zfutils_en.xml"]]
+	]
+]
+
+//call routine here to ensure it's called every time plugin loaded
+[RoutineCall, InitZFUtilsTests]
+
+// Update the UI(requires the UI to be created before being called so call at very end of script)
+[RoutineDef, UpdateZFUtilsUI,
+	[VarSet, name, ""]
+	[MemReadString, ZFUTest_Mem_Dropdown, name, 4]
+	[RoutineCall, ZFU_RenameButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Enter name", name]
+]
+
+
+[RoutineDef,CheckSharedFolder,  
+  [VarSet,gSharedFolder,"ZPluginData/"]//all plugins use same folder
+  [VarSet,gPluginFolder,"MyPluginData/"]//unique folder for your plugin
+  //create memblock to get public/shared folder
+  [If,[MemGetSize,MC_SharedPath],,
+    [MemCreate,MC_SharedPath,256,0]
+    [FileExecute, [Var,dllPath],GetPublicFolder,,,MC_SharedPath]
+  ]
+  //copy path to variable
+  [MemReadString,MC_SharedPath,gSharedPath,0,1]
+  //check for folders and create as necessary
+   [If,isMac,
+    [VarSet,gSharedPath,[StrMerge,gSharedPath,"/Shared/ZBrushData/",gSharedFolder]]
+    [If,[FileExists,[StrMerge,"!:",gSharedPath,gPluginFolder,"folder.txt"]],,
+      [FileExecute, [Var,dllPath],MakeFolder,gSharedPath]
+      [FileExecute, [Var,dllPath],MakeFolder,[StrMerge,gSharedPath,gPluginFolder]]
+      [MemSaveToFile,MC_SharedPath,[StrMerge,"!:",gSharedPath,gPluginFolder,"folder.txt"]]      
+    ]
+    [VarSet,gSharedPath,[StrMerge,"!:",gSharedPath,gPluginFolder]] 
+      ,
+    [VarSet,gSharedPath,[StrMerge,gSharedPath,"/ZBrushData/",gSharedFolder]]
+    [If,[FileExists,[StrMerge,gSharedPath,gPluginFolder,"folder.txt"]],,
+      [FileExecute, [Var,dllPath],MakeFolder,gSharedPath]      
+      [FileExecute, [Var,dllPath],MakeFolder,[StrMerge,gSharedPath,gPluginFolder]]
+      [MemSaveToFile,MC_SharedPath,[StrMerge,gSharedPath,gPluginFolder,"folder.txt"]]
+    ]
+    [VarSet,gSharedPath,[StrMerge,gSharedPath,gPluginFolder]] 
+   ]
+]//end routine
+
+
+
+[RoutineDef,CheckIsFile,//routine to check if it's a file (not a folder)
+		[VarSet,isF,0]
+		[VarSet,fileExt,""]		
+		[If,([StrLength,file]>2),//we'll assume the file name is at least 2 chars			
+			[VarSet,fileExt,[FileNameExtract,file,4]]//and the file has an extension			
+			[If,[StrLength,fileExt],[VarSet,isF,1]]		
+		]	
+,isF,file]	
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~INTERFACE
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[ISubPalette,"ZPlugin:ZFileUtilsTests"]
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~FILES & FOLDERS OPERATIONS
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[ISubPalette,"ZPlugin:ZFileUtilsTests:Files & Folders"]
+
+
+//create a new folder
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:MakeFolder","Make a folder called 'Test Folder' in the same location as this zscript",
+	//~~~set path & name for new folder~~~
+	//get the full path to this script file
+	[VarSet,folderName,[FileNameResolvePath,"ZFileUtils_TestZScript.txt"]]
+	//use this to create the full path to the new folder
+	[VarSet,folderName,[StrMerge,[FileNameExtract,folderName,1],"Test Folder"]]
+	//check to see if folder exists
+	[VarSet,folderExists,[FileExecute,[Var,dllPath],"FolderExists",#folderName]]	
+	[If,folderExists,
+		[Note,"Folder exists. Operation cancelled.",,3]
+		[Exit]
+		,//else no folder
+		[VarSet,err,[FileExecute,[Var,dllPath],"MakeFolder",#folderName]]	
+		[If,err,[Note,"An error occurred.",,2],[Note,"Folder created",,2]]	
+	]		
+,,1]//end button
+
+
+//~~~copy a file in one location to a new file in a new location~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:CopyFileTo","Copy a file",
+	//the file to be copied
+	[VarSet,fileName,"MyPluginData\FromThis.txt"]
+	//we need the full path
+	[VarSet,fileName,[FileNameResolvePath,fileName]]	
+	//the destination - any existing file will be overwritten!
+	[VarSet,copyFileName,"Test Folder\ToThis.txt"]
+	//we need the full path
+	[VarSet,copyFileName,[FileNameResolvePath,copyFileName]]
+	//copy the file
+	[MemCreate, ZFileUtils_CopyFile, 256, 0]					
+	[MemWriteString,ZFileUtils_CopyFile,copyFileName,0]	
+	[If,[FileExists,fileName],
+		[VarSet,err,[FileExecute,[Var,dllPath],"FileCopyTo",fileName,,ZFileUtils_CopyFile]]		
+	]
+	[MemDelete,ZFileUtils_CopyFile]
+	[If,err,[Note,"An error occurred.",,2],[Note,"File copied",,2]]
+,,1]//end button
+
+
+//~~~rename a file~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:FileRename","Rename a file",
+	//the file to be renamed
+	[VarSet,fileName,"Test Folder\ToThis.txt"]
+	//we need the full path
+	[VarSet,fileName,[FileNameResolvePath,fileName]]
+	//the new name
+	[VarSet,copyFileName,"Test Folder\NewName.txt"]
+	//we need the full path
+	[VarSet,copyFileName,[FileNameResolvePath,copyFileName]]
+	//~~~copy the file~~~
+	//create a memblock to take the copy file name
+	[MemCreate, ZFileUtils_CopyFile, 256, 0]
+	//write the file name to the memblock					
+	[MemWriteString,ZFileUtils_CopyFile,copyFileName,0]	
+	//if the file exists, rename it
+	[If,[FileExists,fileName],
+		[VarSet,err,[FileExecute,[Var,dllPath],"FileRename",fileName,,ZFileUtils_CopyFile]]		
+	]
+	//delete the memblock as we've finished with it
+	[MemDelete,ZFileUtils_CopyFile]
+	[If,err,[Note,"An error occurred.",,2],[Note,"File renamed",,2]]
+,,1]//end button
+
+
+//get the number of files/folders in a folder
+//files in subfolders are not counted
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:GetFileNumber","Get the number of files & subfolders in the folder called 'Test Folder'",
+	//get the full path to this script file
+	[VarSet,folderName,[FileNameResolvePath,"ZFileUtils_TestZScript.txt"]]
+	//use this to create the full path to the folder
+	[VarSet,folderName,[StrMerge,[FileNameExtract,folderName,1],"Test Folder"]]
+	//get the number of files
+	[VarSet,fileCount,[FileExecute,[Var,dllPath],"GetFileNumber",#folderName]]	
+	[If,fileCount < 0,	//negative values mean an error
+		[Note,"Error getting number of files from folder."]
+		,//else OK
+		[Note,[StrMerge,"\CffffffThere are ",fileCount," files/folders in the \n\Cff9923",folderName,"\Cffffff\nlocation."]]
+	]
+,,1]//end button
+
+
+//~~~empty a folder of files~~~
+//~~~note this will not delete subfolders or their contents~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:EmptyFolder","Delete all files in the folder called 'Test Folder'",	
+	//get the full path to this script file
+	[VarSet,folderName,[FileNameResolvePath,"ZFileUtils_TestZScript.txt"]]
+	//use this to create the full path to the folder
+	[VarSet,folderName,[StrMerge,[FileNameExtract,folderName,1],"Test Folder"]]
+	//empty the folder of files
+	[VarSet,err,[FileExecute,[Var,dllPath],"EmptyFolder",#folderName]]	
+	[If,err,[Note,"An error occurred.",,2],[Note,"Folder emptied",,2]]	
+,,1]//end button
+
+
+
+//~~~delete a file~~~
+//~~~note that the file is deleted completely, not moved to the Trash/Recycle Bin~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:DeleteFile","Delete a file",
+	//the file to be deleted
+	[VarSet,fileName,"Test Folder\ToThis.txt"]
+	//we need the full path
+	[VarSet,fileName,[FileNameResolvePath,fileName]]
+	//if the file exists, delete it
+	[If,[FileExists,fileName],
+		[VarSet, err, [FileExecute, [Var,dllPath],"FileDelete",#fileName]] // Delete this file...
+		[If,err,[Note,"An error occurred.",,2],[Note,"File deleted",,2]]
+		,
+		[Note,"No file to delete!",,2]
+	]
+,,1]//end button
+
+
+//~~~delete a folder~~~
+//~~~note that the folder is deleted completely, not moved to the Trash/Recycle Bin~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:DeleteFolder","Delete a folder - it must be empty!",
+	//get the full path to this script file
+	[VarSet,folderName,[FileNameResolvePath,"ZFileUtils_TestZScript.txt"]]
+	//use this to create the full path to the folder
+	[VarSet,folderName,[StrMerge,[FileNameExtract,folderName,1],"Test Folder"]]
+	//delete the folder
+	[VarSet,err,[FileExecute,[Var,dllPath],"DeleteFolder",#folderName]]
+	//an error may mean the folder has files in it		
+	[If,err,[Note,"An error occurred.",,2],[Note,"Folder deleted",,2]]	
+,,1]//end button
+
+
+
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:LaunchFileDialog","Launch a file browser to select files",
+	//***this code just for setting the default folder for open dialog
+	//get the full path to this script file
+	[VarSet,folderName,[FileNameResolvePath,"ZFileUtils_TestZScript.txt"]]
+	//use this to create the full path to the folder
+	[VarSet,folderName,[FileNameExtract,folderName,1]]
+	//(optional) set the default folder (not implemented on Mac OSX)
+	[FileExecute, [Var,dllPath], SetDefaultFolder, folderName]
+	//***
+	
+	//text for the dialog title (optional)	
+	[VarDef,dialogTitle, "Please select some files"]	
+	//string containing file extensions separated by commas(,)
+	//if not used then all files will be used
+	[VarSet,fileExt,"obj,GoZ,ma"]
+	//create memblock for file extensions
+	[MemCreate,ZFileUTils_FileExt, 256, 0] 
+	//copy file extensions to memblock
+	[MemWriteString,ZFileUTils_FileExt,fileExt,0]	
+	//create and launch Open File dialog
+	//returns the number of files selected
+	[VarSet, fileCount, [FileExecute, [Var,dllPath],"GetFilesDialog",#dialogTitle,,ZFileUTils_FileExt]]
+	
+	//***alternative GetFilesDialog function call with no title text or file extensions:	
+	//[VarSet, fileCount, [FileExecute, [Var,dllPath], "GetFilesDialog"]]	
+	
+	//delete the memblock as we've finished with it
+	[MemDelete,ZFileUTils_FileExt]
+	
+	//display the number of files selected
+	[Note,[StrMerge,fileCount," files selected"],,2]	
+	//now get the full file path to each file selected
+	[If,fileCount > 0,
+		//Create a memblock to get the file path
+		[MemCreate,Test_ZFileUTils, 256, 0] 
+		//get each of the file paths
+		[VarSet,index,1]
+		[Loop,fileCount,			
+			[VarSet,err,[FileExecute, [Var,dllPath],GetFilePath,,index,Test_ZFileUTils]]			
+			[VarInc,index]
+			//if all is OK copy from memblock to variable
+			[If,err == 0,
+				[MemReadString, Test_ZFileUTils, fileName]
+				//do stuff
+				//display the file name and path
+				[Note,fileName,,1]
+				,
+				[LoopContinue]
+			]
+		]//end loop	
+		[MemDelete,Test_ZFileUTils]	
+	]//end if fileCount
+,,1]//end button
+		
+
+//~~~get a list of all files and subfolders in a folder~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:GetFiles","Get a list of files and subfolders in a folder",
+	[VarSet,fileIndex,0]
+	[VarSet,folderIndex,0]
+	//ask the user for a file so that we can get the folder it is in
+	[VarSet,folderName,[FileNameAsk,"Photoshop(*.psd)|*.psd|JPG(*.jpg)|*.jpg|TIF(*.tif)|*.tif||",,"Please Select File..."]]
+	//if the user selected a file	
+	[If,[StrLength,folderName],	
+		//get the path only
+		[VarSet,folderName,[FileNameExtract,folderName,1]]
+		//we need the full path (although in this example the path is already the full path)
+		[VarSet,folderName,[FileNameResolvePath,folderName]]
+		[VarSet,fileCount,[FileExecute,[Var,dllPath],"GetFileNumber",folderName]]//get the number of files/folders
+		[If,fileCount < 0,[Note,"Error getting number of files in folder"]]
+		//if we have some files
+		[If, fileCount > 0,
+			//open the folder
+			[VarSet,err,[FileExecute,[Var,dllPath],"OpenFolder",folderName]]
+			//if we can't open the folder exit the zscript
+			[If,err,[Note,"Error opening folder."][Exit]]
+			//create a memblock to get the file name
+			[MemCreate,ZFileUtils_list, 256, 0]
+			[Loop,fileCount,//loop through the files
+				//get the filename
+				[VarSet,err,[FileExecute,[Var,dllPath],"GetFile",,,ZFileUtils_list]]	
+				//an error means we've reached the end of the list, so exit the loop	
+				[If,err,[LoopExit]]
+				//otherwise write the file name from the memblock to a variable
+				[MemReadString, ZFileUtils_list,fileName]
+				[VarSet,isaFile,0]
+				//check if it's a file	
+				[RoutineCall,CheckIsFile,isaFile,fileName]
+				//if it's a file	
+				[If,isaFile,
+					//increment the number of files
+					[VarInc, fileIndex]
+					//display the file name
+					[If,(fileIndex+folderIndex <= 30),//just list the first 30 files&folders
+						[Note,[StrMerge,"\C808080",[Val,fileIndex],". \Cffffff",fileName,"\n"],,-1]
+					]
+				,//else it's a folder
+					[VarInc, folderIndex]//increment the number of folders
+					//display the folder name
+					[If,(folderIndex+fileIndex <= 30),//just list the first 30 files&folders
+						[Note,[StrMerge,"\Cff9923    ",fileName,"\C808080 - subfolder\Cffffff\n"],,-1]
+					]
+				]//end if it is a file
+			]//end loop
+			//delete the memblock as we've done with it
+			[MemDelete,ZFileUtils_list]
+			//***must close the folder***
+			[VarSet,err,[FileExecute,[Var,dllPath],"CloseFolder",folderName]]
+			[If,err,[Note,"Error closing folder."]]		
+			//display up to 30 of the files and folders
+			[Note,[StrMerge,"\n\Cffffff",[Val,fileIndex],"\Cff9923 files and \Cffffff",[Val,folderIndex],"\Cff9923 subfolders in folder"],,,4737096,,500]		
+		]//end if file number >0		
+	]//end if a file selected
+,,1]//end button
+
+
+
+//~~~launch an app with a file~~~
+//~~~Note: this does not check to see if an app is already running~~~
+//~~some apps may open multiple copies if repeatedly called~~~
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:LaunchAppWithFile","Launch an application and open a file",
+	//the full path to the app to launch
+	[If,isMac,//if we're on Mac OSX
+		[VarSet,appPath,"/Applications/TextEdit.app"]	
+			,//else we're on Windows
+		[VarSet,appPath,"C:\Windows\System32\notepad.exe"]		
+	]
+	//full path to the file to open
+	[VarSet,fullFilePath,[FileNameResolvePath,"MyPluginData\FromThis.txt"]]	
+	//create memblock for app path
+	[MemCreate,ZFileUTils_AppPath, 256, 0] 
+	//write app path to memblock
+	[MemWriteString,ZFileUTils_AppPath,appPath,0]		
+	[VarSet,err,[FileExecute,[Var,dllPath],"LaunchAppWithFile",#fullFilePath,,ZFileUTils_AppPath]]
+	
+	//***alternative LaunchAppWithFile call with only file path (no need for memblock):
+	//***this will launch the file with its default application
+	//***if the path is to an executable (such as notepad.exe) then the app will launch with no file
+	//[VarSet,err,[FileExecute,[Var,dllPath],"LaunchAppWithFile",#fullFilePath]]
+		
+	//delete the memblock as we've done with it
+	[MemDelete,ZFileUTils_AppPath]
+	//an error 	
+	[If,err,[Note,"An error occurred.",,2]]	
+,,1]//end button
+
+
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:GetZBrushDataFolder","Get the public ZBrushData folder",
+	//create memblock to get the path
+	[If,[MemGetSize,MC_SharedPath],,
+    [MemCreate,MC_SharedPath,256,0]
+    [FileExecute, [Var,dllPath],GetPublicFolder,,,MC_SharedPath]
+  ]
+  //copy path from memblock tpo variable
+  [MemReadString,MC_SharedPath,gSharedPath,0,1]
+  //add ZBrushData to path
+  [If,isMac,
+    [VarSet,gSharedPath,[StrMerge,gSharedPath,"/Shared/ZBrushData/"]]
+    	,
+    [VarSet,gSharedPath,[StrMerge,gSharedPath,"/ZBrushData/"]]
+  ]
+  //display result
+  [Note,gSharedPath]	
+,,1]//end button
+
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:CheckPluginDataFolder","Check for PluginData folder and create if necessary",
+	//call this routine at plugin startup if using ZBrushData for temp files
+	[RoutineCall,CheckSharedFolder]
+	//display result
+	[If,[FileExists,[StrMerge,gSharedPath,"folder.txt"]],
+		[Note,[StrMerge,"Folder was created or already exists!\nPath: ",gSharedPath]]
+	]
+,,1]//end button
+
+
+[IButton,"ZPlugin:ZFileUtilsTests:Files & Folders:SelectFolder","Launch a Select Folder dialog",
+	[VarDef,folderPath,""]
+	//create memblock to get the path
+	[If,[MemGetSize,MC_FolderPath],,
+    [MemCreate,MC_FolderPath,256,0]    
+  ]
+  [VarSet,err,[FileExecute, [Var,dllPath],ChooseFolder,,,MC_FolderPath]]
+  [If,err,
+  	[Note,err]//function will return -1 if no folder chosen
+  	,
+	  //copy path from memblock to variable
+	  [MemReadString,MC_FolderPath,folderPath,0,1]
+	  //show the selected folder path
+	  [Note,folderPath]//Notes do not display backslashes
+	  //*** when using the path remember to append a slash before the file name!***
+	  //*** for example:
+	  //[VarSet,fileName,"My_Model.ztl"]
+	  //[FileNameSetNext,[StrMerge,folderPath,"/",fileName]]
+	]
+  [MemDelete,MC_FolderPath]	
+,,1]//end button
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~DROPDOWN & LOCALISATION OPERATIONS
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[ISubPalette,"ZPlugin:ZFileUtilsTests:Dropdown & Localisation"]
+
+//~~~This button demonstrates localised button name, popup info and message box~~~
+//~~~selected name in dropdown will be used for renaming~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Rename SubTool", "Will rename the current SubTool with the name you've entered",
+	[VarSet, name, ""]
+	//get the name to be entered (current selection in dropdown)
+	[MemReadString, ZFUTest_Mem_Dropdown, name, 4]
+	//get localisation message tag
+	[VarSet, text, "#ZFU_RENAME_SUBTOOL_CONFIRMATION"]
+	[RoutineCall, ZFU_LocalizeInfo, text]
+	[RoutineCall, ZFU_StrReplaceArg, text, 1, name]
+	[NoteIButton, "Yes"]
+	[NoteIButton, "No"]
+	[If, ([Note, text]==1),
+		[RoutineCall, ZFU_RenameCurrentSubTool, name]
+	]
+,,1]
+
+
+//~~~This button demonstrates localised button name and popup info~~~
+//~~~selected name in dropdown will be used for renaming~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Rename Layer", "Will rename the current Layer with the name you've entered",
+	[VarSet, name, ""]
+	[MemReadString, ZFUTest_Mem_Dropdown, name, 4]
+	[RoutineCall, ZFU_RenameCurrentLayer, name]
+,,1]
+
+
+//~~~This button demonstrates renaming transpose units~~~
+//~~~selected name in dropdown will be used for renaming~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Rename Transpose Units", "Will rename the current Layer with the name you've entered",
+	[VarSet, name, ""]
+	[MemReadString, ZFUTest_Mem_Dropdown, name, 4]
+	[RoutineCall, ZFU_RenameTransposeUnits, name]
+,,1]
+
+
+//~~~This button demonstrates appending a new subtool~~~
+//~~~selected name in dropdown will be used for name~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Append New SubTool", "Appends a new SubTool",
+	[VarSet, resIndex, 0]
+	[VarSet, name, ""]
+	[MemReadString, ZFUTest_Mem_Dropdown, name, 4]
+	[RoutineCall, ZFU_AppendNewSubTool, name, resIndex]
+	[Note,[StrMerge,"\Cff9923New SubTool named \Cffffff",#name,"\Cff9923 appended at index \Cffffff",resIndex]]
+,,1.0]
+
+
+//~~~The buttons below demonstrate a dropdown list~~~
+//~~~enter new names using this button~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Enter name", "Click here to enter a new name",
+	[VarSet, oldName, ""]
+	[MemReadString, ZFUTest_Mem_Dropdown, oldName, 4]
+	[VarSet, newName, [StrAsk, oldName, "Please, enter a new name"]]
+	[If, [StrLength, newName],
+		[VarSet, index, 0]
+		[MemWriteString, ZFUTest_Mem_Dropdown, newName, 4]
+		[RoutineCall, ZFU_DropdownGetCount, [MVarGet, ZFUTest_Mem_Dropdown, 0], index]
+		[RoutineCall, ZFU_DropdownAdd, [MVarGet, ZFUTest_Mem_Dropdown, 0], newName]
+		[RoutineCall, ZFU_DropdownSelect, [MVarGet, ZFUTest_Mem_Dropdown, 0], index]
+		[RoutineCall, ZFU_RenameButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Enter name", newName]
+	]
+,,0.7]
+
+//~~~Press this button to show dropdown - after two or more entries~~~
+//~~~Scroll bar will appear after about 12 entries~~~
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:+", "Select a previous name entered",
+	[VarSet, index, 0]
+	[RoutineCall, ZFU_DropdownShow, [MVarGet, ZFUTest_Mem_Dropdown, 0], "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:+", index]
+	[If, (index>=0),
+		[VarSet, name, ""]
+		[RoutineCall, ZFU_DropdownGet, [MVarGet, ZFUTest_Mem_Dropdown, 0], index, name]
+		[MemWriteString, ZFUTest_Mem_Dropdown, name, 4]
+		[RoutineCall, ZFU_RenameButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Enter name", name]
+	]
+,,0.3]
+
+//~~~Button to show translation of any text
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Localize Text", "Localize any text",
+	[VarSet, text, [StrAsk, "", "Please, enter a text, tag or UI path"]]
+	[If, [StrLength, text],
+		[VarSet, locText, text]
+		[RoutineCall, ZFU_LocalizeText, locText]
+		[NoteIButton, "OK"]
+		[Note, [StrMerge, "\Cff9923Localization of text \Cffffff", [StrFromAsc, 34], text, [StrFromAsc, 34], "\Cff9923 is:\Cffffff", [StrFromAsc, 13], locText]]
+	]
+,,1.0]
+
+//~~~Button to show translation of a title
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Localize Title", "Localize any title",
+	[VarSet, text, [StrAsk, "", "Please, enter a title, tag or UI path"]]
+	[If, [StrLength, text],
+		[VarSet, locText, text]
+		[RoutineCall, ZFU_LocalizeTitle, locText]
+		[NoteIButton, "OK"]
+		[Note, [StrMerge, "\Cff9923Localization of title \Cffffff", [StrFromAsc, 34], text, [StrFromAsc, 34], "\Cff9923 is:\Cffffff", [StrFromAsc, 13], locText]]
+	]
+,,1.0]
+
+//~~~Button to show translation of any info text
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Localize Info", "Localize any info text",
+	[VarSet, text, [StrAsk, "", "Please, enter a info, tag or UI path"]]
+	[If, [StrLength, text],
+		[VarSet, locText, text]
+		[RoutineCall, ZFU_LocalizeInfo, locText]
+		[NoteIButton, "OK"]
+		[Note, [StrMerge, "\Cff9923Localization of info \Cffffff", [StrFromAsc, 34], text, [StrFromAsc, 34], "\Cff9923 is:\Cffffff", [StrFromAsc, 13], locText]]
+	]
+,,1.0]
+
+//~~~Button to show translation of any description text
+[IButton, "ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Localize Descr", "Localize any description text",
+	[VarSet, text, [StrAsk, "", "Please, enter a descr, tag or UI path"]]
+	[If, [StrLength, text],
+		[VarSet, locText, text]
+		[RoutineCall, ZFU_LocalizeDescr, locText]
+		[NoteIButton, "OK"]
+		[Note, [StrMerge, "\Cff9923Localization of descr \Cffffff", [StrFromAsc, 34], text, [StrFromAsc, 34], "\Cff9923 is:\Cffffff", [StrFromAsc, 13], locText]]
+	]
+,,1.0]
+
+
+
+// Initial UI update
+[RoutineCall, UpdateZFUtilsUI]

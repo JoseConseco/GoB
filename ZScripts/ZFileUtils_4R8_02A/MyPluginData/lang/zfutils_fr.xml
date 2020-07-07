@@ -1,0 +1,27 @@
+<buttons>
+  <button path="ZPlugin:ZFileUtilsTests">
+    <title text="ZFileUtilsTests" trans="Tests de ZFileUtils"/>
+  </button>
+  <button path="ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Rename SubTool">
+    <title text="Rename SubTool" trans="Renommer le SubTool"/>
+    <info text="Will rename the current SubTool with the name you've entered" trans="Renommer le SubTool courant avec le nom que vous avez entré"/>
+  </button>
+  <button path="ZPlugin:ZFileUtilsTests:Dropdown & Localisation:Rename Layer">
+    <title text="Rename Layer" trans="Renommer le Layer"/>
+    <info text="Will rename the current Layer with the name you've entered" trans="Renommer le layer courant avec le nom que vous avez entré"/>
+  </button>
+  <!-- <button tag="">
+    <title text="" trans=""/>
+    <info text="" trans=""/>
+  </button>  -->
+</buttons>
+
+<messages>
+  <message tag="ZFU_RENAME_SUBTOOL_CONFIRMATION">
+    <info text="You are about to rename current SubTool as %arg1%.\nAre your sure you really want to name it %arg1%?" trans="Vous êtes sur le point de renommer le SubTool courant en %arg1%.\n Etes vous vraiment sûr de vouloir faire çà?"/>
+  </message>
+  <!-- <message tag="">
+    <title text="" trans=""/>
+    <info text="" trans=""/>
+  </message> -->
+</messages>
