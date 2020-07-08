@@ -1107,8 +1107,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if diff:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
-                diff.save_render(name)
                 print(name)
+                try:
+                    diff.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1120,8 +1123,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if disp:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
-                disp.save_render(name)
                 print(name)
+                try:
+                    disp.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1133,8 +1139,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if norm:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
-                norm.save_render(name)
                 print(name)
+                try:
+                    norm.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1161,7 +1170,17 @@ class GoB_OT_export(bpy.types.Operator):
         if not exists:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
             return {"CANCELLED"}
-          
+        
+        
+        # remove ZTL files since they mess up Zbrush importing subtools 
+        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
+        for file_name in os.listdir(folder_path):
+            print(file_name)
+            if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
+                print('suffix match:', file_name)
+                os.remove(folder_path + file_name)
+
+
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
@@ -1179,14 +1198,12 @@ class GoB_OT_export(bpy.types.Operator):
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         
-        # remove ZTL files since they mess up Zbrush importing subtools 
-        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
-        for file_name in os.listdir(folder_path):
-            if file_name.endswith('.ZTL'):
-                os.remove(folder_path + file_name)
-                print('remove ztl file:', file_name)
-
+        
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
+
+        PATHCURRENT = os.getcwd()
+        print("current path", PATHCURRENT)
+        os.system(f"{PATHCURRENT}/ZScripts/GoB_textures.zsc")
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
