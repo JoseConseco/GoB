@@ -1,0 +1,56 @@
+
+
+
+
+//RECORDED ZSCRIPT 2020
+[IButton,Play,"Press to play this ZScript. ZScript can be aborted at anytime by pressing the ëescí key.",
+[IConfig,2020]
+
+[NoteBar, "GoZ is importing, Please wait..."]
+
+//variables
+[VarDef, objName, "EQ"]
+[VarDef, objPath, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ.GoZ"]
+[VarDef, diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_diff.bmp"]
+[VarDef, normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_norm.bmp"]
+[VarDef, dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_disp.bmp"]
+
+
+[VarSave,objName, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarSave,diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarSave,normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarSave,dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+
+[VarLoad,objName, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarLoad,diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarLoad,normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+[VarLoad,dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+
+//import GoZ object
+
+[Note, [SubToolLocate, objName]]
+[If,[SubToolLocate, objName]<-1,
+    [SubToolSelect, [SubToolLocate, objName]]   
+    
+    [If,[FileExists,objPath],
+        [FileNameSetNext,objPath][IPress,Tool:Import]
+    ]
+,     
+    [IPress,Tool:SubTool:Append]
+    [IPress,PopUp:PolyMesh3D]
+    [IPress,Tool:SubTool:PolyMesh3D1]
+    
+    [If,[FileExists,objPath],
+        [FileNameSetNext,objPath][IPress,Tool:Import]
+    ]
+]
+
+
+// import textures
+[IPress,Tool:Texture Map:TextureMap]
+[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_diff.bmp"][IPress,Texture:Import]
+[IPress,Tool:Displacement Map:DisplacementMap]
+[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_disp.bmp"][IPress,Alpha:Import]
+[IPress,Tool:Normal Map:Normal Map]
+[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_norm.bmp"][IPress,Texture:Import]
+]/*End of ZScript*/
