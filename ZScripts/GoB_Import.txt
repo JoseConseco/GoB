@@ -1,56 +1,71 @@
+[VarDef, GoBImport, 0]
+
+[If, GoBImport = 0,
+
+    [NoteBar, "GoZ is importing, Please wait..."]
+
+    // create variables
+    [VarDef, objName, "EQ"]
+    [VarDef, defaultPath, "C:\Users\Public\Pixologic\GoZProjects\Default\"]
+    [VarDef, objPath, [StrMerge, defaultPath, "EQ.GoZ"]]
+    [VarDef, diffTexture, [StrMerge, defaultPath, "EQ_diff.bmp"]]
+    [VarDef, normTexture, [StrMerge, defaultPath, "EQ_norm.bmp"]]
+    [VarDef, dispTexture, [StrMerge, defaultPath, "EQ_disp.bmp"]]
+
+    /* [VarDef, gobSettings, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
+    [VarSave,objName, gobSettings]
+    [VarSave,diffTexture, gobSettings]
+    [VarSave,normTexture, gobSettings]
+    [VarSave,dispTexture, gobSettings]
+
+    [VarLoad,objName, gobSettings]
+    [VarLoad,diffTexture, gobSettings]
+    [VarLoad,normTexture, gobSettings]
+    [VarLoad,dispTexture, gobSettings] */
+
+    //import GoZ object
 
 
+    [VarDef, subtoolName, ""] // Define a new variable to store the current subtool name 
+    [VarDef, subtool(1024), 0] // Define a Variable list to store the subtool active index
+    [VarSet, totalSubtools, [SubToolGetCount]] // create a variable to define the number of loop based on the subtools count
+    [VarSet, activeSubtool, [SubToolGetActiveIndex]] // create a variable with the current subtool Index
 
 
-//RECORDED ZSCRIPT 2020
-[IButton,Play,"Press to play this ZScript. ZScript can be aborted at anytime by pressing the ëescí key.",
-[IConfig,2020]
-
-[NoteBar, "GoZ is importing, Please wait..."]
-
-//variables
-[VarDef, objName, "EQ"]
-[VarDef, objPath, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ.GoZ"]
-[VarDef, diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_diff.bmp"]
-[VarDef, normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_norm.bmp"]
-[VarDef, dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\EQ_disp.bmp"]
-
-
-[VarSave,objName, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarSave,diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarSave,normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarSave,dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-
-[VarLoad,objName, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarLoad,diffTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarLoad,normTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-[VarLoad,dispTexture, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-
-//import GoZ object
-
-[Note, [SubToolLocate, objName]]
-[If,[SubToolLocate, objName]<-1,
-    [SubToolSelect, [SubToolLocate, objName]]   
-    
-    [If,[FileExists,objPath],
-        [FileNameSetNext,objPath][IPress,Tool:Import]
+    // Select the first subtool of the Ztool
+    [If, activeSubtool==0,
+        [SubToolSelect,1]
     ]
-,     
-    [IPress,Tool:SubTool:Append]
-    [IPress,PopUp:PolyMesh3D]
-    [IPress,Tool:SubTool:PolyMesh3D1]
+    // Loop to fill every subtool until it runs out of subtools
+    [Loop, totalSubtools,
+        [SubToolSelect,[Val, n]]
+        [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]   //get the tool name
+
+        [Note, [StrMerge, subtoolName, , " <> ", objName]]
+        [If, ([StrFind,subtoolName,objName]==0)&&([StrLength,subtoolName]==[StrLength,objName]), // subtool not found, create a new one    
+            [SubToolSelect, [SubToolLocate, objName]]
+            [If,[FileExists,objPath],
+                [FileNameSetNext,objPath][IPress,Tool:Import]
+            ]
+        , // subtool exists, update subtool 
+            /* [IPress,Tool:SubTool:Append]
+            [IPress,PopUp:PolyMesh3D]
+            [IPress,Tool:SubTool:PolyMesh3D]
+            [If,[FileExists,objPath],
+                [FileNameSetNext,objPath]
+                [IPress,Tool:Import]
+            ] */
+        ]
+
+        // import textures
+        [IPress,Tool:Texture Map:TextureMap]
+        [FileNameSetNext,[StrMerge, defaultPath, "EQ_diff.bmp"]] [IPress,Texture:Import]
+        [IPress,Tool:Displacement Map:DisplacementMap]
+        [FileNameSetNext,[StrMerge, defaultPath, "EQ_disp.bmp"]] [IPress,Alpha:Import]
+        [IPress,Tool:Normal Map:Normal Map]
+        [FileNameSetNext,[StrMerge, defaultPath, "EQ_norm.bmp"]] [IPress,Texture:Import]
+
+        [VarSet, n, n+1]
+    ,n]
     
-    [If,[FileExists,objPath],
-        [FileNameSetNext,objPath][IPress,Tool:Import]
-    ]
-]
-
-
-// import textures
-[IPress,Tool:Texture Map:TextureMap]
-[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_diff.bmp"][IPress,Texture:Import]
-[IPress,Tool:Displacement Map:DisplacementMap]
-[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_disp.bmp"][IPress,Alpha:Import]
-[IPress,Tool:Normal Map:Normal Map]
-[FileNameSetNext,"C:\Users\Public\Pixologic\GoZProjects\Default\EQ_norm.bmp"][IPress,Texture:Import]
 ]/*End of ZScript*/
