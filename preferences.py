@@ -121,11 +121,11 @@ class GoBPreferences(AddonPreferences):
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
-            items=[#('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
+            items=[('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
                    ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='POLYPAINT')            
+            default='TEXTURES')            
     import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
@@ -133,6 +133,8 @@ class GoBPreferences(AddonPreferences):
                    ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
                    ],
             default='AUTOMATIC')
+            
+   
     import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
@@ -165,18 +167,57 @@ class GoBPreferences(AddonPreferences):
         name="UV Map", 
         description="Set name for the UV Map", 
         default="UVMap")
+
     import_diffuse_suffix: StringProperty(
         name="Base Color", 
         description="Set Suffix for Base Color Map", 
-        default="_diff")        
+        default="_diff")   
+    import_diffuse_colorspace: EnumProperty(
+        name="",
+        description="diffuse_colorspace",
+        items=[('Filmic Log', 'Filmic Log', 'Log based filmic shaper with 16.5 stops of latitude, and 25 stops of dynamic range'),
+                ('Linear', 'Linear', 'Rec. 709 (Full Range), Blender native linear space'),
+                ('Linear ACES', 'Linear ACES', 'ACES linear space'),
+                ('Non-Color', 'Non-Color', 'Color space used for images which contains non-color data (i,e, normal maps)'),
+                ('Raw', 'Raw', 'Raw'),
+                ('sRGB', 'sRGB ', 'Standard RGB Display Space'),
+                ('XYZ', 'XYZ ', 'XYZ'),
+                ],
+        default='sRGB')  
+        
     import_displace_suffix: StringProperty(
         name="Displacement Map", 
         description="Set Suffix for Displacement Map", 
-        default="_disp")
+        default="_disp")    
+    import_displace_colorspace: EnumProperty(
+        name="",
+        description="displace_colorspace",
+        items=[('Filmic Log', 'Filmic Log', 'Log based filmic shaper with 16.5 stops of latitude, and 25 stops of dynamic range'),
+                ('Linear', 'Linear', 'Rec. 709 (Full Range), Blender native linear space'),
+                ('Linear ACES', 'Linear ACES', 'ACES linear space'),
+                ('Non-Color', 'Non-Color', 'Color space used for images which contains non-color data (i,e, normal maps)'),
+                ('Raw', 'Raw', 'Raw'),
+                ('sRGB', 'sRGB ', 'Standard RGB Display Space'),
+                ('XYZ', 'XYZ ', 'XYZ'),
+                ],
+        default='Linear')  
+
     import_normal_suffix: StringProperty(
         name="Normal Map", 
         description="Set Suffix for Normal Map", 
-        default="_norm")
+        default="_norm")        
+    import_normal_colorspace: EnumProperty(
+        name="",
+        description="normal_colorspace",
+        items=[('Filmic Log', 'Filmic Log', 'Log based filmic shaper with 16.5 stops of latitude, and 25 stops of dynamic range'),
+                ('Linear', 'Linear', 'Rec. 709 (Full Range), Blender native linear space'),
+                ('Linear ACES', 'Linear ACES', 'ACES linear space'),
+                ('Non-Color', 'Non-Color', 'Color space used for images which contains non-color data (i,e, normal maps)'),
+                ('Raw', 'Raw', 'Raw'),
+                ('sRGB', 'sRGB ', 'Standard RGB Display Space'),
+                ('XYZ', 'XYZ ', 'XYZ'),
+                ],
+        default='Non-Color')   
     
   
     def draw(self, context):
@@ -219,10 +260,16 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polygroups_to_facemaps')          
         #col.prop(self, 'apply_facemaps_to_facesets')
         
-        col = box.column(align=True)  
-        col.prop(self, 'import_diffuse_suffix') 
-        col.prop(self, 'import_displace_suffix') 
-        col.prop(self, 'import_normal_suffix')
+        row = box.row(align=True)  
+        row.prop(self, 'import_diffuse_suffix') 
+        row.prop(self, 'import_diffuse_colorspace') 
+        row = box.row(align=True)
+        row.prop(self, 'import_normal_suffix')
+        row.prop(self, 'import_normal_colorspace')       
+        row = box.row(align=True)
+        row.prop(self, 'import_displace_suffix') 
+        row.prop(self, 'import_displace_colorspace')
+
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
