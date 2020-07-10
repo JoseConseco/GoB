@@ -1123,6 +1123,13 @@ class GoB_OT_export(bpy.types.Operator):
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         
+        # remove ZTL files since they mess up Zbrush importing subtools 
+        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
+        for file_name in os.listdir(folder_path):
+            if file_name.endswith('.ZTL'):
+                os.remove(folder_path + file_name)
+                print('remove ztl file:', file_name)
+
         os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
