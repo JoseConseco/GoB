@@ -25,6 +25,7 @@ import os
 from struct import pack, unpack
 from copy import deepcopy
 import string
+import numpy
 
 if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = "C:/Users/Public/Pixologic"
@@ -78,7 +79,6 @@ class GoB_OT_import(bpy.types.Operator):
             start_time = profiler(time.time(), "Start Import Profiling")
             start_total_time = profiler(time.time(), "")
 
-        scn = bpy.context.scene
         utag = 0
         vertsData = []
         facesData = []
@@ -100,7 +100,7 @@ class GoB_OT_import(bpy.types.Operator):
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             print(f"Importing: {pathFile, objName}")            
             tag = goz_file.read(4)
-
+            
             while tag:                
                 # Name
                 if tag == b'\x89\x13\x00\x00':
@@ -110,7 +110,7 @@ class GoB_OT_import(bpy.types.Operator):
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
-                    #print("Vertices:", tag)
+                    #print("Vertices:", tag)                    
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -178,28 +178,27 @@ class GoB_OT_import(bpy.types.Operator):
                 #me.transform(obj.matrix_world.inverted())      
            
             # object already exist
-            else:
+            else:                
+                obj = bpy.data.objects[objName]                
+                me = obj.data
                 #mesh has same vertex count
-                if len(bpy.data.objects[objName].data.vertices) == len(vertsData): 
-                    obj = bpy.data.objects[objName]
-                    me = obj.data
+                if len(me.vertices) == len(vertsData): 
                     bm = bmesh.new()
                     bm.from_mesh(me)
                     bm.faces.ensure_lookup_table() 
                     #udpate vertex positions
                     for i, v in enumerate(bm.verts):
-                        v.co = vertsData[i]
+                        v.co  = mathutils.Vector(vertsData[i])  
                     bm.to_mesh(me)   
                     bm.free()
 
                 #mesh has different vertex count
-                else:  
-                    obj = bpy.data.objects[objName]   
-                    me = obj.data                     
+                else:              
                     me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
-               
+           
+
             # update mesh data after transformations to fix normals 
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
@@ -528,9 +527,12 @@ class GoB_OT_import(bpy.types.Operator):
 
     def execute(self, context):
         goz_obj_paths = []
-        with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
-            for line in goz_objs_list:
-                goz_obj_paths.append(line.strip() + '.GoZ')
+        try:
+            with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
+                for line in goz_objs_list:
+                    goz_obj_paths.append(line.strip() + '.GoZ')
+        except PermissionError:
+            print("File already in use! Try again Later")
 
         if len(goz_obj_paths) == 0:
             self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
@@ -600,9 +602,21 @@ def create_node_material(mat, pref):
 def apply_transformation(me, is_import=True): 
     pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     mat_transform = None
-
-    # TODO: do we add scaling here?
+    scale = 1.0
     
+    if pref.use_scale == 'BUNITS':
+        scale = bpy.context.scene.unit_settings.scale_length
+
+    if pref.use_scale == 'MANUAL':        
+        scale =  1/pref.manual_scale
+
+    if pref.use_scale == 'ZUNITS':
+        if bpy.context.active_object:
+            obj = bpy.context.active_object
+            i, max = max_list_value(obj.dimensions)
+            scale =  1 / pref.zbrush_scale * max
+            #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+            
     #import
     if pref.flip_up_axis:  # fixes bad mesh orientation for some people
         if pref.flip_forward_axis:
@@ -611,7 +625,8 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
                 me.flip_normals()
             else:
                 #export
@@ -619,7 +634,7 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
         else:
             if is_import:
                 #import
@@ -627,15 +642,15 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
                     (-1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
-
+                    (0., 0., 0., 1.)]) * (1/scale)
     else:
         if pref.flip_forward_axis:            
             if is_import:
@@ -644,7 +659,8 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
                 me.flip_normals()
             else:
                 #export
@@ -652,7 +668,7 @@ def apply_transformation(me, is_import=True):
                     (-1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
         else:
             if is_import:
                 #import
@@ -660,14 +676,15 @@ def apply_transformation(me, is_import=True):
                     (1., 0., 0., 0.),
                     (0., 0., 1., 0.),
                     (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]))
+                    (0., 0., 0., 1.)]) * scale
+                )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
                     (1., 0., 0., 0.),
                     (0., 0., -1., 0.),
                     (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)])
+                    (0., 0., 0., 1.)]) * (1/scale)
     return me, mat_transform
                 
 def profiler(start_time=0, string=None):               
@@ -676,6 +693,19 @@ def profiler(start_time=0, string=None):
     print("{:.4f}".format(elapsed-start_time), "<< ", string)  
     start_time = time.time()
     return start_time  
+
+def max_list_value(list):
+    i = numpy.argmax(list)
+    v = list[i]
+    return (i, v)
+    
+def avg_list_value(list):
+    avgData=[]
+    for obj in list:
+        i = numpy.argmax(obj)
+        avgData.append(obj[i])
+    avg = numpy.average(avgData)
+    return (avg)
 
 def run_import_periodically():
     # print("Runing timers update check")
@@ -707,8 +737,8 @@ def run_import_periodically():
 
 class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
-    bl_label = "Export to Zbrush"
-    bl_description = "Export to Zbrush"
+    bl_label = "Export to ZBrush"
+    bl_description = "Export to ZBrush"
     
     @staticmethod
     def apply_modifiers(obj, pref):
@@ -753,8 +783,8 @@ class GoB_OT_export(bpy.types.Operator):
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
         #  of the linked object is created to goz it
-        if bpy.context.object.type == 'MESH':
-            if bpy.context.object.library:
+        if obj.type == 'MESH':
+            if obj.library:
                 new_ob = obj.copy()
                 new_ob.data = obj.data.copy()
                 scn.collection.objects.link(new_ob)
@@ -803,7 +833,7 @@ class GoB_OT_export(bpy.types.Operator):
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))            
             for vert in me.vertices:
-                modif_coo = obj.matrix_world @ vert.co
+                modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
                 modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
                 
@@ -834,7 +864,6 @@ class GoB_OT_export(bpy.types.Operator):
             # --UVs--
             if me.uv_layers.active:
                 uv_layer = me.uv_layers[0]
-                uvdata = me.uv_layers[0].data
                 goz_file.write(pack('<4B', 0xA9, 0x61, 0x00, 0x00))
                 goz_file.write(pack('<I', len(me.polygons)*4*2*4+16))
                 goz_file.write(pack('<Q', len(me.polygons)))
@@ -1075,7 +1104,7 @@ class GoB_OT_export(bpy.types.Operator):
     def execute(self, context):
         exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         if not exists:
-            print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your Zbrush GOZ installation')
+            print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
             return {"CANCELLED"}
           
         currentContext = 'OBJECT'

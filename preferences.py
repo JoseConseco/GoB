@@ -31,6 +31,32 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
+    use_scale: EnumProperty(
+            name="Scale",
+            description="Create Material",
+            items=[('MANUAL', 'Manual', 'Use Manual Factor for Scaling'),
+                   ('BUNITS', 'Blender Units', 'Changes Scale depending on Blenders Unit Scale '),
+                   ('ZUNITS', 'ZBrush Units', 'Scale single Object to ZBrush Units'),
+                   ],
+            default='BUNITS')  
+    zbrush_scale: FloatProperty(
+        name="ZBrush Scale",
+        description="Target ZBrush Scale",
+        default=2.0,
+        min = 0.1,
+        soft_max=10,
+        step=1.0,
+        precision=1,
+        subtype='FACTOR') 
+    manual_scale: FloatProperty(
+        name="Scale Factor",
+        description="Change Scale in Zbrush",
+        default=1.0,
+        min = 0.1,
+        soft_max=10,
+        step=1.0,
+        precision=1,
+        subtype='FACTOR') 
     flip_up_axis: BoolProperty(
         name="Invert up axis",
         description="Enable this to invert the up axis on import/export",
@@ -62,8 +88,8 @@ class GoBPreferences(AddonPreferences):
     export_modifiers: EnumProperty(
         name='Modifiers',
         description='Modifiers Mode',
-        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to Zbrush'),
-               ('ONLY_EXPORT', 'Only Export', 'Export Modifiers to Zbrush but do not apply them in Blender'),
+        items=[('APPLY_EXPORT', 'Export and Apply', 'Apply Modifiers in Blender and Export them to ZBrush'),
+               ('ONLY_EXPORT', 'Only Export', 'Export Modifiers to ZBrush but do not apply them in Blender'),
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
@@ -85,18 +111,9 @@ class GoBPreferences(AddonPreferences):
         step=0.01,
         precision=2,
         subtype='FACTOR') 
-    export_scale_factor: FloatProperty(
-        name="** Scale",
-        description="export_scale_factor",
-        default=1.0,
-        min=0,
-        soft_max=2,
-        step=0.1,
-        precision=2,
-        subtype='FACTOR') 
     export_clear_mask: BoolProperty(
         name="Clear Mask",
-        description="When enabled Masks will not be exported an cleared in Zbrush",
+        description="When enabled Masks will not be exported an cleared in ZBrush",
         default=False)
 
 
@@ -116,11 +133,6 @@ class GoBPreferences(AddonPreferences):
                    ('AUTOMATIC', 'Automatic', 'Automatic Mode'),
                    ],
             default='AUTOMATIC')
-    import_scale_factor: FloatProperty(
-        name="** Scale",
-        description="import_scale_factor",
-        default=1.0, min=0, soft_max=2, step=0.1, precision=2,
-        subtype='FACTOR')
     import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
@@ -147,7 +159,7 @@ class GoBPreferences(AddonPreferences):
         default=True)
     import_uv: BoolProperty(
         name="UV Map",
-        description="Import Uv Map from Zbrush",
+        description="Import Uv Map from ZBrush",
         default=True) 
     import_uv_name: StringProperty(
         name="UV Map", 
@@ -170,18 +182,23 @@ class GoBPreferences(AddonPreferences):
     def draw(self, context):
         #GLOBAL
         layout = self.layout
-        layout.use_property_split = True
+        layout.use_property_split = True   
+        layout.prop(self, 'show_button_text')    
         layout.prop(self, 'flip_up_axis')
-        layout.prop(self, 'flip_forward_axis')
-        layout.prop(self, 'show_button_text')        
-        layout.prop(self, 'performance_profiling') 
+        layout.prop(self, 'flip_forward_axis')   
+        layout.prop(self, 'use_scale')
+        if self.use_scale == 'MANUAL':                   
+            layout.prop(self, 'manual_scale')
+        if self.use_scale == 'ZUNITS':                   
+            layout.prop(self, 'zbrush_scale')
+        layout.prop(self, 'performance_profiling')
+              
         #layout.prop(self, 'texture_format')
 
         #EXPORT
         col = layout.column()
         box = layout.box()
         box.label(text='Export', icon='EXPORT')  
-        #box.prop(self, 'export_scale_factor')      #TODO
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
@@ -193,7 +210,6 @@ class GoBPreferences(AddonPreferences):
         box = layout.box() 
         box.label(text='Import', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
-        #box.prop(self, 'import_scale_factor')      #TODO: add scaling
         box.prop(self, 'import_material')  
         col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
@@ -212,3 +228,4 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polypaint_name') 
 
 
+ 
