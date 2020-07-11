@@ -1,102 +1,84 @@
-[VarDef, GoBImport, 0]
+[VarDef,GoBImport,0]
+[VarSet,noteTimer,1]
 
-[If, GoBImport = 0,
-
-    [NoteBar, "GoZ is importing, Please wait..."]
+[If,GoBImport==0,
 
     // create variables
-    [VarDef, objName, "EQ"]
-    [VarDef, missingSubtool, 0]
-    [VarDef, defaultPath, "C:\Users\Public\Pixologic\GoZProjects\Default\"]
-    [VarDef, objPath, [StrMerge, defaultPath, "EQ.GoZ"]]
-    [VarDef, diffTexture, [StrMerge, defaultPath, "EQ_diff.bmp"]]
-    [VarDef, normTexture, [StrMerge, defaultPath, "EQ_norm.bmp"]]
-    [VarDef, dispTexture, [StrMerge, defaultPath, "EQ_disp.bmp"]]
+    [VarDef,subtoolMissing, -1]     // replace with subtool index if subtool already exists
+    [VarDef,fileExtension,".obj"]
+    [VarDef,objectName,"EQ"]   //object name to import
+    [VarDef,defaultPath,"C:\Users\Public\Pixologic\GoZProjects\Default\"]
+    [VarDef,objectPath,[StrMerge,defaultPath,objectName,fileExtension]]        
 
-    /* [VarDef, gobSettings, "C:\Users\Public\Pixologic\GoZProjects\Default\GoBSetting.zvr"]
-    [VarSave,objName, gobSettings]
-    [VarSave,diffTexture, gobSettings]
-    [VarSave,normTexture, gobSettings]
-    [VarSave,dispTexture, gobSettings]
-
-    [VarLoad,objName, gobSettings]
-    [VarLoad,diffTexture, gobSettings]
-    [VarLoad,normTexture, gobSettings]
-    [VarLoad,dispTexture, gobSettings] */
-
-    //import GoZ object
-
-
-    [VarDef, subtoolName, ""] // Define a new variable to store the current subtool name 
-    [VarDef, subtool(1024), 0] // Define a Variable list to store the subtool active index
-    [VarSet, totalSubtools, [SubToolGetCount]] // create a variable to define the number of loop based on the subtools count
-    [VarSet, activeSubtool, [SubToolGetActiveIndex]] // create a variable with the current subtool Index
+    [VarDef,diffTexture,[StrMerge,defaultPath,"EQ_diff.bmp"]]
+    [VarDef,normTexture,[StrMerge,defaultPath,"EQ_norm.bmp"]]
+    [VarDef,dispTexture,[StrMerge,defaultPath,"EQ_disp.bmp"]]
 
 
 
+    /* [VarDef,gobSettings,[StrMerge,defaultPath,"GoBSetting.zvr"]
+    [VarSave,objectName,gobSettings]
+    [VarSave,diffTexture,gobSettings]
+    [VarSave,normTexture,gobSettings]
+    [VarSave,dispTexture,gobSettings]
 
-    // Select the first subtool of the Ztool
-    [If, activeSubtool == 0,
-        [SubToolSelect, 1]
-    ]
-
-    //chekc if subtool is missing
-    [Loop, totalSubtools,
-        [Note, missingSubtool] 
-        [SubToolSelect, [Val, n]]
-        [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]   //get the tool name
-        [If, ([StrFind, subtoolName, objName]==0) && ([StrLength, subtoolName]==[StrLength, objName]), // subtool not found, create a new one    
-            [SubToolSelect, [SubToolLocate, objName]]
-            [VarSet, missingSubtool, 0]
-        , 
-            [VarSet, missingSubtool, 1]  // subtool not found
-        ]
-        [VarSet, n, n+1]
-    ,n]
+    [VarLoad,objectName,gobSettings]
+    [VarLoad,diffTexture,gobSettings]
+    [VarLoad,normTexture,gobSettings]
+    [VarLoad,dispTexture,gobSettings] */
 
 
 
-    // Select the first subtool of the Ztool
-    [If, activeSubtool == 0,
-        [SubToolSelect, 1]
-    ]
-
-    // Loop to fill every subtool until it runs out of subtools
-    [Loop, totalSubtools,
-        [SubToolSelect, [Val, n]]
-        [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]   //get the tool name
-
-        [Note, [StrMerge, subtoolName, , " <> ", objName]]
-        [If, ([StrFind, subtoolName, objName]==0) && ([StrLength, subtoolName]==[StrLength, objName]), // subtool not found, create a new one    
-            [SubToolSelect, [SubToolLocate, objName]]
-            [If,[FileExists, objPath],
-                [FileNameSetNext, objPath]
-                [IPress, Tool:Import]
+    [VarDef,subtoolName,""]     // Define a new variable to store the current subtool name 
+    [VarDef,subtool(1024),0]    // Define a Variable list to store the subtool active index
+    [VarSet,totalSubtools,[SubToolGetCount]]    // create a variable to define the number of loop based on the subtools count
+    
+    [SubToolSelect,0]   // select first subtool
+    [VarSet,activeSubtool,[SubToolGetActiveIndex]]  // create a variable with the current subtool Index
+    
+    [Loop,totalSubtools, //loop over subtools
+        [SubToolSelect,[Val,activeSubtool]]
+        [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]   //get the subtool name
+        [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]   // trim chars from the end.
+        [If,subtoolMissing == -1,
+            [If,([StrFind,subtoolName,objectName]==0) && ([StrLength,subtoolName]==[StrLength,objectName]),   // subtool not found,create a new one                 
+                [VarSet,subtoolMissing, activeSubtool]   
+                //[Note,[StrMerge,"subtool found: ",subtoolName, ", index: ",  subtoolMissing],,noteTimer]
             ]
-        ]
-        [VarSet, n, n+1]
-        ,n]
+        ]        
+        //[Note, [StrMerge,activeSubtool, " activeSubtool: ",subtoolName],,noteTimer]   //displays message for 1 second
+        [VarSet,activeSubtool,(activeSubtool+1)]    //adds 1 to the value of counter variable
+    ] //end of Loop
 
-    [Note, missingSubtool] 
-    [If, missingSubtool == 1,
-        // subtool exists, update subtool 
-        [IPress, Tool:SubTool:Append]
-        [IPress, PopUp:PolyMesh3D]
-        [IPress, Tool:SubTool:PolyMesh3D1]
+    [If,subtoolMissing == -1,    
+        // subtool exists,update subtool 
+        [IPress,Tool:SubTool:Append]
+        [IPress,PopUp:PolyMesh3D]
+        [IPress,Tool:SubTool:PolyMesh3D1]
 
-        [If,[FileExists, objPath],
-            [FileNameSetNext, objPath]
-            [IPress, Tool:Import]
+        [If,[FileExists,objectPath],
+            [FileNameSetNext,objectPath]
+            [IPress,Tool:Import]
+        ]  
+        [Note,[StrMerge,"subtoolMissing: ",subtoolMissing],,10]
+        
+    ,        
+        [SubToolSelect,[Val,subtoolMissing]]
+        [If,[FileExists,objectPath],
+            [FileNameSetNext,objectPath]
+            [IPress,Tool:Import]
         ]
+        [Note,[StrMerge,"subtoolMissing: ",subtoolMissing],,noteTimer]
     ]
+    
 
-        // import textures
-        /* [IPress,Tool:Texture Map:TextureMap]
-        [FileNameSetNext,[StrMerge, defaultPath, "EQ_diff.bmp"]] [IPress,Texture:Import]
-        [IPress,Tool:Displacement Map:DisplacementMap]
-        [FileNameSetNext,[StrMerge, defaultPath, "EQ_disp.bmp"]] [IPress,Alpha:Import]
-        [IPress,Tool:Normal Map:Normal Map]
-        [FileNameSetNext,[StrMerge, defaultPath, "EQ_norm.bmp"]] [IPress,Texture:Import] */
+    // import textures
+    [IPress,Tool:Texture Map:TextureMap]
+    [FileNameSetNext,[StrMerge,defaultPath,"EQ_diff.bmp"]] [IPress,Texture:Import]
+    [IPress,Tool:Displacement Map:DisplacementMap]
+    [FileNameSetNext,[StrMerge,defaultPath,"EQ_disp.bmp"]] [IPress,Alpha:Import]
+    [IPress,Tool:Normal Map:Normal Map]
+    [FileNameSetNext,[StrMerge,defaultPath,"EQ_norm.bmp"]] [IPress,Texture:Import]
 
       
     
