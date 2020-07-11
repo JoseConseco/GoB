@@ -6,6 +6,7 @@
 
     // create variables
     [VarDef, objName, "EQ"]
+    [VarDef, missingSubtool, 0]
     [VarDef, defaultPath, "C:\Users\Public\Pixologic\GoZProjects\Default\"]
     [VarDef, objPath, [StrMerge, defaultPath, "EQ.GoZ"]]
     [VarDef, diffTexture, [StrMerge, defaultPath, "EQ_diff.bmp"]]
@@ -32,40 +33,71 @@
     [VarSet, activeSubtool, [SubToolGetActiveIndex]] // create a variable with the current subtool Index
 
 
+
+
     // Select the first subtool of the Ztool
-    [If, activeSubtool==0,
-        [SubToolSelect,1]
+    [If, activeSubtool == 0,
+        [SubToolSelect, 1]
     ]
+
+    //chekc if subtool is missing
+    [Loop, totalSubtools,
+        [Note, missingSubtool] 
+        [SubToolSelect, [Val, n]]
+        [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]   //get the tool name
+        [If, ([StrFind, subtoolName, objName]==0) && ([StrLength, subtoolName]==[StrLength, objName]), // subtool not found, create a new one    
+            [SubToolSelect, [SubToolLocate, objName]]
+            [VarSet, missingSubtool, 0]
+        , 
+            [VarSet, missingSubtool, 1]  // subtool not found
+        ]
+        [VarSet, n, n+1]
+    ,n]
+
+
+
+    // Select the first subtool of the Ztool
+    [If, activeSubtool == 0,
+        [SubToolSelect, 1]
+    ]
+
     // Loop to fill every subtool until it runs out of subtools
     [Loop, totalSubtools,
-        [SubToolSelect,[Val, n]]
+        [SubToolSelect, [Val, n]]
         [VarSet, subtoolName, [IGetTitle, "Tool:ItemInfo"]]   //get the tool name
 
         [Note, [StrMerge, subtoolName, , " <> ", objName]]
-        [If, ([StrFind,subtoolName,objName]==0)&&([StrLength,subtoolName]==[StrLength,objName]), // subtool not found, create a new one    
+        [If, ([StrFind, subtoolName, objName]==0) && ([StrLength, subtoolName]==[StrLength, objName]), // subtool not found, create a new one    
             [SubToolSelect, [SubToolLocate, objName]]
-            [If,[FileExists,objPath],
-                [FileNameSetNext,objPath][IPress,Tool:Import]
+            [If,[FileExists, objPath],
+                [FileNameSetNext, objPath]
+                [IPress, Tool:Import]
             ]
-        , // subtool exists, update subtool 
-            /* [IPress,Tool:SubTool:Append]
-            [IPress,PopUp:PolyMesh3D]
-            [IPress,Tool:SubTool:PolyMesh3D]
-            [If,[FileExists,objPath],
-                [FileNameSetNext,objPath]
-                [IPress,Tool:Import]
-            ] */
         ]
+        [VarSet, n, n+1]
+        ,n]
+
+    [Note, missingSubtool] 
+    [If, missingSubtool == 1,
+        // subtool exists, update subtool 
+        [IPress, Tool:SubTool:Append]
+        [IPress, PopUp:PolyMesh3D]
+        [IPress, Tool:SubTool:PolyMesh3D1]
+
+        [If,[FileExists, objPath],
+            [FileNameSetNext, objPath]
+            [IPress, Tool:Import]
+        ]
+    ]
 
         // import textures
-        [IPress,Tool:Texture Map:TextureMap]
+        /* [IPress,Tool:Texture Map:TextureMap]
         [FileNameSetNext,[StrMerge, defaultPath, "EQ_diff.bmp"]] [IPress,Texture:Import]
         [IPress,Tool:Displacement Map:DisplacementMap]
         [FileNameSetNext,[StrMerge, defaultPath, "EQ_disp.bmp"]] [IPress,Alpha:Import]
         [IPress,Tool:Normal Map:Normal Map]
-        [FileNameSetNext,[StrMerge, defaultPath, "EQ_norm.bmp"]] [IPress,Texture:Import]
+        [FileNameSetNext,[StrMerge, defaultPath, "EQ_norm.bmp"]] [IPress,Texture:Import] */
 
-        [VarSet, n, n+1]
-    ,n]
+      
     
 ]/*End of ZScript*/
