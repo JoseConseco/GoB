@@ -17,31 +17,37 @@ version: 1.0.0
     [VarDef,diffSuffix, "_diff"]
     [VarDef,dispSuffix, "_disp"]
     [VarDef,normSuffix, "_norm"]
-    [VarDef,objectName,"EQ"]//object name to import
+    //[VarDef,objectName,"EQ"]//object name to import
     [VarDef,defaultPath,"C:/Users/Public/Pixologic/GoZProjects/Default/"]   
     [VarDef,GoBIcon, "goz.png"]
 
-    [VarDef,diffTexture,[StrMerge,defaultPath, objectName, diffSuffix, textureFormat]]
-    [VarDef,dispTexture,[StrMerge,defaultPath, objectName, dispSuffix, textureFormat]]
-    [VarDef,normTexture,[StrMerge,defaultPath, objectName, normSuffix, textureFormat]]
 
-
-    [VarDef,configFile,[StrMerge,defaultPath,"GoB_Config.zvr"]]//define config file    
+    //[VarDef,configFile,[StrMerge,defaultPath,"GoB_Config.zvr"]]//define config file  
+    [VarDef,configFile,[StrMerge,defaultPath,"GoB_Config2.zvr"]]//define config file  
     [VarDef,config(1),""]//create config size
 
-    [VarSet,config(0),objectName]
     /* [VarSet,config(1),fileExtension]
     [VarSet,config(2),defaultPath]
     [VarSet,config(3),diffTexture]
     [VarSet,config(4),normTexture]
     [VarSet,config(5),dispTexture] */
-
-    [VarSave,config,configFile]//save config file
+    //[VarSave,config,configFile]//save config file
     
+
+    [VarDef,objectName,""]
     [If,[FileExists,configFile],
         [VarLoad,config,configFile]//load config file 
-        [Note,[StrMerge, "VarLoad: ", config(0)],,timer]   
+        [VarSet,objectName,[StrMerge, config(0),""]]
+        [Note,[StrMerge, "Object Name: ", objectName],,timer]  
     ]
+
+
+    [VarDef,diffTexture,[StrMerge,defaultPath, objectName, diffSuffix, textureFormat]]
+    [VarDef,dispTexture,[StrMerge,defaultPath, objectName, dispSuffix, textureFormat]]
+    [VarDef,normTexture,[StrMerge,defaultPath, objectName, normSuffix, textureFormat]]
+    
+
+
     /* [Note,config(1),,1]
     [Note,config(2),,1]
     [Note,config(3),,1]
@@ -58,6 +64,7 @@ version: 1.0.0
     [VarLoad,diffTexture,configFile]
     [VarLoad,normTexture,configFile]
     [VarLoad,dispTexture,configFile] */
+
 
     [VarDef,objectPath,[StrMerge,defaultPath,objectName,fileExtension]]  
     
@@ -111,7 +118,7 @@ version: 1.0.0
         // subtool exists,update subtool 
         [Note,[StrMerge,"\nSubtool not found: ",objectName,"  id: ",subtoolIndex],,timer] 
 
-        [IPress,Tool:SubTool:Append]
+        [IPress,Tool:SubTool:Append]    //TODO: this fails if we have no active tool
         [IPress,PopUp:PolyMesh3D]
         [IPress,Tool:SubTool:PolyMesh3D1]
         [If,[FileExists,objectPath],
