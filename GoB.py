@@ -1199,11 +1199,11 @@ class GoB_OT_export(bpy.types.Operator):
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         
         
-        os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
+        #os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
 
         PATHCURRENT = os.getcwd()
         print("current path", PATHCURRENT)
-        os.system(f"{PATHCURRENT}/ZScripts/GoB_textures.zsc")
+        os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
