@@ -90,7 +90,7 @@ class GoB_OT_import(bpy.types.Operator):
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
             return
-
+        
         with open(pathFile, 'rb') as goz_file:
             goz_file.seek(36, 0)
             lenObjName = unpack('<I', goz_file.read(4))[0] - 16
@@ -529,6 +529,7 @@ class GoB_OT_import(bpy.types.Operator):
             with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
+
         except PermissionError:
             print("File already in use! Try again Later")
 
@@ -856,6 +857,25 @@ class GoB_OT_export(bpy.types.Operator):
 
         if pref.performance_profiling: 
             start_time = profiler(start_time, "Make Mesh")
+
+
+        ## ================================================
+        configFile = f"{PATHGOZ}/GoZProjects/Default/GoB_Config2.zvr"
+
+        gob_import_data = []
+        with open(configFile, 'wb') as config_file:            
+            config_file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            config_file.write(pack('<2B',0x00, 0x53))   #.S
+            config_file.write(b'EQ') #objectName            
+            config_file.write(pack('<B', 0x00))  #. #end
+        
+        config_file.close()
+        
+        #print(gob_import_data)
+
+        ## ================================================
+
+
 
 
         with open(pathImport + '/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
