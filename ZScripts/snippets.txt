@@ -1,0 +1,147 @@
+
+[VarSet,bestand,[FileNameMake,"Paint.txt",PaintNum]]
+[MemCreateFromFile,el_membestand[StrMerge,"ZBRUSH_ZStartup\ZPlugs\LayerPaintTemp\",bestand],123]    //Paint#”,PaintNum,”.txt"],123]
+[MemWriteString,el_membestand,[if,1,,0,1]
+[MemSaveToFile,el_membestand,[StrMerge,"ZBRUSH_ZStartup\ZPlugs\LayerPaintTemp\",bestand],1] //Paint#”,PaintNum,”.txt"],1]
+[MemDelete,el_membestand]
+[IPress,[StrMerge,Tool:Paint,PaintNum]]
+[FileNameSetNext,[StrMerge,"ZBRUSH_ZStartup\ZPlugs\LayerPaintTemp\",bestand]]   //Paint#”,PaintNum,”.txt"]]
+[IPress,zscript:load]
+
+
+
+
+//routine to create a file to import to change tool name
+[RoutineDef,NameMesh,
+    [If,[MemGetSize,MC_Namer],[MemDelete,MC_Namer]]
+    [MemCreate,MC_Namer,1]
+    [MemWriteString,MC_Namer," ",0,0]
+    [MemSaveToFile,MC_Namer,newName]
+    [MemDelete,MC_Namer]
+,newName]//end routine
+
+//routine to rename a subtool
+[RoutineDef,RenameSubTool,
+    [VarSet,newFile,[StrMerge,"PluginData\",newName,".dat"]
+]
+
+[RoutineCall,NameMesh,newFile]
+[FileNameSetNext,newFile]
+[IPress,Tool:Import]
+[VarSet,subTName,file]
+//need to use ZFileUtils to delete the file
+[RoutineCall,DeleteFile,[FileNameResolvePath,newFile]]
+
+
+
+
+[VarSet, width, (Document:Width)]
+[VarSet, height, (Document:Height)]
+
+// [Caption, [StrMerge, "Document size:", width, " ", height]]
+[MemCreate, canvasColor, width * height * 4]
+[loop, height, 
+    [loop, width,
+        [MemWrite, canvasColor, [PixolPick, 0, x, y], 6, (y * width + x) * 4]
+        [MemWrite, canvasColor, 255, 2, (y * width + x) * 4 + 3]
+    ,x]
+,y]
+[MemSaveToFile, canvasColor, "C:\Users\jens\Documents\ZScript\canvasColor.bin", 1]
+
+
+
+
+[IButton,HasQRemesherRun,,
+//check the memblock isn't around
+    [MemDelete,MC_Test]
+    //create a memory block
+    [MVarDef,MC_Test,10,0]
+    //save it to the file
+    [MemSaveToFile,MC_Test,"TestFile.dat",1]
+    //delete the memblock
+    [MemDelete,MC_Test]
+
+    //get the time test file was modified
+    [VarSet,fHrs,[FileGetInfo, [FileNameResolvePath,"TestFile.dat"],11]]
+    [VarSet,fMins,[FileGetInfo, [FileNameResolvePath,"TestFile.dat"],12]]
+        //get the time the QRemesher file was last modified
+    [VarSet,qRHrs,[FileGetInfo, "C:\Users\Public\Documents\ZBrushData\Temp\objOut.obj",11]]
+    [VarSet,qRMins,  [FileGetInfo, "C:\Users\Public\Documents\ZBrushData\Temp\objOut.obj",12]]
+
+    //compare the result
+    [If,((qRHrs == fHrs)&&(qRMins == fMins)),
+        [Note,"QRemesher was just run"]
+        ,
+        [Note,"QRemesher not used recently"]
+    ]
+]
+
+
+
+
+[RoutineDef,NameSubTool,
+    [If,[MemGetSize,SubT_Namer],
+        [MemDelete,SubT_Namer]
+    ]//make sure this memory block isn’t around
+
+    [MemCreate,SubT_Namer,16]//create memblock
+    [VarSet,newS,[MemWriteString,SubT_Namer," ",0,0]]//write empty string
+    [MemResize,SubT_Namer,newS]//resize memblock
+    [MemSaveToFile,SubT_Namer,#newName]//save to file
+    [MemDelete,SubT_Namer]//delete memblcok
+    ,newName]//end routine
+
+[VarSet,newFile,“My_SubTool.dat”]
+[RoutineCall,NameSubTool,newFile]
+[FileNameSetNext,#newFile]
+[IPress,Tool:Import]
+[FileDelete,newFile]
+
+
+[MemWrite, Mem block identifier, 
+            Value to write, 
+            Data format (0:omitted:float 1:signed char 2:unsigned char 3:signed short 4:unsigned short 5:signed long 6:unsigned long 7:fixed16 (16.16)),
+            Offset (in bytes) into memory block
+]
+[MemWrite, myTempData, 4, 12, 3]
+
+
+[MemRead, Mem block identifier, 
+        Read variable, 
+        Data format (0:omitted:float 1:signed char 2:unsigned char 3:signed short 4:unsigned short 5:signed long 6:unsigned long 7:fixed16 (16.16)), 
+        Offset (in bytes) into memory block
+]
+[MemRead, myTempData, width, 12, 3]
+
+
+[MemWriteString, Mem block identifier, 
+                The string, 
+                Offset (in bytes) into memory block, 
+                Write terminating zero char (if omitted:yes)
+]
+[MemWriteString, myTempData, "Hello There", 12]
+
+
+[MemReadString, Mem block identifier, 
+                The string variable, Offset (in bytes) into memory block, 
+                Break at line end? (default:no), 
+                Skip white space? (default:no), 
+                Max read length 1 - 255(default)
+]
+[MemReadString, myTempData, tempText, 12, 1]
+
+
+[MemSaveToFile, Mem block identifier, 
+                File name including the extension (such as brush1.ztl ), 
+                Overwrite if exists? Set to a value (including 0) to save the file even if an identically named file already exists on disk - Default (no argument): do not overwrite
+]
+[MemSaveToFile, myTempData, "mesh.obj",1]
+
+
+[MemCreateFromFile, Mem block identifier, 
+                    File name including the extension (such as brush1.ztl ), 
+                    Optional start file offset for partial file read (default:0), 
+                    Optional max bytes to read (default:all file)
+]
+[MemCreateFromFile, myTempData, mesh.obj]
+
