@@ -859,19 +859,77 @@ class GoB_OT_export(bpy.types.Operator):
             start_time = profiler(start_time, "Make Mesh")
 
 
+        fileExt = '.bmp'
         ## ================================================
-        configFile = f"{PATHGOZ}/GoZProjects/Default/GoB_Config2.zvr"
+        #configFile = f"{PATHGOZ}/GoZProjects/Default/GoB_Config2.zvr"
+        objectNameFile = f"{PATHGOZ}/GoZProjects/Default/GoB_objectName.zvr"
+        fileExtensionFile = f"{PATHGOZ}/GoZProjects/Default/GoB_fileExtension.zvr"
+        textureFormatFile = f"{PATHGOZ}/GoZProjects/Default/GoB_textureFormat.zvr"
+        customPathFile = f"{PATHGOZ}/GoZProjects/Default/GoB_defaultPath.zvr"
+        diffTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_diffTexture.zvr"
+        normTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_normTexture.zvr"
+        dispTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_dispTexture.zvr"
 
-        gob_import_data = []
-        with open(configFile, 'wb') as config_file:            
-            config_file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            config_file.write(pack('<2B',0x00, 0x53))   #.S
-            config_file.write(b'EQ') #objectName            
-            config_file.write(pack('<B', 0x00))  #. #end
+        with open(objectNameFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            
+            # object name
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(obj.name.encode('utf-8'))
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
+
+        with open(fileExtensionFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # fileExtension
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(b'.GoZ')
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
+
+        with open(textureFormatFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # textureFormat   
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(b'.bmp')
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
+        """ 
+        with open(customPathFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # defaultPath
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(b'defaultPath')   
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close() """
+
+        with open(diffTextureFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # diffTexture
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            
+            name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
+            file.write(name.encode('utf-8')) 
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
+
+        with open(normTextureFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # normTexture
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
+            file.write(name.encode('utf-8')) 
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
         
-        config_file.close()
-        
-        #print(gob_import_data)
+        with open(dispTextureFile, 'wb') as file:            
+            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
+            # dispTexture
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
+            file.write(name.encode('utf-8')) 
+            file.write(pack('<B', 0x00))  #. #end        
+        file.close()
 
         ## ================================================
 
