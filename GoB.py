@@ -833,8 +833,8 @@ class GoB_OT_export(bpy.types.Operator):
 
         if pref.performance_profiling: 
             print("\n", 100*"=")
-            start_time = profiler(time.time(), "Start Export Profiling")
-            start_total_time = profiler(time.time(), "")
+            start_time = profiler(time.time(), "Export Profiling: " + obj.name)
+            start_total_time = profiler(time.time(), "-------------")
         
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -1272,6 +1272,9 @@ class GoB_OT_export(bpy.types.Operator):
                     with open( f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ztn", 'wt') as ztn:
                         ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
                     GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
+                    PATHCURRENT = os.getcwd()
+                    print("current path", PATHCURRENT)
+                    os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
 
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
@@ -1279,9 +1282,8 @@ class GoB_OT_export(bpy.types.Operator):
         
         #os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
 
-        PATHCURRENT = os.getcwd()
-        print("current path", PATHCURRENT)
-        os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
+        
+        
         
         #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
         #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
