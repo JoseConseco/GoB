@@ -122,11 +122,17 @@ version: 1.0.0
     [RoutineCall,FindSubtool]
     [If,subtoolIndex == -1,    
         // subtool exists,update subtool 
-        [Note,[StrMerge,"\n\nCreating new Subtool: ",objectName,"  id: ",subtoolIndex],,timer] 
-
+        [Note,[StrMerge,"\n\nCreating new Subtool: ",objectName,"  id: ",subtoolIndex, " ", [ToolGetActiveIndex]," ", [ToolGetCount]] ,,timer] 
+        
+        /* [If, [ToolGetActiveIndex] == 2, //this is the default brush. this means we have no Tool to append
+            //[ToolSelect, 41]            
+            [IPress,Tool:SimpleBrush]
+            [IPress,Tool:PolyMesh3D]
+        ] */
+        
         [IPress,Tool:SubTool:Append]    //TODO: this fails if we have no active tool
         [IPress,PopUp:PolyMesh3D]
-        [IPress,Tool:SubTool:PolyMesh3D1]
+        [IPress,Tool:SubTool:PolyMesh3D1]   // this fails if there are 
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath]
             [IPress,Tool:Import]
