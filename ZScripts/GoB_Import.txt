@@ -130,18 +130,18 @@ version: 1.0.0
             [IPress,Tool:PolyMesh3D]
         ] */
 
-        /* [IButton,TestAppend,"Do it",
-            [VarSet,toolID,[IGet,Tool:ItemInfo]]//with tool you are appending to selected
-            [IPress,Tool:Polymesh3D]
-            [VarSet,appendTool,[IGetTitle,Tool:Current Tool,0]]
-            [ISet,Tool:ItemInfo,toolID]
-            [IPress,Tool:SubTool:Append]
-            [IPress,[StrMerge,"PopUp:",[Var,appendTool]]]
-        ] */
+        //[IButton,TestAppend,"Do it",
+        [VarSet,toolID,[IGet,Tool:ItemInfo]]//with tool you are appending to selected
+        [IPress,Tool:Polymesh3D]
+        [VarSet,appendTool,[IGetTitle,Tool:Current Tool,0]]
+        [ISet,Tool:ItemInfo,toolID]
+        [IPress,Tool:SubTool:Append]
+        [IPress,[StrMerge,"PopUp:",[Var,appendTool]]]
+        //]
         
-        [IPress,Tool:SubTool:Append]    //TODO: this fails if we have no active tool
+        /* [IPress,Tool:SubTool:Append]    //TODO: this fails if we have no active tool
         [IPress,PopUp:PolyMesh3D]
-        [IPress,Tool:SubTool:PolyMesh3D1]   // this fails if there are 
+        [IPress,Tool:SubTool:PolyMesh3D1]   // this fails if there are  */
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath]
             [IPress,Tool:Import]
