@@ -46,6 +46,9 @@
 ]
 
 
+
+
+
 [IButton,GetPublicFolder,"Do it",
 	 [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/any.dat"],1]]
 	 [RoutineCall,AdjustPath,publicPath]//just as Notes don't display backslashes!

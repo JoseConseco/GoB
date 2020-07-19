@@ -10,28 +10,92 @@ version: 1.0.0
 [VarDef,timer,-1]
 [VarDef,debug,0]
 
-[If,GoBImport==0,
-    // create variables
-    [VarDef,defaultPath,"C:/Users/Public/Pixologic/GoZProjects/Default/"] 
-    /* form ZPUBLIC_ which on Windows will resolve to
-        C:\Users\Public\Documents\ZBrushData2020
-        and on MacOS to
-        /Users/Shared/ZBrushData2020 . 
-    */
-    //[VarDef, defaultPath,"ZPUBLIC_/"]
-    //[Note,defaultPath,,4]
-    
+
+
+
+[IButton,CreateList,"Do it",
+	[VarSet,myList(0),"apples"]
+	[VarSet,myList(1),"oranges"]
+	[VarSet,myList(2),"pears"]
+	[VarSet,myList(3),"bananas"]
+	[VarSet,myList(4),"lemons"]
+	[VarSet,saved,[VarSave,myList,"MySavedList.zvr"]]
+	[If,saved,//if value greater than 0
+		[Note,"MyList saved!"]
+		,
+		[Note,"Error - no values saved!"]
+	]	
+]
+
+[IButton,LoadList,"Do it",	
+	[If,[FileExists,"MySavedList.zvr"],
+		[VarLoad,myList,"MySavedList.zvr"]
+	]
+	[Loop,5,
+		[Note,[StrMerge,myList([Var,n]),"\n"],,-1]//Note duration of -1 displays with next note
+	,n]
+	[Note,""]
+]
+
+
+
+[If,GoBImport==0, //make sure this runs when loaded
+
+    [VarDef,gozPath,""]
+    [RoutineDef,AdjustPath,//replace backslashes with forward slashes
+        [VarDef,pathStr,""]
+        [Loop,999,
+            [VarSet,in,[StrFind,[StrFromAsc,92],pathStr]]
+            [If,[Val,in] > -1,//"
+                [VarSet,pathStr,[StrMerge,[StrExtract,pathStr,0,[Val,in-1]],"/",[StrExtract,pathStr,[Val,in+1],[StrLength,pathStr]]]]
+                ,
+                [LoopExit]
+            ]		
+        ]
+    ,pathStr]
+
+    [RoutineDef,GetFullPath,	
+        [VarSet,path,[FileNameResolvePath,path]]
+        [If,[ZBrushInfo,6],//is MacOS
+            //adjust for Mac OSX
+            [VarSet,path,[StrExtract,path,2,256]]
+        ]
+    ,path]
+
+    [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/"],1]]
+    [RoutineCall,AdjustPath,publicPath]//just as Notes don't display backslashes!
+    [Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
+
+	[If,[ZBrushInfo,6],//is MacOS
+	 	[If,[StrFind,"Shared",publicPath]>-1,
+		 	[VarSet,gozPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,gozPath,[StrMerge,gozPath,"Pixologic/GoZProjects/Default/"]]	
+            [Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gozPath],,timer]
+		 ]	 	
+	 	//note that ZBrush paths on MacOS start with "!:"
+	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
+	 	,//else Windows
+		 [If,[StrFind,"Documents",publicPath]>-1,
+		 	[VarSet,gozPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,gozPath,[StrMerge,gozPath,"Pixologic/GoZProjects/Default/"]]
+		 	[RoutineCall,AdjustPath,gozPath]
+            [Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gozPath],,timer]
+		 ]
+	]
+
+
+
 
     [VarDef,diffSuffix, "_diff"]
     [VarDef,dispSuffix, "_disp"]
     [VarDef,normSuffix, "_norm"]
 
-    [VarDef,objectNameFile,[StrMerge,defaultPath,"GoB_objectName.zvr"]]     //define config file  
-    [VarDef,fileExtensionFile,[StrMerge,defaultPath,"GoB_fileExtension.zvr"]]
-    [VarDef,textureFormatFile,[StrMerge,defaultPath,"GoB_textureFormat.zvr"]]
-    [VarDef,diffTextureFile,[StrMerge,defaultPath,"GoB_diffTexture.zvr"]]
-    [VarDef,normTextureFile,[StrMerge,defaultPath,"GoB_normTexture.zvr"]]
-    [VarDef,dispTextureFile,[StrMerge,defaultPath,"GoB_dispTexture.zvr"]]
+    [VarDef,objectNameFile,[StrMerge,gozPath,"GoB_objectName.zvr"]]     //define config file  
+    [VarDef,fileExtensionFile,[StrMerge,gozPath,"GoB_fileExtension.zvr"]]
+    [VarDef,textureFormatFile,[StrMerge,gozPath,"GoB_textureFormat.zvr"]]
+    [VarDef,diffTextureFile,[StrMerge,gozPath,"GoB_diffTexture.zvr"]]
+    [VarDef,normTextureFile,[StrMerge,gozPath,"GoB_normTexture.zvr"]]
+    [VarDef,dispTextureFile,[StrMerge,gozPath,"GoB_dispTexture.zvr"]]
         
     [VarDef, object(1),""]//create config size
     [If,[FileExists,objectNameFile],
@@ -72,7 +136,7 @@ version: 1.0.0
 
 
 
-    [VarDef,objectPath,[StrMerge,defaultPath,objectName,fileExtension]]
+    [VarDef,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
     [VarDef,subtoolIndex, -1]// replace with subtool index if subtool already exists  
 
     [RoutineDef,FindSubtool,
