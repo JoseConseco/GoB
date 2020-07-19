@@ -117,36 +117,28 @@ version: 1.0.0
             [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
         ]
     ]//end Routine 
-
-
     [RoutineCall,FindSubtool]
+
+
     [If,subtoolIndex == -1,    
         // subtool exists,update subtool 
         [Note,[StrMerge,"\n\nCreating new Subtool: ",objectName,"  id: ",subtoolIndex, " ", [ToolGetActiveIndex]," ", [ToolGetCount]] ,,timer] 
         
-        /* [If, [ToolGetActiveIndex] == 2, //this is the default brush. this means we have no Tool to append
-            //[ToolSelect, 41]            
-            [IPress,Tool:SimpleBrush]
-            [IPress,Tool:PolyMesh3D]
-        ] */
+        [Note,[StrMerge,"\nToolGetSubToolID: ",[ToolGetSubToolID],""],,timer]
+        [If,[ToolGetSubToolID] == 0, //tool cant have subtools, create a new tool
+            [IPress,Tool:Cube3D]
+            [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
+            [IPress,PopUp:PolyMesh3D]
+        ,
+            [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
+            [IPress,PopUp:PolyMesh3D]
+        ]
 
-        //[IButton,TestAppend,"Do it",
-        [VarSet,toolID,[IGet,Tool:ItemInfo]]//with tool you are appending to selected
-        [IPress,Tool:Polymesh3D]
-        [VarSet,appendTool,[IGetTitle,Tool:Current Tool,0]]
-        [ISet,Tool:ItemInfo,toolID]
-        [IPress,Tool:SubTool:Append]
-        [IPress,[StrMerge,"PopUp:",[Var,appendTool]]]
-        //]
-        
-        /* [IPress,Tool:SubTool:Append]    //TODO: this fails if we have no active tool
-        [IPress,PopUp:PolyMesh3D]
-        [IPress,Tool:SubTool:PolyMesh3D1]   // this fails if there are  */
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath]
             [IPress,Tool:Import]
         ]     
-        [RoutineCall, LoadTextures] 
+        [RoutineCall, LoadTextures]
     ,        
         [Note,[StrMerge,"\nSubtool already exists: ",objectName," id: ", subtoolIndex],,timer]
         [SubToolSelect,[Val,subtoolIndex]]
