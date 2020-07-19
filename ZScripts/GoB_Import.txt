@@ -9,39 +9,17 @@ version: 1.0.0
 [VarDef,GoBImport,0]
 [VarDef,timer,-1]
 [VarDef,debug,0]
+[VarDef,debugtimer,4]
 
-
-
-
-[IButton,CreateList,"Do it",
-	[VarSet,myList(0),"apples"]
-	[VarSet,myList(1),"oranges"]
-	[VarSet,myList(2),"pears"]
-	[VarSet,myList(3),"bananas"]
-	[VarSet,myList(4),"lemons"]
-	[VarSet,saved,[VarSave,myList,"MySavedList.zvr"]]
-	[If,saved,//if value greater than 0
-		[Note,"MyList saved!"]
-		,
-		[Note,"Error - no values saved!"]
-	]	
-]
-
-[IButton,LoadList,"Do it",	
-	[If,[FileExists,"MySavedList.zvr"],
-		[VarLoad,myList,"MySavedList.zvr"]
-	]
-	[Loop,5,
-		[Note,[StrMerge,myList([Var,n]),"\n"],,-1]//Note duration of -1 displays with next note
-	,n]
-	[Note,""]
-]
-
+[VarDef,GoBList(6),""] // NOTE: if list size changes gob export list size needs to be udpated as well
+    /* File: Gob_variables.zvr
+    0: object name, 1: fileExtension, 2: textureFormat,
+    3: diffTexture, 4: normTexture, 5: dispTexture 
+    */
 
 
 [If,GoBImport==0, //make sure this runs when loaded
 
-    [VarDef,gozPath,""]
     [RoutineDef,AdjustPath,//replace backslashes with forward slashes
         [VarDef,pathStr,""]
         [Loop,999,
@@ -66,6 +44,7 @@ version: 1.0.0
     [RoutineCall,AdjustPath,publicPath]//just as Notes don't display backslashes!
     [Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
 
+    [VarDef,gozPath,""]
 	[If,[ZBrushInfo,6],//is MacOS
 	 	[If,[StrFind,"Shared",publicPath]>-1,
 		 	[VarSet,gozPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
@@ -83,58 +62,50 @@ version: 1.0.0
 		 ]
 	]
 
-
-
-
+    // load variables from GoB export
+        /* File: Gob_variables.zvr
+        0: object name, 1: fileExtension, 2: textureFormat,
+        3: diffTexture, 4: normTexture, 5: dispTexture 
+        */
+    [VarDef,variablesFile,[StrMerge,gozPath,"GoB_variables.zvr"]]   
     [VarDef,diffSuffix, "_diff"]
     [VarDef,dispSuffix, "_disp"]
     [VarDef,normSuffix, "_norm"]
 
-    [VarDef,objectNameFile,[StrMerge,gozPath,"GoB_objectName.zvr"]]     //define config file  
-    [VarDef,fileExtensionFile,[StrMerge,gozPath,"GoB_fileExtension.zvr"]]
-    [VarDef,textureFormatFile,[StrMerge,gozPath,"GoB_textureFormat.zvr"]]
-    [VarDef,diffTextureFile,[StrMerge,gozPath,"GoB_diffTexture.zvr"]]
-    [VarDef,normTextureFile,[StrMerge,gozPath,"GoB_normTexture.zvr"]]
-    [VarDef,dispTextureFile,[StrMerge,gozPath,"GoB_dispTexture.zvr"]]
-        
-    [VarDef, object(1),""]//create config size
-    [If,[FileExists,objectNameFile],
-        [VarLoad,object,objectNameFile]//load config file 
-        [VarDef,objectName,[StrMerge, object(0),""]]
-        [Note,[StrMerge, "\nObject Name: ", objectName],,timer]
-    ] 
-    [VarDef, extension(1),""]//create config size
-    [If,[FileExists,fileExtensionFile], 
-        [VarLoad,extension,fileExtensionFile]//load config file 
-        [VarDef,fileExtension,[StrMerge, extension(0),""]]
-        [Note,[StrMerge, "\n    File Extension: ", fileExtension],,timer]
+
+    [IButton,CreateList,"create list",
+        [VarSet,GoBList(0),"test"]     
+	    [VarSet,saved,[VarSave,GoBList,variablesFile]] 
     ]
-    [VarDef, format(1),""]//create config size
-    [If,[FileExists,textureFormatFile],
-        [VarLoad,format,textureFormatFile]//load config file 
-        [VarDef,textureFormat,[StrMerge, format(0),""]]
-        [Note,[StrMerge, "\n    Texture Format : ", textureFormat],,timer]
-    ] 
-    [VarDef,diff(1),""]//create config size
-    [If,[FileExists,diffTextureFile],
-        [VarLoad,diff,diffTextureFile]//load config file 
-        [VarDef,diffTexture,[StrMerge,diff(0),""]]
-        [Note,[StrMerge,"\n    diffTexture : ",diffTexture],,timer]
-    ] 
-    [VarDef,norm(1),""]//create config size
-    [If,[FileExists,normTextureFile],
-        [VarLoad,norm,normTextureFile]//load config file 
-        [VarDef,normTexture,[StrMerge,norm(0),""]]
-        [Note,[StrMerge,"\n    normTexture : ",normTexture],,timer]
-    ] 
-    [VarDef,disp(1),""]//create config size
-    [If,[FileExists,dispTextureFile],
-        [VarLoad,disp,dispTextureFile]//load config file 
-        [VarDef,dispTexture,[StrMerge,disp(0),""]]
-        [Note,[StrMerge,"\n    dispTexture : ",dispTexture],,timer]
-    ] 
 
 
+    //[IButton,LoadList,"Do it",	
+    [If,[FileExists,variablesFile],    
+        [VarLoad,GoBList,variablesFile]
+
+        [VarSet,objectName,[StrMerge,GoBList(0),""]]
+        [Note,[StrMerge,objectName,"\n"],,timer]
+
+        [VarSet,fileExtension,[StrMerge,GoBList(1),""]]
+        [Note,[StrMerge,fileExtension,"\n"],,timer]
+
+        [VarSet,textureFormat,[StrMerge,GoBList(2),""]]
+        [Note,[StrMerge,textureFormat,"\n"],,timer]
+
+        [VarSet,diffTexture,[StrMerge,GoBList(3),""]]
+        [Note,[StrMerge,diffTexture,"\n"],,timer]
+
+        [VarSet,normTexture,[StrMerge,GoBList(4),""]]
+        [Note,[StrMerge,normTexture,"\n"],,timer]
+
+        [VarSet,dispTexture,[StrMerge,GoBList(5),""]]  
+        [Note,[StrMerge,dispTexture,"\n"],,timer]          
+    , 
+        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,0]
+        [Exit]
+    ]
+    //]
+  
 
     [VarDef,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
     [VarDef,subtoolIndex, -1]// replace with subtool index if subtool already exists  
@@ -160,7 +131,7 @@ version: 1.0.0
             //[Note, [StrMerge,activeSubtool, " activeSubtool: ",subtoolName],,timer]//displays message for 1 second
             [VarInc, activeSubtool]//adds 1 to the loop counter
         ]
-    ]//end Routine  
+    ]
 
 
     [RoutineDef,LoadTextures,
@@ -180,7 +151,7 @@ version: 1.0.0
             [FileNameSetNext,normTexture] [IPress,Texture:Import]
             [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
         ]
-    ]//end Routine 
+    ]
     [RoutineCall,FindSubtool]
 
 
@@ -218,7 +189,7 @@ version: 1.0.0
         [Note,
             "\n\nGoB import finished!",
             none, //Optional path1 of an interface item to be pointed out (default:none), 
-            0, //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
+            debugtimer, //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
             0x164128, //Popup background color (0x000000<->0xffffff, default:0x606060, 0:No Background), 
             48, //Prefered distance of the note from the specified interface item (default:48), 
             600, //Prefered Note width (in pixels, default:400), 
