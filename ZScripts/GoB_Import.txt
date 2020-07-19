@@ -161,12 +161,21 @@ version: 1.0.0
         
         [Note,[StrMerge,"\nToolGetSubToolID: ",[ToolGetSubToolID],""],,timer]
         [If,[ToolGetSubToolID] == 0, //tool cant have subtools, create a new tool
+
             [IPress,Tool:Cube3D]
             [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
             [IPress,PopUp:PolyMesh3D]
-        ,
-            [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
+        ,               
+            [IPress,Tool:SubTool:Insert]
             [IPress,PopUp:PolyMesh3D]
+
+            /* 
+            //[Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+            [If, [StrMerge,[ToolGetPath, [ToolGetActiveIndex]], ""] == "PolyMesh3D",   
+                [Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+            ,           
+                [Note,[StrMerge,"\n not star: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+            ] */
         ]
 
         [If,[FileExists,objectPath],
