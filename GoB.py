@@ -1235,6 +1235,7 @@ class GoB_OT_export(bpy.types.Operator):
                     PATHCURRENT = os.getcwd()
                     print("current path", PATHCURRENT)
                     os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
+                    
 
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
