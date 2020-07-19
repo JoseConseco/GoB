@@ -860,80 +860,39 @@ class GoB_OT_export(bpy.types.Operator):
 
 
         fileExt = '.bmp'
-        ## ================================================
-        #configFile = f"{PATHGOZ}/GoZProjects/Default/GoB_Config2.zvr"
-        objectNameFile = f"{PATHGOZ}/GoZProjects/Default/GoB_objectName.zvr"
-        fileExtensionFile = f"{PATHGOZ}/GoZProjects/Default/GoB_fileExtension.zvr"
-        textureFormatFile = f"{PATHGOZ}/GoZProjects/Default/GoB_textureFormat.zvr"
-        customPathFile = f"{PATHGOZ}/GoZProjects/Default/GoB_defaultPath.zvr"
-        diffTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_diffTexture.zvr"
-        normTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_normTexture.zvr"
-        dispTextureFile = f"{PATHGOZ}/GoZProjects/Default/GoB_dispTexture.zvr"
+        
+        # write GoB ZScript variables
+        variablesFile = f"{PATHGOZ}/GoZProjects/Default/GoB_variables.zvr"
+        with open(variablesFile, 'wb') as file:            
+            file.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
+            file.write(pack('<1B', 0x06))                           #NOTE: n list items, update this when adding new items to list
+            file.write(pack('<2B', 0x00, 0x00)) 
 
-        with open(objectNameFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            
-            # object name
+            # 0: object name
             file.write(pack('<2B',0x00, 0x53))   #.S
             file.write(obj.name.encode('utf-8'))
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close()
-
-        with open(fileExtensionFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # fileExtension
+            # 1: fileExtension
             file.write(pack('<2B',0x00, 0x53))   #.S
             file.write(b'.GoZ')
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close()
-
-        with open(textureFormatFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # textureFormat   
+            # 2: textureFormat   
             file.write(pack('<2B',0x00, 0x53))   #.S
-            file.write(b'.bmp')
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close()
-        """ 
-        with open(customPathFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # defaultPath
-            file.write(pack('<2B',0x00, 0x53))   #.S
-            file.write(b'defaultPath')   
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close() """
-
-        with open(diffTextureFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # diffTexture
-            file.write(pack('<2B',0x00, 0x53))   #.S
-            
+            file.write(b'.bmp') 
+            # 3: diffTexture
+            file.write(pack('<2B',0x00, 0x53))   #.S            
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
-            file.write(name.encode('utf-8')) 
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close()
-
-        with open(normTextureFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # normTexture
+            file.write(name.encode('utf-8'))    
+            # 4: normTexture
             file.write(pack('<2B',0x00, 0x53))   #.S
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
-            file.write(name.encode('utf-8')) 
-            file.write(pack('<B', 0x00))  #. #end        
-        file.close()
-        
-        with open(dispTextureFile, 'wb') as file:            
-            file.write(pack('<7B', 0xE9, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00))
-            # dispTexture
+            file.write(name.encode('utf-8'))   
+            # 5: dispTexture
             file.write(pack('<2B',0x00, 0x53))   #.S
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
-            file.write(name.encode('utf-8')) 
-            file.write(pack('<B', 0x00))  #. #end        
+            file.write(name.encode('utf-8'))   
+            
+            file.write(pack('<B', 0x00))  #. 
+            #end       
         file.close()
-
-        ## ================================================
-
-
 
 
         with open(pathImport + '/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
