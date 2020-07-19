@@ -1272,6 +1272,7 @@ class GoB_OT_export(bpy.types.Operator):
                     with open( f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ztn", 'wt') as ztn:
                         ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
                     GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
+                    
                     PATHCURRENT = os.getcwd()
                     print("current path", PATHCURRENT)
                     os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
