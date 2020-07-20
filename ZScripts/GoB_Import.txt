@@ -8,7 +8,7 @@ version: 1.0.0
 
 [VarDef,GoBImport,0]
 [VarDef,timer,-1]
-[VarDef,debug,0]
+[VarDef,debug,1]
 [VarDef,debugtimer,4]
 
 [VarDef,GoBList(6),""] // NOTE: if list size changes gob export list size needs to be udpated as well
@@ -45,11 +45,17 @@ version: 1.0.0
     [Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
 
     [VarDef,gozPath,""]
+    [VarDef, objectlistPath, ""]
 	[If,[ZBrushInfo,6],//is MacOS
 	 	[If,[StrFind,"Shared",publicPath]>-1,
 		 	[VarSet,gozPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
-		 	[VarSet,gozPath,[StrMerge,gozPath,"Pixologic/GoZProjects/Default/"]]	
+		 	[VarSet,gozPath,[StrMerge,gozPath,"Pixologic/GoZProjects/Default/"]]
+
+		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
+
             [Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gozPath],,timer]
+            [Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
 		 ]	 	
 	 	//note that ZBrush paths on MacOS start with "!:"
 	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
@@ -57,29 +63,31 @@ version: 1.0.0
 		 [If,[StrFind,"Documents",publicPath]>-1,
 		 	[VarSet,gozPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
 		 	[VarSet,gozPath,[StrMerge,gozPath,"Pixologic/GoZProjects/Default/"]]
-		 	[RoutineCall,AdjustPath,gozPath]
+		 	[RoutineCall,AdjustPath,gozPath]//just as Notes don't display backslashes!
+
+		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
+		 	[RoutineCall,AdjustPath,objectlistPath]//just as Notes don't display backslashes!
+
             [Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gozPath],,timer]
+            [Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
 		 ]
 	]
+
 
     // load variables from GoB export
         /* File: Gob_variables.zvr
         0: object name, 1: fileExtension, 2: textureFormat,
         3: diffTexture, 4: normTexture, 5: dispTexture 
         */
-    [VarDef,variablesFile,[StrMerge,gozPath,"GoB_variables.zvr"]]   
+    [VarDef,variablesFile,[StrMerge,gozPath,"GoB_variables.zvr"]]  
+
+
     [VarDef,diffSuffix, "_diff"]
     [VarDef,dispSuffix, "_disp"]
     [VarDef,normSuffix, "_norm"]
 
-
-    [IButton,CreateList,"create list",
-        [VarSet,GoBList(0),"test"]     
-	    [VarSet,saved,[VarSave,GoBList,variablesFile]] 
-    ]
-
-
-    //[IButton,LoadList,"Do it",	
+	
     [If,[FileExists,variablesFile],    
         [VarLoad,GoBList,variablesFile]
 
@@ -104,7 +112,6 @@ version: 1.0.0
         [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,0]
         [Exit]
     ]
-    //]
   
 
     [VarDef,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
@@ -152,6 +159,7 @@ version: 1.0.0
             [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
         ]
     ]
+
     [RoutineCall,FindSubtool]
 
 
@@ -191,6 +199,41 @@ version: 1.0.0
         ]
         [RoutineCall, LoadTextures]        
     ]   
+
+
+    [IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
+        [VarSet,objectlistFile,[StrMerge,objectlistPath,"GoZ_ObjectList.txt"]] 
+        [Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,0] 
+
+        [If,[FileExists,objectlistFile],
+            //create memory block from the file
+            [MemCreateFromFile,ZB_TextInputMem,objectlistFile]
+        ]
+
+        [VarSet,gOffset,0]
+        [VarDef,lineStr,""]
+        [VarDef,objectStr,""]
+        
+        [If,[MemGetSize,ZB_TextInputMem],
+            [Loop,10000,
+                //read a line into a string variable
+                [VarSet,lineBytes,[MemReadString,ZB_TextInputMem,lineStr,gOffset,1]]
+                //extract objects string
+                [VarSet,objectStr,[StrExtract,lineStr,[StrLength,gozPath],lineBytes]]
+                [Note,[StrMerge, "\nobjectStr \n    ", objectStr],,0]
+
+                // call routine for import here
+                //
+                //
+
+                [VarSet,gOffset,gOffset+lineBytes]
+                [If,gOffset >= [MemGetSize,ZB_TextInputMem],
+                    [LoopExit]
+                ]
+            ]
+        ]        
+        [MemDelete,ZB_TextInputMem] //all done, delete memblock
+    ]
 
 
     // show summary of what was imorted

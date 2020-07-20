@@ -1,3 +1,50 @@
+[IButton,ReadFromFile,“Read from a text file”,
+    [VarSet,gFilePath,“input.txt”]
+    [If,FileExists,gFilePath],
+        //create memory block from the file
+        [MemCreateFromFile,ZB_TextInputMem,gFilePath]
+    ]
+
+    [VarSet,gOffset,0]
+    [VarDef,lStr,""]
+    [VarDef,lTargetPolys,0]
+    
+    [If,MemGetSize,ZB_TextInputMem],
+        [Loop,10000,
+            //read a line into a string variable
+            [VarSet,gBytes,MemReadString,ZB_TextInputMem,lStr,gOffset,1]]
+            //find “obj”
+            [VarSet,endPath,StrFind,“obj”,StrLower,lStr]]
+        ]
+        [If,endPath > -1,//if “obj” found
+            //extract file path string
+            [VarSet,lImportPath,StrExtract,lStr,0,endPath+2]]
+            //extract target polys string
+            [VarSet,lTargetPolys,StrExtract,lStr,endPath+4,256]
+        ]
+        [If,FileExists,lImportPath],
+            [FileNameSetNext,lImportPath]
+            [IPress,Tool:Import]
+            [ISet,Tool:Geometry:Target Polygons Count,lTargetPolys]
+            [IUpdate,1,1
+        ]//update the UI
+
+        [IPress,Tool:Geometry:ZRemesher]
+            [FileNameSetNext,lImportPath]
+            [IPress,Tool:Export]
+        ]
+    ]
+    [VarSet,gOffset,gOffset+gBytes]
+    [If,gOffset >= MemGetSize,ZB_TextInputMem],
+        LoopExit]]
+    ]
+    ]
+    [MemDelete,ZB_TextInputMem] //all done, delete memblock
+]
+
+
+
+
 
 [VarSet,bestand,[FileNameMake,"Paint.txt",PaintNum]]
 [MemCreateFromFile,el_membestand[StrMerge,"ZBRUSH_ZStartup\ZPlugs\LayerPaintTemp\",bestand],123]    //Paint#”,PaintNum,”.txt"],123]
