@@ -9,7 +9,7 @@ version: 1.0.0
 [VarDef,GoBImport,0]
 [VarDef,timer,-1]
 [VarDef,debug,1]
-[VarDef,debugtimer,4]
+[VarDef,debugtimer,0]
 
 [VarDef,GoBList(6),""] // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
@@ -87,153 +87,151 @@ version: 1.0.0
     [VarDef,dispSuffix, "_disp"]
     [VarDef,normSuffix, "_norm"]
 
-	
-    [If,[FileExists,variablesFile],    
+	[If,[FileExists,variablesFile],    
         [VarLoad,GoBList,variablesFile]
 
-        [VarSet,objectName,[StrMerge,GoBList(0),""]]
-        [Note,[StrMerge,objectName,"\n"],,timer]
+        //[VarSet,objectName,[StrMerge,GoBList(0),""]]
+        //[Note,[StrMerge,objectName,"\n"],,timer]
 
         [VarSet,fileExtension,[StrMerge,GoBList(1),""]]
-        [Note,[StrMerge,fileExtension,"\n"],,timer]
+        //[Note,[StrMerge,fileExtension,"\n"],,timer]
 
         [VarSet,textureFormat,[StrMerge,GoBList(2),""]]
-        [Note,[StrMerge,textureFormat,"\n"],,timer]
+        //[Note,[StrMerge,textureFormat,"\n"],,timer]
 
         [VarSet,diffTexture,[StrMerge,GoBList(3),""]]
-        [Note,[StrMerge,diffTexture,"\n"],,timer]
+        //[Note,[StrMerge,diffTexture,"\n"],,timer]
 
         [VarSet,normTexture,[StrMerge,GoBList(4),""]]
-        [Note,[StrMerge,normTexture,"\n"],,timer]
+        //[Note,[StrMerge,normTexture,"\n"],,timer]
 
         [VarSet,dispTexture,[StrMerge,GoBList(5),""]]  
-        [Note,[StrMerge,dispTexture,"\n"],,timer]          
+        //[Note,[StrMerge,dispTexture,"\n"],,timer]          
     , 
-        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,0]
+        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,timer]
         [Exit]
     ]
+    
   
 
-    [VarDef,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
-    [VarDef,subtoolIndex, -1]// replace with subtool index if subtool already exists  
+    //[IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
+    [VarSet,objectlistFile,[StrMerge,objectlistPath,"GoZ_ObjectList.txt"]] 
+    //[Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,timer] 
 
-    [RoutineDef,FindSubtool,
-        [VarDef,subtoolName,""]// Define a new variable to store the current subtool name 
-        [VarSet,totalSubtools,[SubToolGetCount]]// create a variable to define the number of loop based on the subtools count
-        [SubToolSelect,0]// select first subtool
-        [VarSet,activeSubtool,[SubToolGetActiveIndex]]// create a variable with the current subtool Index
-
-        [Loop,totalSubtools,//loop over subtools
-            [SubToolSelect,[Val,activeSubtool]]
-            [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]//get the subtool name
-            [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]// trim chars from the end.
-            //[Note,[StrMerge,"Subtool Name: ",subtoolName, "\nTarget Object",  objectName],,timer]
-            [If,subtoolIndex == -1,
-                [If,([StrFind,subtoolName,objectName]==0) && ([StrLength,subtoolName]==[StrLength,objectName]),   // subtool not found,create a new one                 
-                    [VarSet,subtoolIndex, activeSubtool]   
-                    [LoopExit]
-                    //[Note,[StrMerge,"subtool found: ",subtoolName, ", index: ",  subtoolIndex],,timer]
-                ]
-            ]        
-            //[Note, [StrMerge,activeSubtool, " activeSubtool: ",subtoolName],,timer]//displays message for 1 second
-            [VarInc, activeSubtool]//adds 1 to the loop counter
-        ]
+    [If,[FileExists,objectlistFile],
+        //create memory block from the file
+        [MemCreateFromFile,ZB_TextInputMem,objectlistFile]
     ]
 
+    [VarSet,gOffset,0]
+    [VarDef,lineStr,""]
+    [VarDef,objectName,""]
+    
+    [If,[MemGetSize,ZB_TextInputMem],
+        [Loop,10000,
+            //read a line into a string variable
+            [VarSet,lineBytes,[MemReadString,ZB_TextInputMem,lineStr,gOffset,1]]
+            //extract objects string
+            [VarSet,objectName,[StrExtract,lineStr,[StrLength,gozPath],lineBytes]]
+            //[Note,[StrMerge, "\nobjectName \n    ", objectName],,timer]
 
-    [RoutineDef,LoadTextures,
-        // import textures
-        [If,[FileExists,diffTexture],
-            [IPress,Tool:Texture Map:TextureMap]
-            [FileNameSetNext,diffTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", diffTexture],, timer]
-        ]
-        [If,[FileExists,dispTexture],
-            [IPress,Tool:Displacement Map:DisplacementMap]
-            [FileNameSetNext,dispTexture] [IPress,Alpha:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", dispTexture],, timer]
-        ]
-        [If,[FileExists,normTexture],            
-            [IPress,Tool:Normal Map:Normal Map]
-            [FileNameSetNext,normTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
-        ]
-    ]
+            // call routine for import here   
+            [VarSet,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
+            //[Note,[StrMerge, "\nobjectPath \n    ", objectPath],,timer]
 
-    [RoutineCall,FindSubtool]
+            [VarDef,subtoolIndex, -1]// replace with subtool index if subtool already exists  
 
+            [RoutineDef,FindSubtool,
+                [VarDef,subtoolName,""]// Define a new variable to store the current subtool name 
+                [VarSet,totalSubtools,[SubToolGetCount]]// create a variable to define the number of loop based on the subtools count
+                [SubToolSelect,0]// select first subtool
+                [VarSet,activeSubtool,[SubToolGetActiveIndex]]// create a variable with the current subtool Index
 
-    [If,subtoolIndex == -1,    
-        // subtool exists,update subtool 
-        [Note,[StrMerge,"\n\nCreating new Subtool: ",objectName,"  id: ",subtoolIndex, " ", [ToolGetActiveIndex]," ", [ToolGetCount]] ,,timer] 
-        
-        [Note,[StrMerge,"\nToolGetSubToolID: ",[ToolGetSubToolID],""],,timer]
-        [If,[ToolGetSubToolID] == 0, //tool cant have subtools, create a new tool
-
-            [IPress,Tool:Cube3D]
-            [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
-            [IPress,PopUp:PolyMesh3D]
-        ,               
-            [IPress,Tool:SubTool:Insert]
-            [IPress,PopUp:PolyMesh3D]
-
-            /* 
-            //[Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-            [If, [StrMerge,[ToolGetPath, [ToolGetActiveIndex]], ""] == "PolyMesh3D",   
-                [Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-            ,           
-                [Note,[StrMerge,"\n not star: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-            ] */
-        ]
-
-        [If,[FileExists,objectPath],
-            [FileNameSetNext,objectPath]
-            [IPress,Tool:Import]
-        ]     
-        [RoutineCall, LoadTextures]
-    ,        
-        [Note,[StrMerge,"\nSubtool already exists: ",objectName," id: ", subtoolIndex],,timer]
-        [SubToolSelect,[Val,subtoolIndex]]
-        [If,[FileExists,objectPath],
-            [FileNameSetNext,objectPath] [IPress,Tool:Import]
-        ]
-        [RoutineCall, LoadTextures]        
-    ]   
-
-
-    [IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
-        [VarSet,objectlistFile,[StrMerge,objectlistPath,"GoZ_ObjectList.txt"]] 
-        [Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,0] 
-
-        [If,[FileExists,objectlistFile],
-            //create memory block from the file
-            [MemCreateFromFile,ZB_TextInputMem,objectlistFile]
-        ]
-
-        [VarSet,gOffset,0]
-        [VarDef,lineStr,""]
-        [VarDef,objectStr,""]
-        
-        [If,[MemGetSize,ZB_TextInputMem],
-            [Loop,10000,
-                //read a line into a string variable
-                [VarSet,lineBytes,[MemReadString,ZB_TextInputMem,lineStr,gOffset,1]]
-                //extract objects string
-                [VarSet,objectStr,[StrExtract,lineStr,[StrLength,gozPath],lineBytes]]
-                [Note,[StrMerge, "\nobjectStr \n    ", objectStr],,0]
-
-                // call routine for import here
-                //
-                //
-
-                [VarSet,gOffset,gOffset+lineBytes]
-                [If,gOffset >= [MemGetSize,ZB_TextInputMem],
-                    [LoopExit]
+                [Loop,totalSubtools,//loop over subtools
+                    [SubToolSelect,[Val,activeSubtool]]
+                    [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]//get the subtool name
+                    [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]// trim chars from the end.
+                    //[Note,[StrMerge,"Subtool Name: ",subtoolName, "\nTarget Object",  objectName],,timer]
+                    [If,subtoolIndex == -1,
+                        [If,([StrFind,subtoolName,objectName]==0) && ([StrLength,subtoolName]==[StrLength,objectName]),   // subtool not found,create a new one                 
+                            [VarSet,subtoolIndex, activeSubtool]   
+                            [LoopExit]
+                            //[Note,[StrMerge,"subtool found: ",subtoolName, ", index: ",  subtoolIndex],,timer]
+                        ]
+                    ]        
+                    //[Note, [StrMerge,activeSubtool, " activeSubtool: ",subtoolName],,timer]//displays message for 1 second
+                    [VarInc, activeSubtool]//adds 1 to the loop counter
                 ]
             ]
-        ]        
-        [MemDelete,ZB_TextInputMem] //all done, delete memblock
-    ]
+
+
+            [RoutineDef,LoadTextures,
+                // import textures
+                [If,[FileExists,diffTexture],
+                    [IPress,Tool:Texture Map:TextureMap]
+                    [FileNameSetNext,diffTexture] [IPress,Texture:Import]
+                    [Note, [StrMerge, "\n   Load Texture: ", diffTexture],, timer]
+                ]
+                [If,[FileExists,dispTexture],
+                    [IPress,Tool:Displacement Map:DisplacementMap]
+                    [FileNameSetNext,dispTexture] [IPress,Alpha:Import]
+                    [Note, [StrMerge, "\n   Load Texture: ", dispTexture],, timer]
+                ]
+                [If,[FileExists,normTexture],            
+                    [IPress,Tool:Normal Map:Normal Map]
+                    [FileNameSetNext,normTexture] [IPress,Texture:Import]
+                    [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
+                ]
+            ]
+
+            [RoutineCall,FindSubtool]
+
+
+            [If,subtoolIndex == -1,    
+                // subtool exists,update subtool 
+                [Note,[StrMerge,"\n\nCreating new Subtool: ",objectName,"  id: ",subtoolIndex, " ", [ToolGetActiveIndex]," ", [ToolGetCount]] ,,timer] 
+                
+                [Note,[StrMerge,"\nToolGetSubToolID: ",[ToolGetSubToolID],""],,timer]
+                [If,[ToolGetSubToolID] == 0, //tool cant have subtools, create a new tool
+
+                    [IPress,Tool:Cube3D]
+                    [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
+                    [IPress,PopUp:PolyMesh3D]
+                ,               
+                    [IPress,Tool:SubTool:Insert]
+                    [IPress,PopUp:PolyMesh3D]
+
+                    /* 
+                    //[Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+                    [If, [StrMerge,[ToolGetPath, [ToolGetActiveIndex]], ""] == "PolyMesh3D",   
+                        [Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+                    ,           
+                        [Note,[StrMerge,"\n not star: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
+                    ] */
+                ]
+
+                [If,[FileExists,objectPath],
+                    [FileNameSetNext,objectPath]
+                    [IPress,Tool:Import]
+                ]     
+                [RoutineCall, LoadTextures]
+            ,        
+                [Note,[StrMerge,"\nSubtool already exists: ",objectName," id: ", subtoolIndex],,timer]
+                [SubToolSelect,[Val,subtoolIndex]]
+                [If,[FileExists,objectPath],
+                    [FileNameSetNext,objectPath] [IPress,Tool:Import]
+                ]
+                [RoutineCall, LoadTextures]        
+            ]   
+
+            [VarSet,gOffset,gOffset+lineBytes]
+            [If,gOffset >= [MemGetSize,ZB_TextInputMem],
+                [LoopExit]
+            ]
+        ]
+    ]        
+    [MemDelete,ZB_TextInputMem] //all done, delete memblock
+    //]
 
 
     // show summary of what was imorted
