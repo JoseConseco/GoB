@@ -22,6 +22,7 @@ import mathutils
 import math
 import time
 import os
+import subprocess
 from struct import pack, unpack
 from copy import deepcopy
 import string
@@ -1236,17 +1237,10 @@ class GoB_OT_export(bpy.types.Operator):
 
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        
+                
         PATHCURRENT =  os.path.abspath(os.path.dirname(__file__))
-        print("current path", PATHCURRENT, "/ZScripts/GoB_Import.zsc")
-        os.system(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
-        #os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
-
-        
-        
-        
-        #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
-        #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
+        os.startfile(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
+                
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
