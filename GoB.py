@@ -876,17 +876,17 @@ class GoB_OT_export(bpy.types.Operator):
             # 1: textureFormat   
             file.write(pack('<2B',0x00, 0x53))   #.S
             file.write(b'.bmp') 
-            # 2: diffTexture
+            # 2: diffTexture suffix
             file.write(pack('<2B',0x00, 0x53))   #.S            
-            name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
+            name = pref.import_diffuse_suffix
             file.write(name.encode('utf-8'))    
-            # 3: normTexture
+            # 3: normTexture suffix
             file.write(pack('<2B',0x00, 0x53))   #.S
-            name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
+            name = pref.import_normal_suffix
             file.write(name.encode('utf-8'))   
-            # 4: dispTexture
+            # 4: dispTexture suffix
             file.write(pack('<2B',0x00, 0x53))   #.S
-            name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
+            name = pref.import_displace_suffix
             file.write(name.encode('utf-8'))   
             #end  
             file.write(pack('<B', 0x00))  #. 
