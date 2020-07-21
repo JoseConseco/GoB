@@ -866,33 +866,31 @@ class GoB_OT_export(bpy.types.Operator):
         variablesFile = f"{PATHGOZ}/GoZProjects/Default/GoB_variables.zvr"
         with open(variablesFile, 'wb') as file:            
             file.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
-            file.write(pack('<1B', 0x06))                           #NOTE: n list items, update this when adding new items to list
+            #list size
+            file.write(pack('<1B', 0x05))   #NOTE: n list items, update this when adding new items to list
             file.write(pack('<2B', 0x00, 0x00)) 
 
-            # 0: object name
-            file.write(pack('<2B',0x00, 0x53))   #.S
-            file.write(obj.name.encode('utf-8'))
-            # 1: fileExtension
+            # 0: fileExtension
             file.write(pack('<2B',0x00, 0x53))   #.S
             file.write(b'.GoZ')
-            # 2: textureFormat   
+            # 1: textureFormat   
             file.write(pack('<2B',0x00, 0x53))   #.S
             file.write(b'.bmp') 
-            # 3: diffTexture
+            # 2: diffTexture
             file.write(pack('<2B',0x00, 0x53))   #.S            
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
             file.write(name.encode('utf-8'))    
-            # 4: normTexture
+            # 3: normTexture
             file.write(pack('<2B',0x00, 0x53))   #.S
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
             file.write(name.encode('utf-8'))   
-            # 5: dispTexture
+            # 4: dispTexture
             file.write(pack('<2B',0x00, 0x53))   #.S
             name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
             file.write(name.encode('utf-8'))   
-            
+            #end  
             file.write(pack('<B', 0x00))  #. 
-            #end       
+                 
         file.close()
 
 
@@ -1233,8 +1231,6 @@ class GoB_OT_export(bpy.types.Operator):
                         ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
                     GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
                     
-                    
-
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
                 
