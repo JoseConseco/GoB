@@ -1119,23 +1119,24 @@ class GoB_OT_export(bpy.types.Operator):
             norm = 0
 
             for mat in obj.material_slots:
-                material = bpy.data.materials[mat.name]
-                if material.use_nodes:
-                    #print("material:", mat.name, "using nodes \n")
-                    for node in material.node_tree.nodes:	
-                        #print("node: ", node.type)
-                        	
-                        if node.type == 'TEX_IMAGE':
-                            #print("IMAGES: ", node.image.name, node.image)	
-                            if (pref.import_diffuse_suffix) in node.image.name:                                
-                                diff = node.image
-                                print("diff", diff)
-                            if (pref.import_displace_suffix) in node.image.name:
-                                disp = node.image
-                            if (pref.import_normal_suffix) in node.image.name:
-                                norm = node.image
-                        elif node.type == 'GROUP':
-                            print("group found")
+                if mat.name:
+                    material = bpy.data.materials[mat.name]
+                    if material.use_nodes:
+                        #print("material:", mat.name, "using nodes \n")
+                        for node in material.node_tree.nodes:	
+                            #print("node: ", node.type)
+                                
+                            if node.type == 'TEX_IMAGE':
+                                #print("IMAGES: ", node.image.name, node.image)	
+                                if (pref.import_diffuse_suffix) in node.image.name:                                
+                                    diff = node.image
+                                    print("diff", diff)
+                                if (pref.import_displace_suffix) in node.image.name:
+                                    disp = node.image
+                                if (pref.import_normal_suffix) in node.image.name:
+                                    norm = node.image
+                            elif node.type == 'GROUP':
+                                print("group found")
             
             scn.render.image_settings.file_format = 'BMP'
             #fileExt = ('.' + pref.texture_format.lower())
