@@ -79,29 +79,27 @@ version: 1.0.0
     // load variables from GoB export
         /* File: Gob_variables.zvr
         0: object name, 1: fileExtension, 2: textureFormat,
-        3: diffTexture, 4: normTexture, 5: dispTexture 
+        3: diffSuffix, 4: normSuffix, 5: dispSuffix 
         */
 
-    [VarDef,diffSuffix, "_diff"]
-    [VarDef,dispSuffix, "_disp"]
-    [VarDef,normSuffix, "_norm"]
 
 	[If,[FileExists,variablesFile],    
         [VarLoad,GoBList,variablesFile]
         [VarSet,fileExtension,[StrMerge,GoBList(0),""]]
         [VarSet,textureFormat,[StrMerge,GoBList(1),""]]
-        [VarSet,diffTexture,[StrMerge,GoBList(2),""]]
-        [VarSet,normTexture,[StrMerge,GoBList(3),""]]
-        [VarSet,dispTexture,[StrMerge,GoBList(4),""]]        
+        [VarSet,diffSuffix,[StrMerge,GoBList(2),""]]
+        [VarSet,normSuffix,[StrMerge,GoBList(3),""]]
+        [VarSet,dispSuffix,[StrMerge,GoBList(4),""]]        
     , 
         [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,timer]
         [Exit]
-    ]
-      
+    ]      
     
-
-
+       
     [RoutineDef,LoadTextures,
+        [VarSet,diffTexture,[StrMerge,gozPath,objectName,diffSuffix,textureFormat]]
+        [VarSet,normTexture,[StrMerge,gozPath,objectName,normSuffix,textureFormat]]
+        [VarSet,dispTexture,[StrMerge,gozPath,objectName,dispSuffix,textureFormat]]
         // import textures
         [If,[FileExists,diffTexture],
             [IPress,Tool:Texture Map:TextureMap]
@@ -210,8 +208,8 @@ version: 1.0.0
                 [If,[FileExists,objectPath],
                     [FileNameSetNext,objectPath]
                     [IPress,Tool:Import] 
+                    [RoutineCall, LoadTextures]
                 ]  
-                [RoutineCall, LoadTextures]
 
 
             ,   //else: subtool found, udpate existing subtool     
@@ -222,8 +220,8 @@ version: 1.0.0
                 [If,[FileExists,objectPath],
                     [FileNameSetNext,objectPath] 
                     [IPress,Tool:Import]
-                ]
-                [RoutineCall, LoadTextures]        
+                    [RoutineCall, LoadTextures]  
+                ]      
             ]   
             //next loop or exit if end of file
             [VarSet,gOffset,gOffset+lineBytes]
