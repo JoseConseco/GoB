@@ -3,7 +3,6 @@ name: GoB_Import.zsc
 description: Zbrush script for Blender GoB addon
 tracker_url: https://github.com/JoseConseco/GoB
 author: Daniel Grauer
-version: 1.0.0
 */
 
 [VarDef,GoBImport,0]
@@ -11,10 +10,11 @@ version: 1.0.0
 [VarDef,finalReport,1]
 [VarDef,finalReportTimer,0]
 
-[VarDef,GoBList(5),""] // NOTE: if list size changes gob export list size needs to be udpated as well
+[VarDef,GoBList(6),""] // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
     0: object name, 1: fileExtension, 2: textureFormat,
     3: diffTexture, 4: normTexture, 5: dispTexture 
+    6: GoB version
     */
 
 
@@ -89,12 +89,13 @@ version: 1.0.0
         [VarSet,textureFormat,[StrMerge,GoBList(1),""]]
         [VarSet,diffSuffix,[StrMerge,GoBList(2),""]]
         [VarSet,normSuffix,[StrMerge,GoBList(3),""]]
-        [VarSet,dispSuffix,[StrMerge,GoBList(4),""]]        
+        [VarSet,dispSuffix,[StrMerge,GoBList(4),""]]  
+        [VarSet,gobVersion,[StrMerge,GoBList(5),""]]        
     , 
         [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,timer]
         [Exit]
-    ]      
-    
+    ]   
+    [Note,[StrMerge, "\CFFFFFFGoB Version: ",gobVersion, "\n"],,timer]
        
     [RoutineDef,LoadTextures,
         [VarSet,diffTexture,[StrMerge,gozPath,objectName,diffSuffix,textureFormat]]
