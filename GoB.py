@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import addon_utils
 import bmesh
 import mathutils
 import math
@@ -867,7 +868,7 @@ class GoB_OT_export(bpy.types.Operator):
         with open(variablesFile, 'wb') as file:            
             file.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
-            file.write(pack('<1B', 0x05))   #NOTE: n list items, update this when adding new items to list
+            file.write(pack('<1B', 0x06))   #NOTE: n list items, update this when adding new items to list
             file.write(pack('<2B', 0x00, 0x00)) 
 
             # 0: fileExtension
@@ -887,7 +888,14 @@ class GoB_OT_export(bpy.types.Operator):
             # 4: dispTexture suffix
             file.write(pack('<2B',0x00, 0x53))   #.S
             name = pref.import_displace_suffix
-            file.write(name.encode('utf-8'))   
+            file.write(name.encode('utf-8')) 
+            #5: GoB version   
+            file.write(pack('<2B',0x00, 0x53))   #.S         
+            for mod in addon_utils.modules():
+                if mod.bl_info.get('name') == 'GoB':
+                    version = str(mod.bl_info.get('version', (-1, -1, -1)))
+            file.write(version.encode('utf-8'))
+
             #end  
             file.write(pack('<B', 0x00))  #. 
                  
