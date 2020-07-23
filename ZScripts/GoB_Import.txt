@@ -131,29 +131,26 @@ author: Daniel Grauer
     ]
 
     
+    
+    
+    [VarDef, SubtoolList(4), ""] 
 
-    [RoutineDef,FindSubtool,
-        [VarDef,subtoolName,""]// Define a new variable to store the current subtool name 
-        [VarSet,totalSubtools,[SubToolGetCount]]// create a variable to define the number of loop based on the subtools count
-        [SubToolSelect,0]// select first subtool
-        [VarSet,activeSubtool,[SubToolGetActiveIndex]]// create a variable with the current subtool Index
-        [VarSet,subtoolExists,-1] // reset subtool existance for new search
 
-        [Loop,totalSubtools,//loop over subtools
+    [RoutineDef,CreateSubtoolList,
+        [VarDef,subtoolName,""]                         // Define a new variable to store the current subtool name 
+        [VarSet,totalSubtools,[SubToolGetCount]]        // create a variable to define the number of loop based on the subtools count
+        [SubToolSelect,0]                               // select first subtool to loop over all subtools
+        [VarSet,activeSubtool,[SubToolGetActiveIndex]]  // create a variable with the current subtool Index
+
+        [Loop,totalSubtools,            //loop over subtools
             [SubToolSelect,[Val,activeSubtool]]
-            [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]//get the subtool name
-            [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]// trim chars from the end.
-            //[Note,[StrMerge,"\nactiveSubtool: ",activeSubtool, " ", subtoolExists, "\nSubtool Name: ",subtoolName, " ",[StrLength,subtoolName], "\nTarget Object: ",  objectName, " ",[StrLength,objectName]],,timer]
+            [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
+            [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
+            //[Note,[StrMerge,"\nactiveSubtool: ",activeSubtool, "\nSubtool Name: ",subtoolName, " ",[StrLength,subtoolName], "\nTarget Object: ",  objectName, " ",[StrLength,objectName]],,timer]
             
-            [If,subtoolExists == -1,
-                [If,([StrFind,subtoolName,objectName]==0) && ([StrLength,subtoolName]==[StrLength,objectName]),   // subtool not found,create a new one                 
-                    [VarSet,subtoolExists, activeSubtool]   
-                    //[Note,[StrMerge,"\n\nsubtool found: \n",subtoolName,  "\nactiveSubtool: ", activeSubtool, "\nsubtoolIndex: ",  subtoolExists],,timer]
-                    [LoopExit]
-                ]
-            ]        
-            
-            [VarInc, activeSubtool]//adds 1 to the loop counter            
+            [VarSet,SubtoolList(activeSubtool),subtoolName]         //add subtools to list
+
+            [VarInc, activeSubtool]     //adds 1 to the loop counter            
             [If,activeSubtool >= totalSubtools,
                 [LoopExit]
             ]
@@ -164,10 +161,14 @@ author: Daniel Grauer
     [VarSet,gOffset,0]
     [VarDef,lineStr,""]
     [VarDef,objectName,""]
-    [VarDef,subtoolExists,-1]// replace with subtool index if subtool already exists
+    
 
+    [RoutineCall,CreateSubtoolList]
+
+
+    [VarDef, subtoolExists, -1] 
     [If,[MemGetSize,GoB_TextInputMem],
-        [Loop,10000,
+        [Loop,999,
             //read a line into a string variable
             [VarSet,lineBytes,[MemReadString,GoB_TextInputMem,lineStr,gOffset,1]]
             //extract objects string
@@ -176,62 +177,69 @@ author: Daniel Grauer
             [VarSet,objectPath,[StrMerge,gozPath,objectName,fileExtension]]
             //[Note,[StrMerge, "\nobjectName \n    ", objectName],,timer]
             //[Note,[StrMerge, "\nobjectPath \n    ", objectPath],,timer]
-                       
 
-            [RoutineCall,FindSubtool]
-            //[Note,[StrMerge,"\nsubtoolExists: ",subtoolExists] ,,0] 
-            [If,subtoolExists == -1,    //subtool missing import new one
-                // subtool exists,update subtool 
-                [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer] 
-                //[Note,[StrMerge,"\n\nCreating new Subtool: \n",objectName,"\nactiveSubtool: ", [SubToolGetActiveIndex], "\nsubtoolIndex: ",subtoolExists, "\nactive index: ", [ToolGetActiveIndex],"\ntotal subtools: ", [ToolGetCount]] ,,0] 
-           
+            [VarSet,count,0]     //change this when object is found and skip creating new subtool
+            [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
+                //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
                 
-                //[Note,[StrMerge,"\nToolGetSubToolID: ",[ToolGetSubToolID],""],,0]
-                [If,[ToolGetSubToolID] == 0, //tool cant have subtools, create a new tool
+                //update subtool        
+                [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
+                    //[Note,[StrMerge, "\n\C00FF00MATCH  index:   ", count,"    ",  SubtoolList(count), " == ",  objectName],,timer]
+                    
+                    [SubToolSelect,count]
+                    [If,[FileExists,objectPath],
+                        [FileNameSetNext,objectPath] 
+                        [IPress,Tool:Import]                        
+                        [RoutineCall, LoadTextures]  
+                    ]   
+                    [VarSet, subtoolExists, objectName]    
+                    [LoopExit]
+                ,
+                    [VarSet, subtoolExists, -1]  
+
+                ]
+
+                [VarInc, count]           
+                [If,count >= [VarSize,SubtoolList],
+                    [LoopExit]
+                ]
+            ]
+            
+            //create new subtool
+            [If, subtoolExists == -1, 
+                [If,[ToolGetSubToolID] == 0, //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
+                    //[Note,[StrMerge, "\n\C00FFFFinsert new tool:     ", count,"    ",  objectName],,timer] 
                     [IPress,Tool:Cube3D]
                     [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
                     [IPress,PopUp:PolyMesh3D]                    
                     //[Note,[StrMerge,"\ninsert subtool special: \n",objectName] ,,timer] 
-                ,               
+                ,      
+                    //[Note,[StrMerge, "\n\C00FFFFinsert new:     ", count,"    ",  objectName],,timer]         
                     [IPress,Tool:SubTool:Insert]
                     [IPress,PopUp:PolyMesh3D]
                     //[Note,[StrMerge,"\ninsert subtool: \n",objectName] ,,timer] 
                 ]
-                    /* 
-                    //[Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-                    [If, [StrMerge,[ToolGetPath, [ToolGetActiveIndex]], ""] == "PolyMesh3D",   
-                        [Note,[StrMerge,"\n tool name: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-                    ,           
-                        [Note,[StrMerge,"\n not star: ",[ToolGetPath, [ToolGetActiveIndex]]],,0]
-                    ] */
 
-                //import subtool to selected
-                [If,[FileExists,objectPath],
-                    [FileNameSetNext,objectPath]
-                    [IPress,Tool:Import] 
-                    [RoutineCall, LoadTextures]
-                ]  
-
-
-            ,   //else: subtool found, udpate existing subtool     
-                [SubToolSelect,[Val,subtoolExists]]
-                [Note,[StrMerge,"\n\C00FF00Updated Subtool:    \CFFFFFF",objectName],,timer]
-                //[Note,[StrMerge,"\nUpdate Subtool: \n",objectName, "\nactiveSubtool: ", [SubToolGetActiveIndex],"\nsubtoolIndex: ",  [Val,subtoolExists]],,timer]
-                
                 [If,[FileExists,objectPath],
                     [FileNameSetNext,objectPath] 
-                    [IPress,Tool:Import]
+                    [IPress,Tool:Import]                            
                     [RoutineCall, LoadTextures]  
-                ]      
-            ]   
+                ]              
+            ]
+            
             //next loop or exit if end of file
             [VarSet,gOffset,gOffset+lineBytes]
             [If,gOffset >= [MemGetSize,GoB_TextInputMem],
                 [LoopExit]
             ]
         ]
-    ]        
-    [MemDelete,GoB_TextInputMem] //all done, delete memblock
+    ]
+    [MemDelete,GoB_TextInputMem]        //all done, delete memblock
+    
+
+
+
+    
 
 
     // show summary of what was imorted
@@ -251,6 +259,4 @@ author: Daniel Grauer
             "IMAGE_GMenuIcons/zscript.psd" //Optional icon file name            
         ]
     ]
- 
-    [Exit]
 ]/*End of ZScript*/
