@@ -99,23 +99,23 @@ author: Daniel Grauer
        
     [RoutineDef,LoadTextures,
         [VarSet,diffTexture,[StrMerge,gozPath,objectName,diffSuffix,textureFormat]]
-        [VarSet,normTexture,[StrMerge,gozPath,objectName,normSuffix,textureFormat]]
         [VarSet,dispTexture,[StrMerge,gozPath,objectName,dispSuffix,textureFormat]]
+        [VarSet,normTexture,[StrMerge,gozPath,objectName,normSuffix,textureFormat]]
         // import textures
         [If,[FileExists,diffTexture],
             [IPress,Tool:Texture Map:TextureMap]
             [FileNameSetNext,diffTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", diffTexture],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,diffSuffix,textureFormat]],, timer]
         ]
         [If,[FileExists,dispTexture],
             [IPress,Tool:Displacement Map:DisplacementMap]
             [FileNameSetNext,dispTexture] [IPress,Alpha:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", dispTexture],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
         ]
         [If,[FileExists,normTexture],            
             [IPress,Tool:Normal Map:Normal Map]
             [FileNameSetNext,normTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Load Texture: ", normTexture],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
         ]
     ]
 
@@ -185,7 +185,7 @@ author: Daniel Grauer
                 //update subtool        
                 [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
                     //[Note,[StrMerge, "\n\C00FF00MATCH  index:   ", count,"    ",  SubtoolList(count), " == ",  objectName],,timer]
-                    
+                    [Note,[StrMerge,"\n\C00FF00Updated Subtool:    \CFFFFFF",objectName],,timer]            
                     [SubToolSelect,count]
                     [If,[FileExists,objectPath],
                         [FileNameSetNext,objectPath] 
@@ -207,6 +207,7 @@ author: Daniel Grauer
             
             //create new subtool
             [If, subtoolExists == -1, 
+                [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer] 
                 [If,[ToolGetSubToolID] == 0, //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
                     //[Note,[StrMerge, "\n\C00FFFFinsert new tool:     ", count,"    ",  objectName],,timer] 
                     [IPress,Tool:Cube3D]
