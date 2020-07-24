@@ -133,7 +133,7 @@ author: Daniel Grauer
     
     
     
-    [VarDef, SubtoolList(4), ""] 
+    [VarDef, SubtoolList(9999), ""] 
 
 
     [RoutineDef,CreateSubtoolList,
@@ -146,7 +146,7 @@ author: Daniel Grauer
             [SubToolSelect,[Val,activeSubtool]]
             [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
             [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
-            //[Note,[StrMerge,"\nactiveSubtool: ",activeSubtool, "\nSubtool Name: ",subtoolName, " ",[StrLength,subtoolName], "\nTarget Object: ",  objectName, " ",[StrLength,objectName]],,timer]
+            //[Note,[StrMerge,"\nactiveSubtool: ",activeSubtool, "\nSubtool Name: ",subtoolName, " ",[StrLength,subtoolName], "\nTarget Object: ",  objectName, " ",[StrLength,objectName]],,0]
             
             [VarSet,SubtoolList(activeSubtool),subtoolName]         //add subtools to list
 
@@ -168,7 +168,7 @@ author: Daniel Grauer
 
     [VarDef, subtoolExists, -1] 
     [If,[MemGetSize,GoB_TextInputMem],
-        [Loop,999,
+        [Loop,9999,
             //read a line into a string variable
             [VarSet,lineBytes,[MemReadString,GoB_TextInputMem,lineStr,gOffset,1]]
             //extract objects string
