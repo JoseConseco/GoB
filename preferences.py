@@ -72,7 +72,7 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
-        default=True)
+        default=False)
     """      
     texture_format: EnumProperty(
         name="Image Format",
