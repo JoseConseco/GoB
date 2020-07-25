@@ -798,6 +798,10 @@ class GoB_OT_export(bpy.types.Operator):
     bl_label = "Export to ZBrush"
     bl_description = "Export to ZBrush"
     
+    @classmethod
+    def poll(cls, context):
+        return context.selected_objects
+
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()
