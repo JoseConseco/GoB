@@ -1136,8 +1136,7 @@ class GoB_OT_export(bpy.types.Operator):
                     if material.use_nodes:
                         #print("material:", mat.name, "using nodes \n")
                         for node in material.node_tree.nodes:	
-                            #print("node: ", node.type)
-                                
+                            #print("node: ", node.type)                                
                             if node.type == 'TEX_IMAGE' and node.image:
                                 #print("IMAGES: ", node.image.name, node.image)	
                                 if (pref.import_diffuse_suffix) in node.image.name:                                
