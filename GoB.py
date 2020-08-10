@@ -920,6 +920,11 @@ class GoB_OT_export(bpy.types.Operator):
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
 
+            if  numFaces:
+                print(numFaces)
+            else:
+                print("\n", obj.name, "2 has no faces, zbrush can not import this object")
+
 
             # --File Header--
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
