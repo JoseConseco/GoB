@@ -1217,7 +1217,7 @@ class GoB_OT_export(bpy.types.Operator):
         exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         if not exists:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
-            return {"CANCELLED"}
+            #return {"CANCELLED"}
         
         
         # remove ZTL files since they mess up Zbrush importing subtools 
