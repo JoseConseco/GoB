@@ -31,8 +31,8 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
-if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATHGOZ = "C:/Users/Public/Pixologic"
+if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+    PATHGOZ = os.environ['PUBLIC'] + "/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATHGOZ = "/Users/Shared/Pixologic"
