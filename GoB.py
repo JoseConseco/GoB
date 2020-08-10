@@ -72,7 +72,7 @@ start_time = None
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
-    bl_description = "GOZ import background listener"
+    bl_description = "GoZ Import. Activate to enable Import from GoZ"
     
     
     def GoZit(self, pathFile):     
@@ -796,7 +796,7 @@ def run_import_periodically():
 class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export to ZBrush"
+    bl_description = "Export selected Objects to ZBrush"
     
     @classmethod
     def poll(cls, context):
