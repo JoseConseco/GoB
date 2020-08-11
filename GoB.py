@@ -31,12 +31,15 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
+macosx = None
 if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = os.environ['PUBLIC'] + "/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
+    macosx = False
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATHGOZ = "/Users/Shared/Pixologic"
     FROMAPP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+    macosx = True
 else:
     PATHGOZ = False
     
@@ -1214,26 +1217,21 @@ class GoB_OT_export(bpy.types.Operator):
         bpy.data.meshes.remove(me)
         return
 
-    def execute(self, context):
-        exists_GoZ_ObjectList = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        if not exists_GoZ_ObjectList:
-            print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
-            
-        
-        exists_GoZ_Info = os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Info.txt")
-        if not exists_GoZ_Info:            
+    def execute(self, context):        
+        #setup GoZ configuration
+        if not os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Info.txt"):         
             source_GoZ_Info = f"{PATHGOB}/Blender/"
             target_GoZ_Info = f"{PATHGOZ}/GoZApps/Blender/"
-            shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)
+            shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
             
-            exists_GoZ_Config = os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt")
-            if not exists_GoZ_Config:   
+            #write blender path to GoZ configuration
+            if not os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt"): 
                 with open(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
-                    PATH = "C:/Blender/blender.exe"
                     GoZ_Config.write(f"PATH = \"{PATHBLENDER}\"")
+                #specify GoZ application
                 with open(f"{PATHGOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
-                    GoZ_Application.write("Blender")        
-            
+                    GoZ_Application.write("Blender")            
+
         
         # remove ZTL files since they mess up Zbrush importing subtools 
         folder_path = f'{PATHGOZ}/GoZProjects/Default/'
