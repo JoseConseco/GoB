@@ -31,20 +31,17 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
-macosx = None
 if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATHGOZ = os.environ['PUBLIC'] + "/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
-    macosx = False
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATHGOZ = "/Users/Shared/Pixologic"
     FROMAPP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
-    macosx = True
 else:
     PATHGOZ = False
     
 PATHGOB =  os.path.abspath(os.path.dirname(__file__))
-PATHBLENDER = bpy.app.binary_path
+PATHBLENDER = bpy.app.binary_path.replace("\\", "/")
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
