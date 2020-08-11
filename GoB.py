@@ -17,13 +17,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import os
+import shutil
 import addon_utils
 import bmesh
 import mathutils
 import math
 import time
-import os
-import subprocess
 from struct import pack, unpack
 from copy import deepcopy
 import string
@@ -39,7 +39,9 @@ elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Conten
     FROMAPP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
 else:
     PATHGOZ = False
-
+    
+PATHGOB =  os.path.abspath(os.path.dirname(__file__))
+PATHBLENDER = bpy.app.binary_path
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
@@ -1214,11 +1216,25 @@ class GoB_OT_export(bpy.types.Operator):
         return
 
     def execute(self, context):
-        exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        if not exists:
+        exists_GoZ_ObjectList = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+        if not exists_GoZ_ObjectList:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
-            #return {"CANCELLED"}
+            
         
+        exists_GoZ_Info = os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Info.txt")
+        if not exists_GoZ_Info:            
+            source_GoZ_Info = f"{PATHGOB}/Blender/"
+            target_GoZ_Info = f"{PATHGOZ}/GoZApps/Blender/"
+            shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)
+            
+            exists_GoZ_Config = os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt")
+            if not exists_GoZ_Config:   
+                with open(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
+                    PATH = "C:/Blender/blender.exe"
+                    GoZ_Config.write(f"PATH = \"{PATHBLENDER}\"")
+                with open(f"{PATHGOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
+                    GoZ_Application.write("Blender")        
+            
         
         # remove ZTL files since they mess up Zbrush importing subtools 
         folder_path = f'{PATHGOZ}/GoZProjects/Default/'
@@ -1246,8 +1262,7 @@ class GoB_OT_export(bpy.types.Operator):
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
                 
-        PATHCURRENT =  os.path.abspath(os.path.dirname(__file__))
-        os.startfile(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
+        os.startfile(f"{PATHGOB}/ZScripts/GoB_Import.zsc")
                 
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
