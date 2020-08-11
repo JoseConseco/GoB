@@ -39,7 +39,7 @@ class GoBPreferences(AddonPreferences):
     
     project_path: StringProperty(
         name="Project Path", 
-        description="Project Path", 
+        description="Location where Zbrush and Blender will store the exported content", 
         subtype='FILE_PATH',
         default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
 
