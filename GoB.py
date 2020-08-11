@@ -874,11 +874,11 @@ class GoB_OT_export(bpy.types.Operator):
         fileExt = '.bmp'
         
         # write GoB ZScript variables
-        variablesFile = f"{PATH_PROJECT}/GoB_variables.zvr"
+        variablesFile = f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr"        
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
-            GoBVars.write(pack('<1B', 0x06))   #NOTE: n list items, update this when adding new items to list
+            GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
             GoBVars.write(pack('<2B', 0x00, 0x00)) 
 
             # 0: fileExtension
@@ -905,6 +905,10 @@ class GoB_OT_export(bpy.types.Operator):
                 if mod.bl_info.get('name') == 'GoB':
                     version = str(mod.bl_info.get('version', (-1, -1, -1)))
             GoBVars.write(version.encode('utf-8'))
+            # 6: Project Path
+            GoBVars.write(pack('<2B',0x00, 0x53))   #.S
+            name = pref.project_path
+            GoBVars.write(name.encode('utf-8')) 
 
             #end  
             GoBVars.write(pack('<B', 0x00))  #. 
@@ -1218,34 +1222,41 @@ class GoB_OT_export(bpy.types.Operator):
         bpy.data.meshes.remove(me)
         return
 
-    def execute(self, context):   
+    def execute(self, context):  
+
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences             
         PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
-        if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):         
+        #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
+        try:    #install in GoZApps if missing     
             source_GoZ_Info = f"{PATH_GOB}/Blender/"
             target_GoZ_Info = f"{PATH_GOZ}/GoZApps/Blender/"
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
-            
+        except FileExistsError: #if blender folder is found update the info file
+            source_GoZ_Info = f"{PATH_GOB}/Blender/GoZ_Info.txt"
+            target_GoZ_Info = f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"
+            shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
+
             #write blender path to GoZ configuration
-            if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-                with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
-                    GoZ_Config.write(f"PATH = \"{PATH_BLENDER}\"")
-                #specify GoZ application
-                with open(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
-                    GoZ_Application.write("Blender")            
+            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+            with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
+                GoZ_Config.write(f"PATH = \"{PATH_BLENDER}\"")
+            #specify GoZ application
+            with open(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
+                GoZ_Application.write("Blender")            
+
 
         #update project path
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
-            GoZ_Application.write(PATH_PROJECT)   
+            GoZ_Application.write(PATH_PROJECT)  
+            
 
-        # remove ZTL files since they mess up Zbrush importing subtools 
-        folder_path = f"{PATH_PROJECT}/"
-        for file_name in os.listdir(folder_path):
+        # remove ZTL files since they mess up Zbrush importing subtools
+        for file_name in os.listdir(PATH_PROJECT):
             print(file_name)
             if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
                 print('suffix match:', file_name)
-                os.remove(folder_path + file_name)
+                os.remove(PATH_PROJECT + file_name)
 
 
         currentContext = 'OBJECT'
@@ -1258,9 +1269,9 @@ class GoB_OT_export(bpy.types.Operator):
                 if obj.type == 'MESH':
                     self.escape_object_name(obj)
                     self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
-                    with open( f"{PATH_PROJECT}/{obj.name}.ztn", 'wt') as ztn:
-                        ztn.write(f'{PATH_PROJECT}/{obj.name}')
-                    GoZ_ObjectList.write(f'{PATH_PROJECT}/{obj.name}\n')
+                    with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
+                        ztn.write(f'{PATH_PROJECT}{obj.name}')
+                    GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
