@@ -31,17 +31,21 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
+
+
 if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATHGOZ = os.environ['PUBLIC'] + "/Pixologic"
-    FROMAPP = "GoZBrushFromApp.exe"
+    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
+    FROM_APP = "GoZBrushFromApp.exe"
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
-    PATHGOZ = "/Users/Shared/Pixologic"
-    FROMAPP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+    PATH_GOZ = "/Users/Shared/Pixologic"
+    FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
 else:
-    PATHGOZ = False
-    
-PATHGOB =  os.path.abspath(os.path.dirname(__file__))
-PATHBLENDER = bpy.app.binary_path.replace("\\", "/")
+    PATH_GOZ = False
+
+
+
+PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
+PATH_BLENDER = bpy.app.binary_path.replace("\\", "/")
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
@@ -78,8 +82,8 @@ class GoB_OT_import(bpy.types.Operator):
     
     
     def GoZit(self, pathFile):     
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-        
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
+
         if pref.performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.time(), "Start Import Profiling")
@@ -530,7 +534,7 @@ class GoB_OT_import(bpy.types.Operator):
     def execute(self, context):
         goz_obj_paths = []
         try:
-            with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
+            with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
 
@@ -772,7 +776,7 @@ def run_import_periodically():
     global cached_last_edition_time, run_background_update
 
     try:
-        file_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
     except Exception as e:
         print(e)
         run_background_update = False
@@ -837,8 +841,8 @@ class GoB_OT_export(bpy.types.Operator):
 
 
     def exportGoZ(self, path, scn, obj, pathImport):
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences        
+        PATH_PROJECT = pref.project_path.replace("\\", "/")   
         if pref.performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.time(), "Export Profiling: " + obj.name)
@@ -870,7 +874,7 @@ class GoB_OT_export(bpy.types.Operator):
         fileExt = '.bmp'
         
         # write GoB ZScript variables
-        variablesFile = f"{PATHGOZ}/GoZProjects/Default/GoB_variables.zvr"
+        variablesFile = f"{PATH_PROJECT}/GoB_variables.zvr"
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
@@ -1155,10 +1159,10 @@ class GoB_OT_export(bpy.types.Operator):
             fileExt = '.bmp'
 
             if diff:
-                name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
-                print(name)
+                name = PATH_PROJECT + obj.name + pref.import_diffuse_suffix + fileExt
                 try:
                     diff.save_render(name)
+                    print(name)
                 except:
                     pass
                 name = name.encode('utf8')
@@ -1171,10 +1175,10 @@ class GoB_OT_export(bpy.types.Operator):
                     start_time = profiler(start_time, "Write diff")
 
             if disp:
-                name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
-                print(name)
+                name = PATH_PROJECT + obj.name + pref.import_displace_suffix + fileExt
                 try:
                     disp.save_render(name)
+                    print(name)
                 except:
                     pass
                 name = name.encode('utf8')
@@ -1187,10 +1191,10 @@ class GoB_OT_export(bpy.types.Operator):
                     start_time = profiler(start_time, "Write disp")
 
             if norm:
-                name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
-                print(name)
+                name = PATH_PROJECT + obj.name + pref.import_normal_suffix + fileExt                
                 try:
                     norm.save_render(name)
+                    print(name)
                 except:
                     pass
                 name = name.encode('utf8')
@@ -1214,24 +1218,29 @@ class GoB_OT_export(bpy.types.Operator):
         bpy.data.meshes.remove(me)
         return
 
-    def execute(self, context):        
+    def execute(self, context):   
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences             
+        PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
-        if not os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Info.txt"):         
-            source_GoZ_Info = f"{PATHGOB}/Blender/"
-            target_GoZ_Info = f"{PATHGOZ}/GoZApps/Blender/"
+        if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):         
+            source_GoZ_Info = f"{PATH_GOB}/Blender/"
+            target_GoZ_Info = f"{PATH_GOZ}/GoZApps/Blender/"
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
             
             #write blender path to GoZ configuration
-            if not os.path.isfile(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-                with open(f"{PATHGOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
-                    GoZ_Config.write(f"PATH = \"{PATHBLENDER}\"")
+            if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+                with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
+                    GoZ_Config.write(f"PATH = \"{PATH_BLENDER}\"")
                 #specify GoZ application
-                with open(f"{PATHGOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
+                with open(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
                     GoZ_Application.write("Blender")            
 
-        
+        #update project path
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
+            GoZ_Application.write(PATH_PROJECT)   
+
         # remove ZTL files since they mess up Zbrush importing subtools 
-        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
+        folder_path = f"{PATH_PROJECT}/"
         for file_name in os.listdir(folder_path):
             print(file_name)
             if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
@@ -1244,19 +1253,19 @@ class GoB_OT_export(bpy.types.Operator):
             currentContext = context.object.mode
             bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
 
-        with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
                 if obj.type == 'MESH':
                     self.escape_object_name(obj)
-                    self.exportGoZ(PATHGOZ, context.scene, obj, f'{PATHGOZ}/GoZProjects/Default')
-                    with open( f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ztn", 'wt') as ztn:
-                        ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
-                    GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
+                    self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                    with open( f"{PATH_PROJECT}/{obj.name}.ztn", 'wt') as ztn:
+                        ztn.write(f'{PATH_PROJECT}/{obj.name}')
+                    GoZ_ObjectList.write(f'{PATH_PROJECT}/{obj.name}\n')
                     
         global cached_last_edition_time
-        cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
+        cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
                 
-        os.startfile(f"{PATHGOB}/ZScripts/GoB_Import.zsc")
+        os.startfile(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
                 
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  

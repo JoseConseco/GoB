@@ -16,7 +16,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
+if "bpy" in locals():
+    import importlib
+    importlib.reload(GoB)
+else:
+    from . import GoB
+    
 """Addon preferences"""
 import bpy
 from bpy.types import AddonPreferences
@@ -31,6 +36,13 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
+    
+    project_path: StringProperty(
+        name="Project Path", 
+        description="Project Path", 
+        subtype='FILE_PATH',
+        default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
+
     use_scale: EnumProperty(
             name="Scale",
             description="Create Material",
@@ -234,6 +246,8 @@ class GoBPreferences(AddonPreferences):
             layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'performance_profiling')
               
+              
+        layout.prop(self, 'project_path')  
         #layout.prop(self, 'texture_format')
 
         #EXPORT
