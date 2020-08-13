@@ -32,16 +32,23 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
+from bpy.props import StringProperty, BoolProperty 
+from bpy_extras.io_utils import ImportHelper 
+from bpy.types import Operator 
 
 
+isMacOS = None
 if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
     PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
     FROM_APP = "GoZBrushFromApp.exe"
+    isMacOS = False
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATH_GOZ = "/Users/Shared/Pixologic"
     FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+    isMacOS = True
 else:
     PATH_GOZ = False
+    isMacOS = None
 
 
 
@@ -76,7 +83,7 @@ def draw_goz_buttons(self, context):
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
 
 start_time = None
-class GoB_OT_import(bpy.types.Operator):
+class GoB_OT_import(Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
     bl_description = "GoZ Import. Activate to enable Import from GoZ"
@@ -800,7 +807,7 @@ def run_import_periodically():
     return time_interval
 
 
-class GoB_OT_export(bpy.types.Operator):
+class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
     bl_description = "Export selected Objects to ZBrush"
@@ -1289,9 +1296,12 @@ class GoB_OT_export(bpy.types.Operator):
         if PATH_ZBRUSH:
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
-            print("zbrush path not defined")
-            #open selection to specify the executable path, 
-            # navigate to  goz config file and recommend the path in that file
+            if not isMacOS:
+                PATH_ZBRUSH = f"C:\\Program Files\\Pixologic\\"
+            else:
+                PATH_ZBRUSH = ""
+            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=PATH_ZBRUSH)
+            
 
                 
         if context.object:
@@ -1315,3 +1325,24 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
+
+
+class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
+    bl_idname = "gob.open_filebrowser" 
+    bl_label = "Select ZBrush.exe" 
+
+    filter_glob: StringProperty( default='ZBrush.exe', 
+                                options={'HIDDEN'}
+                                ) 
+    """ some_boolean: BoolProperty( name='ZBrush.exe', 
+                                description='Select the ZBrush Executable',
+                                default=True, ) """
+
+    def execute(self, context):       
+        """Do something with the selected file(s)."""  
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
+        filename, extension = os.path.splitext(self.filepath)
+        #print('Some Boolean:', self.some_boolean) 
+        pref.zbrush_exec = self.filepath        
+        #bpy.ops.wm.save_userpref()
+        return {'FINISHED'}
