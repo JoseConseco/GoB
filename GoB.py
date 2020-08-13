@@ -806,6 +806,9 @@ class GoB_OT_export(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
+        if len(context.selected_objects)<2:
+            numFaces = len(context.active_object.data.polygons)
+            return numFaces
         return context.selected_objects
 
     @staticmethod
@@ -919,12 +922,6 @@ class GoB_OT_export(bpy.types.Operator):
             
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
-
-            if  numFaces:
-                print(numFaces)
-            else:
-                print("\n", obj.name, "2 has no faces, zbrush can not import this object")
-
 
             # --File Header--
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
@@ -1257,12 +1254,12 @@ class GoB_OT_export(bpy.types.Operator):
             
 
         # remove ZTL files since they mess up Zbrush importing subtools
-        for file_name in os.listdir(PATH_PROJECT):
-            print(file_name)
-            if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
-                print('suffix match:', file_name)
-                os.remove(PATH_PROJECT + file_name)
-
+        if pref.clean_project_path:
+            for file_name in os.listdir(PATH_PROJECT):
+                #print(file_name)
+                if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
+                    print('cleaning file:', file_name)
+                    os.remove(PATH_PROJECT + file_name)
 
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
@@ -1271,17 +1268,26 @@ class GoB_OT_export(bpy.types.Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
-                if obj.type == 'MESH':
+
+                numFaces = len(obj.data.polygons)
+                if  obj.type == 'MESH' and numFaces:                    
+                    print("object faces", obj.name, numFaces)
+
                     self.escape_object_name(obj)
                     self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
                     with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
                         ztn.write(f'{PATH_PROJECT}{obj.name}')
                     GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
+                else:
+                    print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+
                     
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
                 
         os.startfile(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
+        #zbrushexe = f"C:\Program Files\Pixologic\ZBrush 2021\ZBrush.exe"
+        #os.execv(zbrushexe, f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
                 
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
