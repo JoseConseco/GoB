@@ -8,7 +8,7 @@ author: Daniel Grauer
 [VarDef,GoBImport,0]
 [VarDef,timer,-1]
 [VarDef,finalReport,1]
-[VarDef,finalReportTimer,0]
+[VarDef,finalReportTimer,100]
 
 [VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
@@ -24,7 +24,6 @@ author: Daniel Grauer
 
 
 [If,GoBImport==0, //make sure this runs when loaded
-
     [RoutineDef,AdjustPath,//replace backslashes with forward slashes
         [VarDef,pathStr,""]
         [Loop,999,
@@ -103,6 +102,7 @@ author: Daniel Grauer
     ]   
     [Note,[StrMerge, "\CFFFFFFGoB Version: ",gobVersion, "\n"],,timer]
        
+
     [RoutineDef,LoadTextures,
         [VarSet,diffTexture,[StrMerge,gozProjectPath,objectName,diffSuffix,textureFormat]]
         [VarSet,dispTexture,[StrMerge,gozProjectPath,objectName,dispSuffix,textureFormat]]
@@ -165,6 +165,7 @@ author: Daniel Grauer
     [RoutineCall,CreateSubtoolList]
     [VarDef, subtoolExists, -1] 
     
+   
     [If,[MemGetSize,GoB_TextInputMem],
         [Loop,9999,
             //read a line into a string variable
