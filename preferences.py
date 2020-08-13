@@ -36,12 +36,23 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
-    
+    zbrush_exec: StringProperty(
+        name="ZBrush", 
+        description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
+                    "\nIf not specified the system default for Zscript (.zsc) files will be used", 
+        subtype='FILE_PATH',
+        default="") 
+
     project_path: StringProperty(
         name="Project Path", 
-        description="Location where Zbrush and Blender will store the exported content", 
+        description="Folder where Zbrush and Blender will store the exported content", 
         subtype='FILE_PATH',
         default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
+    
+    clean_project_path: BoolProperty(
+        name="Clean Project Files",
+        description="Removes files in the project path to keep your GoZ bridge clean and your SSD happy",
+        default=True)
 
     use_scale: EnumProperty(
             name="Scale",
@@ -235,8 +246,10 @@ class GoBPreferences(AddonPreferences):
     def draw(self, context):
         #GLOBAL
         layout = self.layout
-        layout.use_property_split = True  
-        layout.prop(self, 'project_path')     
+        layout.use_property_split = True
+        #layout.prop(self, 'zbrush_exec') 
+        layout.prop(self, 'project_path') 
+        layout.prop(self, 'clean_project_path')    
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')   
         layout.prop(self, 'use_scale')
