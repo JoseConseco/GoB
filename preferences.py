@@ -41,7 +41,7 @@ class GoBPreferences(AddonPreferences):
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
-        default="C:\Program Files\Pixologic\ZBrush 2021\ZBrush.exe") 
+        default="") 
 
     project_path: StringProperty(
         name="Project Path", 
