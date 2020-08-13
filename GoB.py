@@ -19,6 +19,7 @@
 import bpy
 import os
 import shutil
+from subprocess import Popen
 import addon_utils
 import bmesh
 import mathutils
@@ -1282,12 +1283,15 @@ class GoB_OT_export(bpy.types.Operator):
                     
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-        PATH_ZBRUSH = pref.zbrush_exec.replace("\\", "/") 
-        zscript = (f"{PATH_ZBRUSH} {PATH_GOB}/ZScripts/GoB_Import.zsc")
-         
-        print("zscript:", zscript)
-        #os.startfile(zscript)
-        os.system(zscript)
+        PATH_ZBRUSH = pref.zbrush_exec
+        PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
+        
+        if PATH_ZBRUSH:
+            Popen([PATH_ZBRUSH, PATH_SCRIPT])
+        else:
+            print("zbrush path not defined")
+            #open selection to specify the executable path, 
+            # navigate to  goz config file and recommend the path in that file
 
                 
         if context.object:
