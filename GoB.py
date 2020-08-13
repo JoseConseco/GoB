@@ -1270,9 +1270,7 @@ class GoB_OT_export(bpy.types.Operator):
             for obj in context.selected_objects:
 
                 numFaces = len(obj.data.polygons)
-                if  obj.type == 'MESH' and numFaces:                    
-                    print("object faces", obj.name, numFaces)
-
+                if  obj.type == 'MESH' and numFaces:
                     self.escape_object_name(obj)
                     self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
                     with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
@@ -1284,10 +1282,13 @@ class GoB_OT_export(bpy.types.Operator):
                     
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-                
-        os.startfile(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
-        #zbrushexe = f"C:\Program Files\Pixologic\ZBrush 2021\ZBrush.exe"
-        #os.execv(zbrushexe, f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
+        PATH_ZBRUSH = pref.zbrush_exec.replace("\\", "/") 
+        zscript = (f"{PATH_ZBRUSH} {PATH_GOB}/ZScripts/GoB_Import.zsc")
+         
+        print("zscript:", zscript)
+        #os.startfile(zscript)
+        os.system(zscript)
+
                 
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
@@ -1310,7 +1311,3 @@ class GoB_OT_export(bpy.types.Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1
         obj.name = new_name
-
-
-
-

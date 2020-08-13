@@ -41,7 +41,7 @@ class GoBPreferences(AddonPreferences):
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
-        default="") 
+        default="C:\Program Files\Pixologic\ZBrush 2021\ZBrush.exe") 
 
     project_path: StringProperty(
         name="Project Path", 
@@ -247,7 +247,7 @@ class GoBPreferences(AddonPreferences):
         #GLOBAL
         layout = self.layout
         layout.use_property_split = True
-        #layout.prop(self, 'zbrush_exec') 
+        layout.prop(self, 'zbrush_exec') 
         layout.prop(self, 'project_path') 
         layout.prop(self, 'clean_project_path')    
         layout.prop(self, 'flip_up_axis')
