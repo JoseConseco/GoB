@@ -805,9 +805,9 @@ class GoB_OT_export(bpy.types.Operator):
     bl_description = "Export selected Objects to ZBrush"
     
     @classmethod
-    def poll(cls, context):
-        if len(context.selected_objects)<2:
-            numFaces = len(context.active_object.data.polygons)
+    def poll(cls, context):           
+        numFaces = len(context.selected_objects[0].data.polygons)
+        if len(context.selected_objects)<=1:     
             return numFaces
         return context.selected_objects
 
