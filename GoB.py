@@ -17,11 +17,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import addon_utils
 import bmesh
 import mathutils
 import math
 import time
 import os
+import subprocess
 from struct import pack, unpack
 from copy import deepcopy
 import string
@@ -29,8 +31,8 @@ import numpy
 from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
 from bpy_extras.image_utils import load_image
 
-if os.path.isfile("C:/Users/Public/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATHGOZ = "C:/Users/Public/Pixologic"
+if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+    PATHGOZ = os.environ['PUBLIC'] + "/Pixologic"
     FROMAPP = "GoZBrushFromApp.exe"
 elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATHGOZ = "/Users/Shared/Pixologic"
@@ -70,7 +72,7 @@ start_time = None
 class GoB_OT_import(bpy.types.Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
-    bl_description = "GOZ import background listener"
+    bl_description = "GoZ Import. Activate to enable Import from GoZ"
     
     
     def GoZit(self, pathFile):     
@@ -90,7 +92,7 @@ class GoB_OT_import(bpy.types.Operator):
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
             return
-
+        
         with open(pathFile, 'rb') as goz_file:
             goz_file.seek(36, 0)
             lenObjName = unpack('<I', goz_file.read(4))[0] - 16
@@ -529,6 +531,7 @@ class GoB_OT_import(bpy.types.Operator):
             with open(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
+
         except PermissionError:
             print("File already in use! Try again Later")
 
@@ -793,8 +796,12 @@ def run_import_periodically():
 class GoB_OT_export(bpy.types.Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export to ZBrush"
+    bl_description = "Export selected Objects to ZBrush"
     
+    @classmethod
+    def poll(cls, context):
+        return context.selected_objects
+
     @staticmethod
     def apply_modifiers(obj, pref):
         dg = bpy.context.evaluated_depsgraph_get()
@@ -832,8 +839,8 @@ class GoB_OT_export(bpy.types.Operator):
 
         if pref.performance_profiling: 
             print("\n", 100*"=")
-            start_time = profiler(time.time(), "Start Export Profiling")
-            start_total_time = profiler(time.time(), "")
+            start_time = profiler(time.time(), "Export Profiling: " + obj.name)
+            start_total_time = profiler(time.time(), "-------------")
         
         # TODO: when linked system is finalized it could be possible to provide
         #  a option to modify the linked object. for now a copy
@@ -856,6 +863,47 @@ class GoB_OT_export(bpy.types.Operator):
 
         if pref.performance_profiling: 
             start_time = profiler(start_time, "Make Mesh")
+
+
+        fileExt = '.bmp'
+        
+        # write GoB ZScript variables
+        variablesFile = f"{PATHGOZ}/GoZProjects/Default/GoB_variables.zvr"
+        with open(variablesFile, 'wb') as file:            
+            file.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
+            #list size
+            file.write(pack('<1B', 0x06))   #NOTE: n list items, update this when adding new items to list
+            file.write(pack('<2B', 0x00, 0x00)) 
+
+            # 0: fileExtension
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(b'.GoZ')
+            # 1: textureFormat   
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            file.write(b'.bmp') 
+            # 2: diffTexture suffix
+            file.write(pack('<2B',0x00, 0x53))   #.S            
+            name = pref.import_diffuse_suffix
+            file.write(name.encode('utf-8'))    
+            # 3: normTexture suffix
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            name = pref.import_normal_suffix
+            file.write(name.encode('utf-8'))   
+            # 4: dispTexture suffix
+            file.write(pack('<2B',0x00, 0x53))   #.S
+            name = pref.import_displace_suffix
+            file.write(name.encode('utf-8')) 
+            #5: GoB version   
+            file.write(pack('<2B',0x00, 0x53))   #.S         
+            for mod in addon_utils.modules():
+                if mod.bl_info.get('name') == 'GoB':
+                    version = str(mod.bl_info.get('version', (-1, -1, -1)))
+            file.write(version.encode('utf-8'))
+
+            #end  
+            file.write(pack('<B', 0x00))  #. 
+                 
+        file.close()
 
 
         with open(pathImport + '/{0}.GoZ'.format(obj.name), 'wb') as goz_file:
@@ -1083,23 +1131,23 @@ class GoB_OT_export(bpy.types.Operator):
             norm = 0
 
             for mat in obj.material_slots:
-                material = bpy.data.materials[mat.name]
-                if material.use_nodes:
-                    #print("material:", mat.name, "using nodes \n")
-                    for node in material.node_tree.nodes:	
-                        #print("node: ", node.type)
-                        	
-                        if node.type == 'TEX_IMAGE':
-                            #print("IMAGES: ", node.image.name, node.image)	
-                            if (pref.import_diffuse_suffix) in node.image.name:                                
-                                diff = node.image
-                                print("diff", diff)
-                            if (pref.import_displace_suffix) in node.image.name:
-                                disp = node.image
-                            if (pref.import_normal_suffix) in node.image.name:
-                                norm = node.image
-                        elif node.type == 'GROUP':
-                            print("group found")
+                if mat.name:
+                    material = bpy.data.materials[mat.name]
+                    if material.use_nodes:
+                        #print("material:", mat.name, "using nodes \n")
+                        for node in material.node_tree.nodes:	
+                            #print("node: ", node.type)                                
+                            if node.type == 'TEX_IMAGE' and node.image:
+                                #print("IMAGES: ", node.image.name, node.image)	
+                                if (pref.import_diffuse_suffix) in node.image.name:                                
+                                    diff = node.image
+                                    print("diff", diff)
+                                if (pref.import_displace_suffix) in node.image.name:
+                                    disp = node.image
+                                if (pref.import_normal_suffix) in node.image.name:
+                                    norm = node.image
+                            elif node.type == 'GROUP':
+                                print("group found")
             
             scn.render.image_settings.file_format = 'BMP'
             #fileExt = ('.' + pref.texture_format.lower())
@@ -1107,8 +1155,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if diff:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_diffuse_suffix + fileExt
-                diff.save_render(name)
                 print(name)
+                try:
+                    diff.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1120,8 +1171,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if disp:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_displace_suffix + fileExt
-                disp.save_render(name)
                 print(name)
+                try:
+                    disp.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1133,8 +1187,11 @@ class GoB_OT_export(bpy.types.Operator):
 
             if norm:
                 name = path + '/GoZProjects/Default/' + obj.name + pref.import_normal_suffix + fileExt
-                norm.save_render(name)
                 print(name)
+                try:
+                    norm.save_render(name)
+                except:
+                    pass
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1160,8 +1217,18 @@ class GoB_OT_export(bpy.types.Operator):
         exists = os.path.isfile(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
         if not exists:
             print(f'Cant find: {f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt"}. Check your ZBrush GOZ installation')
-            return {"CANCELLED"}
-          
+            #return {"CANCELLED"}
+        
+        
+        # remove ZTL files since they mess up Zbrush importing subtools 
+        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
+        for file_name in os.listdir(folder_path):
+            print(file_name)
+            if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
+                print('suffix match:', file_name)
+                os.remove(folder_path + file_name)
+
+
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
@@ -1175,21 +1242,13 @@ class GoB_OT_export(bpy.types.Operator):
                     with open( f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ztn", 'wt') as ztn:
                         ztn.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}')
                     GoZ_ObjectList.write(f'{PATHGOZ}/GoZProjects/Default/{obj.name}\n')
-
+                    
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATHGOZ}/GoZBrush/GoZ_ObjectList.txt")
-        
-        # remove ZTL files since they mess up Zbrush importing subtools 
-        folder_path = f'{PATHGOZ}/GoZProjects/Default/'
-        for file_name in os.listdir(folder_path):
-            if file_name.endswith('.ZTL'):
-                os.remove(folder_path + file_name)
-                print('remove ztl file:', file_name)
-
-        os.system(f"{PATHGOZ}/GoZBrush/{FROMAPP}")
-        
-        #if not os.path.isfile(f"{PATHGOZ}/GoZProjects/Default/{obj.name}.ZTL"):
-        #    os.system(f"{PATHGOZ}/GoZBrush/Scripts/GoZ_LoadTextureMaps.zsc") #TODO: update texture maps >> note this creates a mess in zbrush
+                
+        PATHCURRENT =  os.path.abspath(os.path.dirname(__file__))
+        os.startfile(f"{PATHCURRENT}/ZScripts/GoB_Import.zsc")
+                
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}

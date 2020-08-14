@@ -68,11 +68,11 @@ class GoBPreferences(AddonPreferences):
     show_button_text: BoolProperty(
         name="Show header buttons text",
         description="Enable this to show the import/export text of the header buttons",
-        default=False)        
+        default=True)        
     performance_profiling: BoolProperty(
         name="[Debug] Process durations",
         description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
-        default=True)
+        default=False)
     """      
     texture_format: EnumProperty(
         name="Image Format",
