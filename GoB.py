@@ -813,11 +813,12 @@ class GoB_OT_export(Operator):
     bl_description = "Export selected Objects to ZBrush"
     
     @classmethod
-    def poll(cls, context):  
-        if context.selected_objects:       
-            numFaces = len(context.selected_objects[0].data.polygons)  
-            if len(context.selected_objects)<=1:    
-                return numFaces
+    def poll(cls, context):        
+        if context.selected_objects: 
+            if context.selected_objects[0].type == 'MESH':      
+                numFaces = len(context.selected_objects[0].data.polygons)  
+                if len(context.selected_objects)<=1:    
+                    return numFaces
         return context.selected_objects
 
     @staticmethod
