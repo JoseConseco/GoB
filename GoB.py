@@ -1297,9 +1297,9 @@ class GoB_OT_export(Operator):
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
             if not isMacOS:
-                filepath = f"C:\\Program Files\\Pixologic\\"
+                filepath = f"C:/Program Files/Pixologic/"
             else:
-                filepath = ""
+                filepath = f"~%/Applications/ZBrushOSX/"
             
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
@@ -1331,11 +1331,18 @@ class GoB_OT_export(Operator):
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser" 
-    bl_label = "Select ZBrush.exe" 
 
-    filter_glob: StringProperty( default='ZBrush.exe', 
-                                options={'HIDDEN'}
-                                ) 
+    if not isMacOS:
+        bl_label = "Select ZBrush.exe" 
+        filter_glob: StringProperty( default='ZBrush.exe', 
+                                    options={'HIDDEN'}
+                                    ) 
+    else:
+        bl_label = "Select ZBrush.app" 
+        filter_glob: StringProperty( default='ZBrush.app', 
+                                    options={'HIDDEN'}
+                                    ) 
+
     """ some_boolean: BoolProperty( name='ZBrush.exe', 
                                 description='Select the ZBrush Executable',
                                 default=True, ) """
