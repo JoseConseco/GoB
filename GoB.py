@@ -1297,10 +1297,12 @@ class GoB_OT_export(Operator):
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
             if not isMacOS:
-                PATH_ZBRUSH = f"C:\\Program Files\\Pixologic\\"
+                filepath = f"C:\\Program Files\\Pixologic\\"
             else:
-                PATH_ZBRUSH = ""
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=PATH_ZBRUSH)
+                filepath = ""
+            
+            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
+            #Popen([PATH_ZBRUSH, PATH_SCRIPT])
             
 
                 
@@ -1344,5 +1346,5 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
         filename, extension = os.path.splitext(self.filepath)
         #print('Some Boolean:', self.some_boolean) 
         pref.zbrush_exec = self.filepath        
-        #bpy.ops.wm.save_userpref()
+        bpy.ops.wm.save_userpref()
         return {'FINISHED'}
