@@ -34,11 +34,10 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 4, 6),
+    "version": (3, 4, 8),
     "blender": (2, 83, 0),
     "location": "In the info header",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:"
-                "2.6/Py/Scripts/Import-Export/GoB_ZBrush_import_export",
+    "wiki_url": "https://github.com/JoseConseco/GoB/wiki",                
     "tracker_url": "https://github.com/JoseConseco/GoB/issues/new",
     "category": "Import-Export"}
 
@@ -46,7 +45,8 @@ bl_info = {
 classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
-    preferences.GoBPreferences
+    GoB.GoB_OT_OpenFilebrowser,
+    preferences.GoBPreferences,
     )
 
 

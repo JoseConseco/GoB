@@ -16,7 +16,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
+if "bpy" in locals():
+    import importlib
+    importlib.reload(GoB)
+else:
+    from . import GoB
+    
 """Addon preferences"""
 import bpy
 from bpy.types import AddonPreferences
@@ -31,6 +36,24 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
+    zbrush_exec: StringProperty(
+        name="ZBrush", 
+        description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
+                    "\nIf not specified the system default for Zscript (.zsc) files will be used", 
+        subtype='FILE_PATH',
+        default="") 
+
+    project_path: StringProperty(
+        name="Project Path", 
+        description="Folder where Zbrush and Blender will store the exported content", 
+        subtype='FILE_PATH',
+        default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
+    
+    clean_project_path: BoolProperty(
+        name="Clean Project Files",
+        description="Removes files in the project path to keep your GoZ bridge clean and your SSD happy",
+        default=True)
+
     use_scale: EnumProperty(
             name="Scale",
             description="Create Material",
@@ -58,20 +81,20 @@ class GoBPreferences(AddonPreferences):
         precision=1,
         subtype='FACTOR') 
     flip_up_axis: BoolProperty(
-        name="Invert up axis",
-        description="Enable this to invert the up axis on import/export",
+        name="Flip up axis",
+        description="Flip the up axis on Import/Export",
         default=False)
     flip_forward_axis: BoolProperty(
-        name="Invert forward axis",
-        description="Enable this to invert the forward axis on import/export",
+        name="Flip forward axis",
+        description="Flip the forward axis on Import/Export",
         default=False)
     show_button_text: BoolProperty(
-        name="Show header buttons text",
-        description="Enable this to show the import/export text of the header buttons",
+        name="Show Buttons Text",
+        description="Show Text on the Import/Export Buttons",
         default=True)        
     performance_profiling: BoolProperty(
-        name="[Debug] Process durations",
-        description="This is used to identiyfy slow code, note this will slow down your transfer if enabled!",
+        name="[Dev] Debug performance",
+        description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
         default=False)
     """      
     texture_format: EnumProperty(
@@ -223,8 +246,10 @@ class GoBPreferences(AddonPreferences):
     def draw(self, context):
         #GLOBAL
         layout = self.layout
-        layout.use_property_split = True   
-        layout.prop(self, 'show_button_text')    
+        layout.use_property_split = True
+        layout.prop(self, 'zbrush_exec') 
+        layout.prop(self, 'project_path') 
+        layout.prop(self, 'clean_project_path')    
         layout.prop(self, 'flip_up_axis')
         layout.prop(self, 'flip_forward_axis')   
         layout.prop(self, 'use_scale')
@@ -232,8 +257,8 @@ class GoBPreferences(AddonPreferences):
             layout.prop(self, 'manual_scale')
         if self.use_scale == 'ZUNITS':                   
             layout.prop(self, 'zbrush_scale')
+        layout.prop(self, 'show_button_text')  
         layout.prop(self, 'performance_profiling')
-              
         #layout.prop(self, 'texture_format')
 
         #EXPORT
