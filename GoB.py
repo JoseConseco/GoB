@@ -1277,16 +1277,16 @@ class GoB_OT_export(Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
-
-                numFaces = len(obj.data.polygons)
-                if  obj.type == 'MESH' and numFaces:
-                    self.escape_object_name(obj)
-                    self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
-                    with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
-                        ztn.write(f'{PATH_PROJECT}{obj.name}')
-                    GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
-                else:
-                    print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+                if  obj.type == 'MESH':
+                    numFaces = len(obj.data.polygons)
+                    if numFaces:
+                        self.escape_object_name(obj)
+                        self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                        with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
+                            ztn.write(f'{PATH_PROJECT}{obj.name}')
+                        GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
+                    else:
+                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
 
                     
         global cached_last_edition_time
