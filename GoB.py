@@ -1259,7 +1259,7 @@ class GoB_OT_export(Operator):
 
 
         #update project path
-        print(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
+        print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT)  
             
