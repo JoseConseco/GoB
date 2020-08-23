@@ -52,7 +52,7 @@ class GoBPreferences(AddonPreferences):
     clean_project_path: BoolProperty(
         name="Clean Project Files",
         description="Removes files in the project path to keep your GoZ bridge clean and your SSD happy",
-        default=True)
+        default=False)
 
     use_scale: EnumProperty(
             name="Scale",
