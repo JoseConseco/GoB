@@ -813,11 +813,14 @@ class GoB_OT_export(Operator):
     bl_description = "Export selected Objects to ZBrush"
     
     @classmethod
-    def poll(cls, context):           
-        numFaces = len(context.selected_objects[0].data.polygons)
-        if len(context.selected_objects)<=1:     
-            return numFaces
-        return context.selected_objects
+    def poll(cls, context):
+        selected_objects = context.selected_objects
+        if selected_objects:
+            if selected_objects[0].visible_get and selected_objects[0].type == 'MESH':
+                numFaces = len(selected_objects[0].data.polygons)
+                if len(selected_objects) <= 1:
+                    return numFaces
+        return selected_objects
 
     @staticmethod
     def apply_modifiers(obj, pref):
@@ -1257,6 +1260,7 @@ class GoB_OT_export(Operator):
 
 
         #update project path
+        print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT)  
             
@@ -1276,16 +1280,16 @@ class GoB_OT_export(Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for obj in context.selected_objects:
-
-                numFaces = len(obj.data.polygons)
-                if  obj.type == 'MESH' and numFaces:
-                    self.escape_object_name(obj)
-                    self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
-                    with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
-                        ztn.write(f'{PATH_PROJECT}{obj.name}')
-                    GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
-                else:
-                    print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+                if  obj.type == 'MESH':
+                    numFaces = len(obj.data.polygons)
+                    if numFaces:
+                        self.escape_object_name(obj)
+                        self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                        with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
+                            ztn.write(f'{PATH_PROJECT}{obj.name}')
+                        GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
+                    else:
+                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
 
                     
         global cached_last_edition_time
@@ -1297,9 +1301,9 @@ class GoB_OT_export(Operator):
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
             if not isMacOS:
-                filepath = f"C:\\Program Files\\Pixologic\\"
+                filepath = f"C:/Program Files/Pixologic/"
             else:
-                filepath = ""
+                filepath = f"~%/Applications/ZBrushOSX/"
             
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
@@ -1331,11 +1335,18 @@ class GoB_OT_export(Operator):
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser" 
-    bl_label = "Select ZBrush.exe" 
 
-    filter_glob: StringProperty( default='ZBrush.exe', 
-                                options={'HIDDEN'}
-                                ) 
+    if not isMacOS:
+        bl_label = "Select ZBrush.exe" 
+        filter_glob: StringProperty( default='ZBrush.exe', 
+                                    options={'HIDDEN'}
+                                    ) 
+    else:
+        bl_label = "Select ZBrush.app" 
+        filter_glob: StringProperty( default='ZBrush.app', 
+                                    options={'HIDDEN'}
+                                    ) 
+
     """ some_boolean: BoolProperty( name='ZBrush.exe', 
                                 description='Select the ZBrush Executable',
                                 default=True, ) """
