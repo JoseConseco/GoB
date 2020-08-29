@@ -1335,17 +1335,18 @@ class GoB_OT_export(Operator):
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser" 
-
-    if not isMacOS:
-        bl_label = "Select ZBrush.exe" 
-        filter_glob: StringProperty( default='ZBrush.exe', 
+    
+    if isMacOS:
+        bl_label = "Select ZBrush.app" 
+        filter_glob: StringProperty( default='*.app', 
                                     options={'HIDDEN'}
                                     ) 
     else:
-        bl_label = "Select ZBrush.app" 
-        filter_glob: StringProperty( default='ZBrush.app', 
+        bl_label = "Select ZBrush.exe" 
+        filter_glob: StringProperty( default='*.exe', 
                                     options={'HIDDEN'}
                                     ) 
+        
 
     """ some_boolean: BoolProperty( name='ZBrush.exe', 
                                 description='Select the ZBrush Executable',
