@@ -38,14 +38,14 @@ from bpy.types import Operator
 
 
 isMacOS = None
-if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
-    FROM_APP = "GoZBrushFromApp.exe"
-    isMacOS = False
-elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
+if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATH_GOZ = "/Users/Shared/Pixologic"
     FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
     isMacOS = True
+elif os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
+    FROM_APP = "GoZBrushFromApp.exe"
+    isMacOS = False
 else:
     PATH_GOZ = False
     isMacOS = None
