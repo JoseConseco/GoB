@@ -1297,7 +1297,7 @@ class GoB_OT_export(Operator):
         PATH_ZBRUSH = pref.zbrush_exec
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        if PATH_ZBRUSH:
+        if 'ZBrush.exe' in PATH_ZBRUSH or 'ZBrush.app' in PATH_ZBRUSH:            
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
             if not isMacOS:
@@ -1308,8 +1308,6 @@ class GoB_OT_export(Operator):
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
             
-
-                
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
@@ -1336,7 +1334,7 @@ class GoB_OT_export(Operator):
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser"  
     bl_label = "Accept"   
-    
+
     def execute(self, context):
         """Do something with the selected file(s)."""  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
