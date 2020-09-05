@@ -38,14 +38,14 @@ from bpy.types import Operator
 
 
 isMacOS = None
-if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
-    FROM_APP = "GoZBrushFromApp.exe"
-    isMacOS = False
-elif os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
+if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATH_GOZ = "/Users/Shared/Pixologic"
     FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
     isMacOS = True
+elif os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
+    FROM_APP = "GoZBrushFromApp.exe"
+    isMacOS = False
 else:
     PATH_GOZ = False
     isMacOS = None
@@ -1297,7 +1297,7 @@ class GoB_OT_export(Operator):
         PATH_ZBRUSH = pref.zbrush_exec
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        if PATH_ZBRUSH:
+        if 'ZBrush.exe' in PATH_ZBRUSH or 'ZBrush.app' in PATH_ZBRUSH:            
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
         else:
             if not isMacOS:
@@ -1308,8 +1308,6 @@ class GoB_OT_export(Operator):
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
             
-
-                
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
@@ -1334,28 +1332,21 @@ class GoB_OT_export(Operator):
 
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    bl_idname = "gob.open_filebrowser" 
+    bl_idname = "gob.open_filebrowser"  
+    bl_label = "Accept"   
 
-    if not isMacOS:
-        bl_label = "Select ZBrush.exe" 
-        filter_glob: StringProperty( default='ZBrush.exe', 
-                                    options={'HIDDEN'}
-                                    ) 
-    else:
-        bl_label = "Select ZBrush.app" 
-        filter_glob: StringProperty( default='ZBrush.app', 
-                                    options={'HIDDEN'}
-                                    ) 
-
-    """ some_boolean: BoolProperty( name='ZBrush.exe', 
-                                description='Select the ZBrush Executable',
-                                default=True, ) """
-
-    def execute(self, context):       
+    def execute(self, context):
         """Do something with the selected file(s)."""  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
         filename, extension = os.path.splitext(self.filepath)
-        #print('Some Boolean:', self.some_boolean) 
-        pref.zbrush_exec = self.filepath        
-        bpy.ops.wm.save_userpref()
+
+        if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
+            pref.zbrush_exec = self.filepath        
+            bpy.ops.wm.save_userpref()
+        else:
+            self.filepath = ""
+            print("ZBrush executable not found, try selecting it again.")
+
         return {'FINISHED'}
+
+
