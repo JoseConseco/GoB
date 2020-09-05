@@ -1334,29 +1334,21 @@ class GoB_OT_export(Operator):
 
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    bl_idname = "gob.open_filebrowser" 
+    bl_idname = "gob.open_filebrowser"  
+    bl_label = "Accept"   
     
-    if isMacOS:
-        bl_label = "Select ZBrush.app" 
-        filter_glob: StringProperty( default='*.app', 
-                                    options={'HIDDEN'}
-                                    ) 
-    else:
-        bl_label = "Select ZBrush.exe" 
-        filter_glob: StringProperty( default='*.exe', 
-                                    options={'HIDDEN'}
-                                    ) 
-        
-
-    """ some_boolean: BoolProperty( name='ZBrush.exe', 
-                                description='Select the ZBrush Executable',
-                                default=True, ) """
-
-    def execute(self, context):       
+    def execute(self, context):
         """Do something with the selected file(s)."""  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
         filename, extension = os.path.splitext(self.filepath)
-        #print('Some Boolean:', self.some_boolean) 
-        pref.zbrush_exec = self.filepath        
-        bpy.ops.wm.save_userpref()
+
+        if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
+            pref.zbrush_exec = self.filepath        
+            bpy.ops.wm.save_userpref()
+        else:
+            self.filepath = ""
+            print("no filename")
+
         return {'FINISHED'}
+
+
