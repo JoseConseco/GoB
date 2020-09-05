@@ -214,18 +214,18 @@ class GoB_OT_import(Operator):
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
            
-
-            # update mesh data after transformations to fix normals 
-            me.validate(verbose=True)
-            me.update(calc_edges=True, calc_edges_loose=True) 
             me,_ = apply_transformation(me, is_import=True)
             # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
             me.transform(obj.matrix_world.inverted())         
            
+            # update mesh data after transformations to fix normals 
+            me.validate(verbose=True)
+            me.update(calc_edges=True, calc_edges_loose=True) 
+
             # make object active
             obj.select_set(True) 
             bpy.context.view_layer.objects.active = obj
-                      
+
             vertsData.clear()
             facesData.clear()
 
@@ -385,17 +385,25 @@ class GoB_OT_import(Operator):
                             if group not in facemapsData:
                                 if str(group) in obj.face_maps:
                                     obj.face_maps.remove(obj.face_maps[str(group)])
-                                fm = obj.face_maps.new(name=str(group))
+                                faceMap = obj.face_maps.new(name=str(group))
                                 facemapsData.append(group)
-                            else:                                
-                                fm = obj.face_maps[str(group)] 
-                            fm.add([i])     # add faces to facemap
+                            else:                        
+                                faceMap = obj.face_maps[str(group)] 
+
+                            try:
+                                if obj.data.polygons(i):    
+                                    faceMap.add([i])     # add faces to facemap
+                            except:
+                                pass
+                            
                     try:
+                        print("VGs: ", obj.vertex_groups.get('0'))
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
                     try:
+                        print("FMs: ", obj.face_maps.get('0'))
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
@@ -1059,7 +1067,7 @@ class GoB_OT_export(Operator):
                                                 
                         groupColor=[]                        
                         #create a color for each facemap (0xffff)
-                        for fm in obj.face_maps:
+                        for faceMap in obj.face_maps:
                             randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
                             color = int(randcolor, 16)
                             groupColor.append(color)
