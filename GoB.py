@@ -1345,7 +1345,7 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
             bpy.ops.wm.save_userpref()
         else:
             self.filepath = ""
-            print("no filename")
+            print("ZBrush executable not found, try selecting it again.")
 
         return {'FINISHED'}
 
