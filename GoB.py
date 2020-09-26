@@ -1305,14 +1305,16 @@ class GoB_OT_export(Operator):
         PATH_ZBRUSH = pref.zbrush_exec
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        if 'ZBrush.exe' in PATH_ZBRUSH or 'ZBrush.app' in PATH_ZBRUSH:            
+        if 'ZBrush.exe' in PATH_ZBRUSH:    
             Popen([PATH_ZBRUSH, PATH_SCRIPT])
+        elif 'ZBrush.app' in PATH_ZBRUSH:
+            Popen(['open', '-a', PATH_ZBRUSH, PATH_SCRIPT])     
         else:
             if not isMacOS:
                 filepath = f"C:/Program Files/Pixologic/"
             else:
-                filepath = f"~%/Applications/ZBrushOSX/"
-            
+                filepath = f"/Applications/"
+
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
             
@@ -1340,14 +1342,17 @@ class GoB_OT_export(Operator):
 
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    bl_idname = "gob.open_filebrowser"  
-    bl_label = "Accept"   
+    bl_idname = "gob.open_filebrowser"
+      
+    if isMacOS:
+        bl_label = "Load ZBrush.exe" 
+    else:
+        bl_label = "Load ZBrus.app" 
 
     def execute(self, context):
         """Do something with the selected file(s)."""  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
         filename, extension = os.path.splitext(self.filepath)
-
         if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
             pref.zbrush_exec = self.filepath        
             bpy.ops.wm.save_userpref()
