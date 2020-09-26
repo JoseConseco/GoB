@@ -178,7 +178,7 @@ author: Daniel Grauer
 	        [If,[ZBrushInfo,6],//is MacOS 
                 [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
             , // else is Windows
-                [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
+                [VarSet,objectPath,[StrMerge,gozProjectPath,objectName,fileExtension]]
             ] 
             
             //[Note,[StrMerge, "\nobjectName \n    ", objectName],,timer]
