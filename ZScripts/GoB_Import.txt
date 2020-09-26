@@ -9,6 +9,7 @@ author: Daniel Grauer
 [VarDef,timer,-1]
 [VarDef,finalReport,1]
 [VarDef,finalReportTimer,100]
+[VarDef,maxSubtools,999]
 
 [VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
@@ -26,7 +27,7 @@ author: Daniel Grauer
 [If,GoBImport==0, //make sure this runs when loaded
     [RoutineDef,AdjustPath,//replace backslashes with forward slashes
         [VarDef,pathStr,""]
-        [Loop,999,
+        [Loop,maxSubtools,
             [VarSet,in,[StrFind,[StrFromAsc,92],pathStr]]
             [If,[Val,in] > -1,//"
                 [VarSet,pathStr,[StrMerge,[StrExtract,pathStr,0,[Val,in-1]],"/",[StrExtract,pathStr,[Val,in+1],[StrLength,pathStr]]]]
@@ -63,7 +64,8 @@ author: Daniel Grauer
 		 ]	 	
 	 	//note that ZBrush paths on MacOS start with "!:"
 	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
-	 	,//else Windows
+	 	
+         ,//else Windows
 		 [If,[StrFind,"Documents",publicPath]>-1,
 		 	[VarSet,gobVarsPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
 		 	[VarSet,gobVarsPath,[StrMerge,gobVarsPath,"Pixologic/GoZProjects/Default/"]]
@@ -85,7 +87,6 @@ author: Daniel Grauer
         0: object name, 1: fileExtension, 2: textureFormat,
         3: diffSuffix, 4: normSuffix, 5: dispSuffix 
         */
-
 
 	[If,[FileExists,variablesFile],    
         [VarLoad,GoBList,variablesFile]
@@ -136,7 +137,7 @@ author: Daniel Grauer
     ]
 
     
-    [VarDef, SubtoolList(9999), ""] 
+    [VarDef, SubtoolList(maxSubtools), ""] 
     [RoutineDef,CreateSubtoolList,
         [VarDef,subtoolName,""]                         // Define a new variable to store the current subtool name 
         [VarSet,totalSubtools,[SubToolGetCount]]        // create a variable to define the number of loop based on the subtools count
@@ -167,13 +168,19 @@ author: Daniel Grauer
     
    
     [If,[MemGetSize,GoB_TextInputMem],
-        [Loop,9999,
+        [Loop,maxSubtools,
             //read a line into a string variable
             [VarSet,lineBytes,[MemReadString,GoB_TextInputMem,lineStr,gOffset,1]]
             //extract objects string
             [VarSet,objectName,[StrExtract,lineStr,[StrLength,gozProjectPath],lineBytes]]
-            // call routine for import here   
-            [VarSet,objectPath,[StrMerge,gozProjectPath,objectName,fileExtension]]
+            // call routine for import here  
+            
+	        [If,[ZBrushInfo,6],//is MacOS 
+                [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
+            , // else is Windows
+                [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
+            ] 
+            
             //[Note,[StrMerge, "\nobjectName \n    ", objectName],,timer]
             //[Note,[StrMerge, "\nobjectPath \n    ", objectPath],,timer]
 
