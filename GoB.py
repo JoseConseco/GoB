@@ -828,8 +828,8 @@ class GoB_OT_export(Operator):
                 numFaces = len(selected_objects[0].data.polygons)
                 if len(selected_objects) <= 1:
                     return numFaces
-            elif selected_objects[0].type == 'MESH':
-                return selected_objects
+            #elif selected_objects[0].type == 'MESH':
+            return selected_objects
 
     @staticmethod
     def apply_modifiers(obj, pref):
