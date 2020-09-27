@@ -1310,10 +1310,10 @@ class GoB_OT_export(Operator):
         elif 'ZBrush.app' in PATH_ZBRUSH:
             Popen(['open', '-a', PATH_ZBRUSH, PATH_SCRIPT])     
         else:
-            if not isMacOS:
-                filepath = f"C:/Program Files/Pixologic/"
-            else:
+            if isMacOS:
                 filepath = f"/Applications/"
+            else:
+                filepath = f"C:/Program Files/Pixologic/"
 
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
             #Popen([PATH_ZBRUSH, PATH_SCRIPT])
@@ -1345,9 +1345,9 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser"
       
     if isMacOS:
-        bl_label = "Load ZBrush.exe" 
+        bl_label = "Load ZBrush.app" 
     else:
-        bl_label = "Load ZBrus.app" 
+        bl_label = "Load ZBrus.exe" 
 
     def execute(self, context):
         """Do something with the selected file(s)."""  
