@@ -7,7 +7,7 @@ author: Daniel Grauer
 
 [VarDef,GoBImport,0]
 [VarDef,timer,-1]
-[VarDef,finalReport,1]
+[VarDef,finalReport,-1]
 [VarDef,finalReportTimer,100]
 [VarDef,maxSubtools,999]
 
@@ -215,8 +215,10 @@ author: Daniel Grauer
                     //[Note,[StrMerge, "\n\C00FFFFinsert new tool:     ", count,"    ",  objectName],,timer] 
                     [IPress,Tool:Cube3D]
                     [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
-                    [IPress,PopUp:PolyMesh3D]                    
+                    [IPress,PopUp:PolyMesh3D]   // draw new tool in canvas and delete initial (first) Subtool                     
                     //[Note,[StrMerge,"\ninsert subtool special: \n",objectName] ,,timer] 
+                    [CanvasStroke,(ZObjStrokeV02n82=H2C2V1AEYH2C2V1AEK1Xh2C27Fv1AD80H2C1v1AEFFH2C2V1BAH2C2V1BCH2C2V1C0H2C2V1C1H2C2V1C6H2C2V1CBH2C2V1CCH2C2V1D2H2C2V1D7H2C2V1DEH2C2V1DFH2C2V1E4H2C2V1EAH2C2V1F0H2C2V1F5H2C2V1FBH2C2V1FCH2C2V1FCH2C2V200H2C2V201H2C2V206H2C2V20BH2C2V20BH2C2V20EH2C2V20FH2C2V20FH2C2V213H2C2V217H2C2V219H2C2V21BH2C2V21CH2C2V220H2C2V224H2C2V225H2C2V229H2C2V22AH2C2V22EH2C2V22FH2C2V233H2C2V234H2C2V238H2C2V239H2C2V23EH2C2V243H2C2V244H2C2V248H2C2V249H2C2V24AH2C2V24EH2C2V252H2C2V257H2C2V258H2C2V25DH2C2V25EH2C2V262H2C2V263H2C2V267H2C2V268H2C2V269H2C2V26DH2C2V26EH2C2V26FH2C2V270H2C2V272H2C2V277H2C2V278H2C2V27BH2C2V27FH2C2V280H2C2V281H2C2V283H2C2V284H2C2V287H2C2V289H2C2V28AH2C2V28BH2C2V28DH2C2V28D)]                    
+        
                 ,   
                     [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
                     [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
@@ -226,8 +228,12 @@ author: Daniel Grauer
                     ,                  
                         [IPress,Tool:SubTool:Insert]
                         [IPress,PopUp:PolyMesh3D]
-                    ]                    
+                    ]  
+                    //[SubToolSelect,0]
+                    //[IPress,Tool:SubTool:Delete] // currently its not possible to confirm delete by script
+                    
                 ]
+
                 [If,[FileExists,objectPath],
                     [FileNameSetNext,objectPath] 
                     [IPress,Tool:Import]                            
@@ -235,13 +241,17 @@ author: Daniel Grauer
                 ]                       
                 [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer]       
             ]
-            
+                
+
             //next loop or exit if end of file
             [VarSet,gOffset,gOffset+lineBytes]
             [If,gOffset >= [MemGetSize,GoB_TextInputMem],
                 [LoopExit]
             ]
         ]
+        
+        [IPress,Transform: Edit]
+        //[IPress,Transform:Fit]  
     ]
     [MemDelete,GoB_TextInputMem]        //all done, delete memblock
     
