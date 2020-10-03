@@ -1290,38 +1290,37 @@ class GoB_OT_export(Operator):
             currentContext = context.object.mode
             bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
 
-        with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
-            for obj in context.selected_objects:
-                if  obj.type == 'MESH':
-                    numFaces = len(obj.data.polygons)
-                    if numFaces:
-                        self.escape_object_name(obj)
-                        self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
-                        with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
-                            ztn.write(f'{PATH_PROJECT}{obj.name}')
-                        GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
-                    else:
-                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
-
-                    
-        global cached_last_edition_time
-        cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-        PATH_ZBRUSH = pref.zbrush_exec
-        PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
-        
-        if 'ZBrush.exe' in PATH_ZBRUSH:    
-            Popen([PATH_ZBRUSH, PATH_SCRIPT])
-        elif 'ZBrush.app' in PATH_ZBRUSH:
-            Popen(['open', '-a', PATH_ZBRUSH, PATH_SCRIPT])     
-        else:
+        if not pref.zbrush_exec and (not 'ZBrush.exe' in pref.zbrush_exec or not 'ZBrush.app' in pref.zbrush_exec):     
             if isMacOS:
                 filepath = f"/Applications/"
             else:
                 filepath = f"C:/Program Files/Pixologic/"
+            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)              
+        else:
+            with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
+                for obj in context.selected_objects:
+                    if  obj.type == 'MESH':
+                        numFaces = len(obj.data.polygons)
+                        if numFaces:
+                            self.escape_object_name(obj)
+                            self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                            with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
+                                ztn.write(f'{PATH_PROJECT}{obj.name}')
+                            GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
+                        else:
+                            print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
 
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
-            #Popen([PATH_ZBRUSH, PATH_SCRIPT])
+                        
+            global cached_last_edition_time
+            cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
             
+            PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
+
+            if 'ZBrush.exe' in pref.zbrush_exec:    
+                Popen([pref.zbrush_exec, PATH_SCRIPT])
+            elif 'ZBrush.app' in pref.zbrush_exec:
+                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT]) 
+                
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
