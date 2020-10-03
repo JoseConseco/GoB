@@ -9,7 +9,7 @@ author: Daniel Grauer
 [VarDef,timer,-1]
 [VarDef,finalReport,-1]
 [VarDef,finalReportTimer,100]
-[VarDef,maxSubtools,999]
+[VarDef,maxSubtools,999]  
 
 [VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
@@ -24,7 +24,7 @@ author: Daniel Grauer
     */
 
 
-[If,GoBImport==0, //make sure this runs when loaded
+[If,GoBImport==0, //make sure this script runs when loaded
     [RoutineDef,AdjustPath,//replace backslashes with forward slashes
         [VarDef,pathStr,""]
         [Loop,maxSubtools,
@@ -46,42 +46,42 @@ author: Daniel Grauer
     ,path]
 
     [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/"],1]]
-    [RoutineCall,AdjustPath,publicPath]//just as Notes don't display backslashes!
+    [RoutineCall,AdjustPath,publicPath] //just as Notes don't display backslashes!
     //[Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
 
-    [VarDef,gobVarsPath,""]
-    [VarDef, objectlistPath, ""]
+    [VarDef,GoZProjectsPath,""]
+    [VarDef, GoZBrushPath, ""]
 	[If,[ZBrushInfo,6],//is MacOS
 	 	[If,[StrFind,"Shared",publicPath]>-1,
-		 	[VarSet,gobVarsPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
-		 	[VarSet,gobVarsPath,[StrMerge,gobVarsPath,"Pixologic/GoZProjects/Default/"]]
+		 	[VarSet,GoZProjectsPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,GoZProjectsPath,[StrMerge,GoZProjectsPath,"Pixologic/GoZProjects/Default/"]]
 
-		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
-		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
+		 	[VarSet,GoZBrushPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,GoZBrushPath,[StrMerge,GoZBrushPath,"Pixologic/GoZBrush/"]]
 
-            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gobVarsPath],,timer]
-            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,timer]
 		 ]	 	
 	 	//note that ZBrush paths on MacOS start with "!:"
 	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
 	 	
          ,//else Windows
 		 [If,[StrFind,"Documents",publicPath]>-1,
-		 	[VarSet,gobVarsPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
-		 	[VarSet,gobVarsPath,[StrMerge,gobVarsPath,"Pixologic/GoZProjects/Default/"]]
-		 	[RoutineCall,AdjustPath,gobVarsPath]//just as Notes don't display backslashes!
+		 	[VarSet,GoZProjectsPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,GoZProjectsPath,[StrMerge,GoZProjectsPath,"Pixologic/GoZProjects/Default/"]]
+		 	[RoutineCall,AdjustPath,GoZProjectsPath]//just as Notes don't display backslashes!
 
-		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
-		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
-		 	[RoutineCall,AdjustPath,objectlistPath]//just as Notes don't display backslashes!
+		 	[VarSet,GoZBrushPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,GoZBrushPath,[StrMerge,GoZBrushPath,"Pixologic/GoZBrush/"]]
+		 	[RoutineCall,AdjustPath,GoZBrushPath]//just as Notes don't display backslashes!
 
-            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gobVarsPath],,timer]
-            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,timer]
 		 ]
 	]
 
 
-    [VarDef,variablesFile,[StrMerge,gobVarsPath,"GoB_variables.zvr"]]  
+    [VarDef,variablesFile,[StrMerge,GoZProjectsPath,"GoB_variables.zvr"]]  
     // load variables from GoB export
         /* File: Gob_variables.zvr
         0: object name, 1: fileExtension, 2: textureFormat,
@@ -128,12 +128,12 @@ author: Daniel Grauer
 
 
     //[IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
-    [VarSet,objectlistFile,[StrMerge,objectlistPath,"GoZ_ObjectList.txt"]] 
+    [VarSet,objectlistFile,[StrMerge,GoZBrushPath,"GoZ_ObjectList.txt"]] 
     //[Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,timer] 
 
     [If,[FileExists,objectlistFile],
         //create memory block from the file
-        [MemCreateFromFile,GoB_TextInputMem,objectlistFile]
+        [MemCreateFromFile,GoB_ObjectList_InputMem,objectlistFile]
     ]
 
     
