@@ -224,6 +224,7 @@ author: Daniel Grauer
             [VarSet,count,0]     //change this when object is found and skip creating new subtool
             [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
                 //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
+                
                 //update subtool        
                 [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
                     //[Note,[StrMerge, "\n\C00FF00MATCH  index:   ", count,"    ",  SubtoolList(count), " == ",  objectName],,timer]
@@ -245,6 +246,7 @@ author: Daniel Grauer
                 ]
             ]
             
+            [Note,[StrMerge, "\nimportAsSubtool: ", importAsSubtool],,0]
             //create new subtool
             [If, subtoolExists == -1,                     
                 [If,[ToolGetSubToolID] == 0, //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
@@ -258,7 +260,7 @@ author: Daniel Grauer
                     [CanvasClick,10,10,10,20]
                     [IPress,Transform: Edit]
                     [VarSet, isNewTool, 1]
-                ,   
+                ,  
                     [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
                     [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
                     [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
@@ -275,25 +277,22 @@ author: Daniel Grauer
                     ] 
                 ]                      
                 [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer]  
-            ]                
+            ]  
 
             //next loop or exit if end of file
             [VarSet,gOffset,gOffset+lineBytes]
-            [If,gOffset >= [MemGetSize,GoB_TextInputMem],
+            [If,gOffset >= [MemGetSize,GoB_ObjectList_InputMem],
                 [LoopExit]
             ]
         ]
-        
-        
-        [If, isNewTool == 1, // if a new tool was created frame it to the canvas otherwise it might not be visible   
-            
+
+        [If, isNewTool == 1, // if a new tool was created frame it to the canvas otherwise it might not be visible 
             [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
-            [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
-            
+            [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot] 
         ]        
     ]
     [VarSet, isNewTool, 0]
-    [MemDelete,GoB_TextInputMem]        //all done, delete memblock
+    [MemDelete,GoB_ObjectList_InputMem]        //all done, delete memblock
     
 
     // show summary of what was imorted
