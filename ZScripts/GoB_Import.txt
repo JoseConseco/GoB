@@ -159,21 +159,57 @@ author: Daniel Grauer
         ]
     ]
     
+    
+    [VarSet,cOffset,0]
+    [VarDef,configLineStr,""]
+    [VarDef,importAsSubtool, 0]  
+
+    [VarDef,configFile,[StrMerge,GoZBrushPath,"GoZ_Config.txt"]] 
+    [If,[FileExists,configFile],
+        //create memory block from the file
+        [MemCreateFromFile,GoB_Config_InputMem,configFile]
+    ]
+
+    [If,[MemGetSize,GoB_Config_InputMem],
+        [Loop,3,
+            //read a line into a string variable
+            [VarSet,lineBytes,[MemReadString,GoB_Config_InputMem,configLineStr,cOffset,1]]
+            //extract objects string
+            [VarSet,configLine,[StrExtract,configLineStr,0,lineBytes]]
+  
+            [If, [StrFind, "IMPORT_AS_SUBTOOL = TRUE", configLine] == 0,
+                [VarSet, importAsSubtool, 1]
+                [LoopExit]            
+            ]
+            [If, [StrFind, "IMPORT_AS_SUBTOOL = FALSE", configLine] == 0,
+                [VarSet, importAsSubtool, 0]
+                [LoopExit]            
+            ]    
+            //next loop or exit if end of file
+            [VarSet,cOffset,cOffset+lineBytes]
+                [Note,[StrMerge, "cOffset: ", cOffset],,timer]
+                [If,cOffset >= [MemGetSize,GoB_Config_InputMem],
+                    [LoopExit]
+                ]
+        ]
+        //[Note,[StrMerge, "\nconfigFile   ", configFile, " \nlineBytes ", lineBytes, " \nconfigLine ",configLine, "\nimportAsSubtool: ", importAsSubtool],,0]
+    ]    
+    [MemDelete,GoB_Config_InputMem]        //all done, delete memblock
+    
+
 
     [VarSet,gOffset,0]
-    [VarDef,lineStr,""]
+    [VarDef,objectLineStr,""]
     [VarDef,objectName,""]
     [RoutineCall,CreateSubtoolList]
-    [VarDef, subtoolExists, -1] 
-    
+    [VarDef, subtoolExists, -1]    
     [VarDef, isNewTool, 0] 
-   
-    [If,[MemGetSize,GoB_TextInputMem],
+    [If,[MemGetSize,GoB_ObjectList_InputMem],
         [Loop,maxSubtools,
             //read a line into a string variable
-            [VarSet,lineBytes,[MemReadString,GoB_TextInputMem,lineStr,gOffset,1]]
+            [VarSet,lineBytes,[MemReadString,GoB_ObjectList_InputMem,objectLineStr,gOffset,1]]
             //extract objects string
-            [VarSet,objectName,[StrExtract,lineStr,[StrLength,gozProjectPath],lineBytes]]
+            [VarSet,objectName,[StrExtract,objectLineStr,[StrLength,gozProjectPath],lineBytes]]
             // call routine for import here  
             
 	        [If,[ZBrushInfo,6],//is MacOS 
