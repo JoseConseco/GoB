@@ -166,6 +166,7 @@ author: Daniel Grauer
     [RoutineCall,CreateSubtoolList]
     [VarDef, subtoolExists, -1] 
     
+    [VarDef, isNewTool, 0] 
    
     [If,[MemGetSize,GoB_TextInputMem],
         [Loop,maxSubtools,
@@ -210,14 +211,17 @@ author: Daniel Grauer
             
             //create new subtool
             [If, subtoolExists == -1,                     
-                [If,[ToolGetSubToolID] == 0, 
-                //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
+                [If,[ToolGetSubToolID] == 0, //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
                     //[Note,[StrMerge, "\n\C00FFFFinsert new tool:     ", count,"    ",  objectName],,timer] 
-                    [IPress,Tool:Cube3D]
-                    [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
-                    [IPress,PopUp:PolyMesh3D]   // draw new tool in canvas and delete initial (first) Subtool                     
+                    [If,[FileExists,objectPath],
+                        [FileNameSetNext,objectPath] 
+                        [IPress,Tool:Import]                            
+                        [RoutineCall, LoadTextures]  
+                    ]                      
                     //[Note,[StrMerge,"\ninsert subtool special: \n",objectName] ,,timer] 
-                     [CanvasClick,10,10,10,200]
+                    [CanvasClick,10,10,10,20]
+                    [IPress,Transform: Edit]
+                    [VarSet, isNewTool, 1]
                 ,   
                     [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
                     [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
@@ -227,20 +231,15 @@ author: Daniel Grauer
                     ,                  
                         [IPress,Tool:SubTool:Insert]
                         [IPress,PopUp:PolyMesh3D]
-                    ]  
-                    //[SubToolSelect,0]
-                    //[IPress,Tool:SubTool:Delete] // currently its not possible to confirm delete by script
-                    
-                ]
-
-                [If,[FileExists,objectPath],
-                    [FileNameSetNext,objectPath] 
-                    [IPress,Tool:Import]                            
-                    [RoutineCall, LoadTextures]  
-                ]                       
-                [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer]       
-            ]
-                
+                    ]     
+                    [If,[FileExists,objectPath],
+                        [FileNameSetNext,objectPath] 
+                        [IPress,Tool:Import]                            
+                        [RoutineCall, LoadTextures]  
+                    ] 
+                ]                      
+                [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer]  
+            ]                
 
             //next loop or exit if end of file
             [VarSet,gOffset,gOffset+lineBytes]
@@ -249,16 +248,17 @@ author: Daniel Grauer
             ]
         ]
         
-        [IPress,Transform: Edit]
-        //[IPress,Transform:Fit]  
+        
+        [If, isNewTool == 1, // if a new tool was created frame it to the canvas otherwise it might not be visible   
+            
+            [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
+            [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
+            
+        ]        
     ]
+    [VarSet, isNewTool, 0]
     [MemDelete,GoB_TextInputMem]        //all done, delete memblock
     
-
-
-
-    
-
 
     // show summary of what was imorted
     [If, finalReport == 1,
