@@ -46,5 +46,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 *.pyc
-*.json
-/gob_updater
+.idea/
+.vscode/
+__pycache__

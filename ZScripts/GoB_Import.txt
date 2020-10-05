@@ -1,0 +1,281 @@
+/*
+name: GoB_Import.zsc 
+description: Zbrush script for Blender GoB addon
+tracker_url: https://github.com/JoseConseco/GoB
+author: Daniel Grauer
+*/
+
+[VarDef,GoBImport,0]
+[VarDef,timer,-1]
+[VarDef,finalReport,-1]
+[VarDef,finalReportTimer,100]
+[VarDef,maxSubtools,999]
+
+[VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
+    /* File: Gob_variables.zvr
+    0: object name, 
+    1: fileExtension, 
+    2: textureFormat,
+    3: diffTexture, 
+    4: normTexture, 
+    5: dispTexture 
+    6: GoB version
+    6: Project Path
+    */
+
+
+[If,GoBImport==0, //make sure this runs when loaded
+    [RoutineDef,AdjustPath,//replace backslashes with forward slashes
+        [VarDef,pathStr,""]
+        [Loop,maxSubtools,
+            [VarSet,in,[StrFind,[StrFromAsc,92],pathStr]]
+            [If,[Val,in] > -1,//"
+                [VarSet,pathStr,[StrMerge,[StrExtract,pathStr,0,[Val,in-1]],"/",[StrExtract,pathStr,[Val,in+1],[StrLength,pathStr]]]]
+                ,
+                [LoopExit]
+            ]		
+        ]
+    ,pathStr]
+
+    [RoutineDef,GetFullPath,	
+        [VarSet,path,[FileNameResolvePath,path]]
+        [If,[ZBrushInfo,6],//is MacOS
+            //adjust for Mac OSX
+            [VarSet,path,[StrExtract,path,2,256]]
+        ]
+    ,path]
+
+    [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/"],1]]
+    [RoutineCall,AdjustPath,publicPath]//just as Notes don't display backslashes!
+    //[Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
+
+    [VarDef,gobVarsPath,""]
+    [VarDef, objectlistPath, ""]
+	[If,[ZBrushInfo,6],//is MacOS
+	 	[If,[StrFind,"Shared",publicPath]>-1,
+		 	[VarSet,gobVarsPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,gobVarsPath,[StrMerge,gobVarsPath,"Pixologic/GoZProjects/Default/"]]
+
+		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
+		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
+
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gobVarsPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
+		 ]	 	
+	 	//note that ZBrush paths on MacOS start with "!:"
+	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
+	 	
+         ,//else Windows
+		 [If,[StrFind,"Documents",publicPath]>-1,
+		 	[VarSet,gobVarsPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,gobVarsPath,[StrMerge,gobVarsPath,"Pixologic/GoZProjects/Default/"]]
+		 	[RoutineCall,AdjustPath,gobVarsPath]//just as Notes don't display backslashes!
+
+		 	[VarSet,objectlistPath,[StrExtract,publicPath,0,([StrFind,"Documents",publicPath]-1)]]
+		 	[VarSet,objectlistPath,[StrMerge,objectlistPath,"Pixologic/GoZBrush/"]]
+		 	[RoutineCall,AdjustPath,objectlistPath]//just as Notes don't display backslashes!
+
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", gobVarsPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", objectlistPath],,timer]
+		 ]
+	]
+
+
+    [VarDef,variablesFile,[StrMerge,gobVarsPath,"GoB_variables.zvr"]]  
+    // load variables from GoB export
+        /* File: Gob_variables.zvr
+        0: object name, 1: fileExtension, 2: textureFormat,
+        3: diffSuffix, 4: normSuffix, 5: dispSuffix 
+        */
+
+	[If,[FileExists,variablesFile],    
+        [VarLoad,GoBList,variablesFile]
+        [VarSet,fileExtension,[StrMerge,GoBList(0),""]]
+        [VarSet,textureFormat,[StrMerge,GoBList(1),""]]
+        [VarSet,diffSuffix,[StrMerge,GoBList(2),""]]
+        [VarSet,normSuffix,[StrMerge,GoBList(3),""]]
+        [VarSet,dispSuffix,[StrMerge,GoBList(4),""]]  
+        [VarSet,gobVersion,[StrMerge,GoBList(5),""]]  
+        [VarSet,gozProjectPath,[StrMerge,GoBList(6),""]]      
+    , 
+        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,timer]
+        [Exit]
+    ]   
+    [Note,[StrMerge, "\CFFFFFFGoB Version: ",gobVersion, "\n"],,timer]
+       
+
+    [RoutineDef,LoadTextures,
+        [VarSet,diffTexture,[StrMerge,gozProjectPath,objectName,diffSuffix,textureFormat]]
+        [VarSet,dispTexture,[StrMerge,gozProjectPath,objectName,dispSuffix,textureFormat]]
+        [VarSet,normTexture,[StrMerge,gozProjectPath,objectName,normSuffix,textureFormat]]
+        // import textures
+        [If,[FileExists,diffTexture],
+            [IPress,Tool:Texture Map:TextureMap]
+            [FileNameSetNext,diffTexture] [IPress,Texture:Import]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,diffSuffix,textureFormat]],, timer]
+        ]
+        [If,[FileExists,dispTexture],
+            [IPress,Tool:Displacement Map:DisplacementMap]
+            [FileNameSetNext,dispTexture] [IPress,Alpha:Import]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
+        ]
+        [If,[FileExists,normTexture],            
+            [IPress,Tool:Normal Map:Normal Map]
+            [FileNameSetNext,normTexture] [IPress,Texture:Import]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
+        ]
+    ]
+
+
+    //[IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
+    [VarSet,objectlistFile,[StrMerge,objectlistPath,"GoZ_ObjectList.txt"]] 
+    //[Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,timer] 
+
+    [If,[FileExists,objectlistFile],
+        //create memory block from the file
+        [MemCreateFromFile,GoB_TextInputMem,objectlistFile]
+    ]
+
+    
+    [VarDef, SubtoolList(maxSubtools), ""] 
+    [RoutineDef,CreateSubtoolList,
+        [VarDef,subtoolName,""]                         // Define a new variable to store the current subtool name 
+        [VarSet,totalSubtools,[SubToolGetCount]]        // create a variable to define the number of loop based on the subtools count
+        [SubToolSelect,0]                               // select first subtool to loop over all subtools
+        [VarSet,activeSubtool,[SubToolGetActiveIndex]]  // create a variable with the current subtool Index
+
+        [Loop,totalSubtools,            //loop over subtools
+            [SubToolSelect,[Val,activeSubtool]]
+            [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
+            [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
+            //[Note,[StrMerge,"\nactiveSubtool: ",activeSubtool, "\nSubtool Name: ",subtoolName, " ",[StrLength,subtoolName], "\nTarget Object: ",  objectName, " ",[StrLength,objectName]],,0]
+            
+            [VarSet,SubtoolList(activeSubtool),subtoolName]         //add subtools to list
+
+            [VarInc, activeSubtool]     //adds 1 to the loop counter            
+            [If,activeSubtool >= totalSubtools,
+                [LoopExit]
+            ]
+        ]
+    ]
+    
+
+    [VarSet,gOffset,0]
+    [VarDef,lineStr,""]
+    [VarDef,objectName,""]
+    [RoutineCall,CreateSubtoolList]
+    [VarDef, subtoolExists, -1] 
+    
+   
+    [If,[MemGetSize,GoB_TextInputMem],
+        [Loop,maxSubtools,
+            //read a line into a string variable
+            [VarSet,lineBytes,[MemReadString,GoB_TextInputMem,lineStr,gOffset,1]]
+            //extract objects string
+            [VarSet,objectName,[StrExtract,lineStr,[StrLength,gozProjectPath],lineBytes]]
+            // call routine for import here  
+            
+	        [If,[ZBrushInfo,6],//is MacOS 
+                [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
+            , // else is Windows
+                [VarSet,objectPath,[StrMerge,gozProjectPath,objectName,fileExtension]]
+            ] 
+            
+            //[Note,[StrMerge, "\nobjectName \n    ", objectName],,timer]
+            //[Note,[StrMerge, "\nobjectPath \n    ", objectPath],,timer]
+
+            [VarSet,count,0]     //change this when object is found and skip creating new subtool
+            [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
+                //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
+                //update subtool        
+                [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
+                    //[Note,[StrMerge, "\n\C00FF00MATCH  index:   ", count,"    ",  SubtoolList(count), " == ",  objectName],,timer]
+                    [Note,[StrMerge,"\n\C00FF00Updated Subtool:    \CFFFFFF",objectName],,timer]            
+                    [SubToolSelect,count]
+                    [If,[FileExists,objectPath],
+                        [FileNameSetNext,objectPath] 
+                        [IPress,Tool:Import]                        
+                        [RoutineCall, LoadTextures]  
+                    ]   
+                    [VarSet, subtoolExists, objectName]    
+                    [LoopExit]
+                ,
+                    [VarSet, subtoolExists, -1]
+                ]
+                [VarInc, count]           
+                [If,count >= [VarSize,SubtoolList],
+                    [LoopExit]
+                ]
+            ]
+            
+            //create new subtool
+            [If, subtoolExists == -1,                     
+                [If,[ToolGetSubToolID] == 0, 
+                //if 0 a tool without subtools is active and a new tool needs to be created that can have subtools
+                    //[Note,[StrMerge, "\n\C00FFFFinsert new tool:     ", count,"    ",  objectName],,timer] 
+                    [IPress,Tool:Cube3D]
+                    [IPress,Tool:SubTool:Insert]    // insert subtool directly selects it so we do not need to know its name to continue
+                    [IPress,PopUp:PolyMesh3D]   // draw new tool in canvas and delete initial (first) Subtool                     
+                    //[Note,[StrMerge,"\ninsert subtool special: \n",objectName] ,,timer] 
+                    [CanvasStroke,(ZObjStrokeV02n82=H2C2V1AEYH2C2V1AEK1Xh2C27Fv1AD80H2C1v1AEFFH2C2V1BAH2C2V1BCH2C2V1C0H2C2V1C1H2C2V1C6H2C2V1CBH2C2V1CCH2C2V1D2H2C2V1D7H2C2V1DEH2C2V1DFH2C2V1E4H2C2V1EAH2C2V1F0H2C2V1F5H2C2V1FBH2C2V1FCH2C2V1FCH2C2V200H2C2V201H2C2V206H2C2V20BH2C2V20BH2C2V20EH2C2V20FH2C2V20FH2C2V213H2C2V217H2C2V219H2C2V21BH2C2V21CH2C2V220H2C2V224H2C2V225H2C2V229H2C2V22AH2C2V22EH2C2V22FH2C2V233H2C2V234H2C2V238H2C2V239H2C2V23EH2C2V243H2C2V244H2C2V248H2C2V249H2C2V24AH2C2V24EH2C2V252H2C2V257H2C2V258H2C2V25DH2C2V25EH2C2V262H2C2V263H2C2V267H2C2V268H2C2V269H2C2V26DH2C2V26EH2C2V26FH2C2V270H2C2V272H2C2V277H2C2V278H2C2V27BH2C2V27FH2C2V280H2C2V281H2C2V283H2C2V284H2C2V287H2C2V289H2C2V28AH2C2V28BH2C2V28DH2C2V28D)]                    
+        
+                ,   
+                    [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
+                    [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
+                    [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
+                        [IPress,Tool:SubTool:Insert]
+                        [IPress,PopUp:Cube3D] 
+                    ,                  
+                        [IPress,Tool:SubTool:Insert]
+                        [IPress,PopUp:PolyMesh3D]
+                    ]  
+                    //[SubToolSelect,0]
+                    //[IPress,Tool:SubTool:Delete] // currently its not possible to confirm delete by script
+                    
+                ]
+
+                [If,[FileExists,objectPath],
+                    [FileNameSetNext,objectPath] 
+                    [IPress,Tool:Import]                            
+                    [RoutineCall, LoadTextures]  
+                ]                       
+                [Note,[StrMerge,"\n\CFFEE00Created Subtool:      \CFFFFFF",objectName] ,,timer]       
+            ]
+                
+
+            //next loop or exit if end of file
+            [VarSet,gOffset,gOffset+lineBytes]
+            [If,gOffset >= [MemGetSize,GoB_TextInputMem],
+                [LoopExit]
+            ]
+        ]
+        
+        [IPress,Transform: Edit]
+        //[IPress,Transform:Fit]  
+    ]
+    [MemDelete,GoB_TextInputMem]        //all done, delete memblock
+    
+
+
+
+    
+
+
+    // show summary of what was imorted
+    [If, finalReport == 1,
+        [Note,
+            "\n\n\CFFFFFFGoB import finished!",
+            none, //Optional path1 of an interface item to be pointed out (default:none), 
+            finalReportTimer, //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
+            0x606060, //Popup background color (0x000000<->0xffffff, default:0x606060, 0:No Background), 
+            48, //Prefered distance of the note from the specified interface item (default:48), 
+            600, //Prefered Note width (in pixels, default:400), 
+            0x000000, //optional marked windows fill color (0x000000<->0xffffff or (blue+(green*256)+(red*65536))(Omitted value:No fill)),
+            1, //Frame horizontal size (1:Max width (default)), 
+            1, //Frame vertical size (1:Max height (default)), 
+            0, //Frame left side (0:left (default), .5:center, 1:right) Omit value for horizontal autocentering, 
+            0, //Frame top side ( 0:top (default), .5:center, 1:bottom )Omit value for vertical auto-centering, 
+            "IMAGE_GMenuIcons/zscript.psd" //Optional icon file name            
+        ]
+    ]
+]/*End of ZScript*/
