@@ -199,7 +199,7 @@ author: Daniel Grauer
    [RoutineDef, FindSubtool,  
         [VarSet,count,0]
         [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
-            [Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
+            //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
             
             [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
                 [VarSet, subtoolExists, objectName] 
@@ -231,7 +231,7 @@ author: Daniel Grauer
         [IPress,Transform: Fit]
         [VarSet, isNewTool, 1]
         
-        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName, newTool],,0]
+        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName, newTool],,timer]
     
     , objectName, objectPath, isNewSubtool]
 
@@ -246,6 +246,10 @@ author: Daniel Grauer
                 [IPress,Tool:Import]                            
                 [RoutineCall, LoadTextures]  
             ]
+            [CanvasClick,10,10,10,20]
+            [IPress,Transform: Edit]
+            [IPress,Transform: Fit]
+            [VarSet, isNewTool, 1]
         ,
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
@@ -260,7 +264,7 @@ author: Daniel Grauer
                 [RoutineCall, LoadTextures]  
             ] 
         ]
-        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,0] 
+        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,timer] 
     
     , objectName, objectPath]
 
@@ -274,7 +278,7 @@ author: Daniel Grauer
             [IPress,Tool:Import]                        
             [RoutineCall, LoadTextures]  
         ] 
-        [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,0]  
+        [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,timer]  
 
     , objectName, objectPath]
 
@@ -312,17 +316,20 @@ author: Daniel Grauer
             [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,timer]
             [VarDef, isNewSubtool, importAsSubtool]
             [If, isNewSubtool == 0, // | [ToolGetSubToolID] == 0, 
-                // add new tool 3        
+                // add new tool       
                 [Note,[StrMerge, "\n test condition: ", isNewSubtool, "   ", [ToolGetSubToolID] ],,timer]
                 
                 [RoutineCall, AddTool, objectName, objectPath, isNewSubtool]
             , //else       
-                // update subtools 1
+                // update subtools
                 //[RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
-            // add subtools 4
+            // add subtools
             [If, subtoolExists != 0,
                 [RoutineCall, AddSubTool, objectName, objectPath]
+            ,//else       
+                // update subtools
+                [RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
 
             //next loop or exit if end of file
