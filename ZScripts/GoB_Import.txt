@@ -186,7 +186,7 @@ author: Daniel Grauer
             ]    
             //next loop or exit if end of file
             [VarSet,configCount,configCount+lineBytes]
-                [Note,[StrMerge, "\nconfigCount: ", configCount],,timer]
+                //[Note,[StrMerge, "\nconfigCount: ", configCount],,timer]
                 [If,configCount >= [MemGetSize,GoB_Config_InputMem],
                     [LoopExit]
                 ]
@@ -203,13 +203,13 @@ author: Daniel Grauer
             
             [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
                 [VarSet, subtoolExists, objectName] 
-                [VarSet,subtoolCount,count] 
+                [VarSet,subtoolCount, count] 
                 [LoopExit]
             ,
                 [VarSet, subtoolExists, -1] 
             ] 
             [VarInc, count]           
-            [If,count >= [VarSize,SubtoolList],
+            [If,count >= [VarSize, SubtoolList],
                 [LoopExit]
             ]
         ]
@@ -219,31 +219,30 @@ author: Daniel Grauer
     [RoutineDef, AddTool, 
         //create a new tool if option in GoZ is set to import as new tool
         [If, isNewSubtool == 0, 
-            [IKeyPress,13,[IPress,Tool:SimpleBrush]] //select simple brush to create new tool from it     
+            [IKeyPress,13,[IPress,Tool:Plane3D]] //select simple brush to create new tool from it     
         ]
-        [If,[FileExists,objectPath],
-            [FileNameSetNext,objectPath] 
-            [IPress,Tool:Import]                            
+        [If,[FileExists, objectPath],
+            [FileNameSetNext, objectPath] 
+            [IPress, Tool:Import]                            
             [RoutineCall, LoadTextures]  
         ]                      
-        [CanvasClick,10,10,10,20]
-        [IPress,Transform: Edit]
-        [IPress,Transform: Fit]
-        [VarSet, isNewTool, 1]
+        [CanvasClick, 10, 10, 10, 20]
+        [IPress, Transform: Edit]
+        [IPress, Transform: Fit]
         
-        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName, newTool],,timer]
+        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,timer]
     
     , objectName, objectPath, isNewSubtool]
 
 
     [RoutineDef, AddSubTool,        
         [VarDef, subtoolCount, 0]
-        [VarSet,subtoolName,[IGetTitle,"Tool:ItemInfo"]]        //get the subtool name
-        [VarSet,subtoolName,[StrExtract,subtoolName,0,[StrLength,subtoolName]-2]]       // trim chars from the end.
+        [VarSet,subtoolName,[IGetTitle, "Tool:ItemInfo"]]        //get the subtool name
+        [VarSet,subtoolName,[StrExtract, subtoolName, 0,[StrLength, subtoolName]-2]]       // trim chars from the end.
         [If, [ToolGetSubToolID] == 0,
-            [If,[FileExists,objectPath],
-                [FileNameSetNext,objectPath] 
-                [IPress,Tool:Import]                            
+            [If,[FileExists, objectPath],
+                [FileNameSetNext, objectPath] 
+                [IPress, Tool:Import]                            
                 [RoutineCall, LoadTextures]  
             ]
             [CanvasClick,10,10,10,20]
@@ -289,7 +288,7 @@ author: Daniel Grauer
     [VarDef,subtoolName,""]    
     [VarDef, SubtoolList(maxSubtools), ""]  
     [RoutineCall,CreateSubtoolList]
-    [VarDef, subtoolExists, -1]
+    [VarDef, subtoolExists, ""]
 
     [If,[MemGetSize,GoB_ObjectList_InputMem],
         [Loop,maxSubtools,
@@ -311,25 +310,29 @@ author: Daniel Grauer
  
     
 
-            [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]
             
+            
+            [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]
+
             [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,timer]
             [VarDef, isNewSubtool, importAsSubtool]
-            [If, isNewSubtool == 0, // | [ToolGetSubToolID] == 0, 
-                // add new tool       
-                [Note,[StrMerge, "\n test condition: ", isNewSubtool, "   ", [ToolGetSubToolID] ],,timer]
-                
+            // add new tool  
+            [If, isNewSubtool == 0, // | [ToolGetSubToolID] == 0,                      
+                //[Note,[StrMerge, "\n test condition: ", isNewSubtool, "   ", [ToolGetSubToolID] ],,timer]                
                 [RoutineCall, AddTool, objectName, objectPath, isNewSubtool]
+                
+                
             , //else       
                 // update subtools
-                //[RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
+            
+            [Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,0]  
             // add subtools
-            [If, subtoolExists != 0,
-                [RoutineCall, AddSubTool, objectName, objectPath]
+            [If, subtoolExists != -1,
+                //[RoutineCall, AddSubTool, objectName, objectPath]
             ,//else       
                 // update subtools
-                [RoutineCall, UpdateSubTool, objectName, objectPath]
+                //[RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
 
             //next loop or exit if end of file
