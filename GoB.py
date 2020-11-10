@@ -37,7 +37,7 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator 
 
 
-isMacOS = None
+isMacOS = False
 if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
     PATH_GOZ = "/Users/Shared/Pixologic"
     FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
@@ -47,8 +47,7 @@ elif os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.
     FROM_APP = "GoZBrushFromApp.exe"
     isMacOS = False
 else:
-    PATH_GOZ = False
-    isMacOS = None
+    PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
 
 
 
@@ -1348,7 +1347,7 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     if isMacOS:
         bl_label = "Load ZBrush.app" 
     else:
-        bl_label = "Load ZBrus.exe" 
+        bl_label = "Load ZBrush.exe" 
 
     def execute(self, context):
         """Do something with the selected file(s)."""  
