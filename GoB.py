@@ -391,7 +391,7 @@ class GoB_OT_import(Operator):
                                 faceMap = obj.face_maps[str(group)] 
 
                             try:
-                                if obj.data.polygons(i):    
+                                if obj.data.polygons[i]:
                                     faceMap.add([i])     # add faces to facemap
                             except:
                                 pass
