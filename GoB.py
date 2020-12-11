@@ -38,10 +38,8 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator 
 
 
-print(platform.system())
-
 isMacOS = False
-if platform.system() == 'Windows':    
+if platform.system() == 'Windows':  
     print("GoB Found System: ", platform.system())
     isMacOS = False
     if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
