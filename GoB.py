@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import platform
 import os
 import shutil
 from subprocess import Popen
@@ -37,18 +38,25 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator 
 
 
-isMacOS = False
-if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
-    PATH_GOZ = "/Users/Shared/Pixologic"
-    FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
-    isMacOS = True
-elif os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-    PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
-    FROM_APP = "GoZBrushFromApp.exe"
-    isMacOS = False
-else:
-    PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+print(platform.system())
 
+isMacOS = False
+if platform.system() == 'Windows':    
+    print("GoB Found System: ", platform.system())
+    isMacOS = False
+    if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+        PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
+        FROM_APP = "GoZBrushFromApp.exe"
+
+elif platform.system() == 'Darwin': #osx
+    print("GoB Found System: ", platform.system())
+    isMacOS = True
+    if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
+        PATH_GOZ = "/Users/Shared/Pixologic"
+        FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+else:
+    print("GoB Unkonwn System: ", platform.system())
+    PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
 
 
 PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
