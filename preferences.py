@@ -148,7 +148,7 @@ class GoBPreferences(AddonPreferences):
                    ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
-            default='TEXTURES')            
+            default='POLYPAINT')            
     import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
