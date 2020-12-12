@@ -38,16 +38,13 @@ def gob_init_os_paths():
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-            PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
-            FROM_APP = "GoZBrushFromApp.exe"
-
+        #if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+        PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
         isMacOS = True
-        if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
-            PATH_GOZ = "/Users/Shared/Pixologic"
-            FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+        #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
+        PATH_GOZ = "/Users/Shared/Pixologic"
     else:
         print("GoB Unkonwn System: ", platform.system())
         PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
@@ -55,10 +52,10 @@ def gob_init_os_paths():
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = bpy.app.binary_path.replace("\\", "/")
 
-    return isMacOS, PATH_GOZ, FROM_APP, PATH_GOB, PATH_BLENDER
+    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER
 
 
-isMacOS, PATH_GOZ, FROM_APP, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
+isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
