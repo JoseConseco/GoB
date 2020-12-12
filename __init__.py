@@ -34,10 +34,10 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 4, 12),
+    "version": (3, 4, 13),
     "blender": (2, 83, 0),
     "location": "In the info header",
-    "wiki_url": "https://github.com/JoseConseco/GoB/wiki",                
+    "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
     "tracker_url": "https://github.com/JoseConseco/GoB/issues/new",
     "category": "Import-Export"}
 
