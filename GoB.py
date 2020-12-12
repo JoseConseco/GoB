@@ -17,7 +17,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-import platform
 import os
 import shutil
 from subprocess import Popen
@@ -27,38 +26,40 @@ import mathutils
 import math
 import time
 from struct import pack, unpack
-from copy import deepcopy
 import string
 import numpy
-from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
-from bpy_extras.image_utils import load_image
-
-from bpy.props import StringProperty, BoolProperty 
 from bpy_extras.io_utils import ImportHelper 
 from bpy.types import Operator 
 
 
-isMacOS = False
-if platform.system() == 'Windows':  
-    print("GoB Found System: ", platform.system())
+def gob_init_os_paths():   
     isMacOS = False
-    if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-        PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
-        FROM_APP = "GoZBrushFromApp.exe"
+    import platform
+    if platform.system() == 'Windows':  
+        print("GoB Found System: ", platform.system())
+        isMacOS = False
+        if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
+            PATH_GOZ = (os.environ['PUBLIC'] + "/Pixologic").replace("\\", "/")
+            FROM_APP = "GoZBrushFromApp.exe"
 
-elif platform.system() == 'Darwin': #osx
-    print("GoB Found System: ", platform.system())
-    isMacOS = True
-    if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
-        PATH_GOZ = "/Users/Shared/Pixologic"
-        FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
-else:
-    print("GoB Unkonwn System: ", platform.system())
-    PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+    elif platform.system() == 'Darwin': #osx
+        print("GoB Found System: ", platform.system())
+        isMacOS = True
+        if os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"):
+            PATH_GOZ = "/Users/Shared/Pixologic"
+            FROM_APP = "GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"
+    else:
+        print("GoB Unkonwn System: ", platform.system())
+        PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+    
+    PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
+    PATH_BLENDER = bpy.app.binary_path.replace("\\", "/")
+
+    return isMacOS, PATH_GOZ, FROM_APP, PATH_GOB, PATH_BLENDER
 
 
-PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
-PATH_BLENDER = bpy.app.binary_path.replace("\\", "/")
+isMacOS, PATH_GOZ, FROM_APP, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
+
 
 time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
