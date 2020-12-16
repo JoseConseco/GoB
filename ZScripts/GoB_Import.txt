@@ -5,7 +5,7 @@ tracker_url: https://github.com/JoseConseco/GoB
 author: Daniel Grauer
 */
 
-[VarDef,GoBImport,0]
+[VarDef,GoBImport,1]
 [VarDef,timer,-1]
 [VarDef,finalReport,-1]
 [VarDef,finalReportTimer,100]
@@ -24,7 +24,7 @@ author: Daniel Grauer
     */
 
 
-[If,GoBImport==0, //make sure this script runs when loaded
+[If,GoBImport==1, //make sure this script runs when loaded
     [RoutineDef,AdjustPath,//replace backslashes with forward slashes
         [VarDef,pathStr,""]
         [Loop,maxSubtools,
@@ -197,16 +197,18 @@ author: Daniel Grauer
         
 
    [RoutineDef, FindSubtool,  
+    // search for subtools with object name in subtoolList 
+    // and return a list with the names of s
         [VarSet,count,0]
         [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
             //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
             
             [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
-                [VarSet, subtoolExists, objectName] 
+                [VarSet, subtoolExists, objectName] //subtoolExists (str:objectName/ -1: for no subtool match
                 [VarSet,subtoolCount, count] 
                 [LoopExit]
             ,
-                [VarSet, subtoolExists, -1] 
+                [VarSet, subtoolExists, -1] //subtoolExists (str:objectName/ -1: for no subtool match
             ] 
             [VarInc, count]           
             [If,count >= [VarSize, SubtoolList],
@@ -226,9 +228,11 @@ author: Daniel Grauer
             [IPress, Tool:Import]                            
             [RoutineCall, LoadTextures]  
         ]                      
+        // new tool was created, frame it to the canvas otherwise it might not be visible
         [CanvasClick, 10, 10, 10, 20]
-        [IPress, Transform: Edit]
-        [IPress, Transform: Fit]
+        [IPress, Transform: Edit] 
+        [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
+        [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
         
         [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,timer]
     
@@ -247,8 +251,7 @@ author: Daniel Grauer
             ]
             [CanvasClick,10,10,10,20]
             [IPress,Transform: Edit]
-            [IPress,Transform: Fit]
-            [VarSet, isNewTool, 1]
+            //[IPress,Transform: Fit]
         ,
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
@@ -283,22 +286,25 @@ author: Daniel Grauer
 
 
     [VarSet,objectCount,0]
-    [VarDef,objectLineStr,""]
-    [VarDef, isNewTool, 0]     
+    [VarDef,objectLineStr,""]  
     [VarDef,subtoolName,""]    
     [VarDef, SubtoolList(maxSubtools), ""]  
     [RoutineCall,CreateSubtoolList]
-    [VarDef, subtoolExists, ""]
+    [VarDef, subtoolExists, ""]             //subtoolExists (str:objectName/ -1: for no subtool match
 
     [If,[MemGetSize,GoB_ObjectList_InputMem],
+
         [Loop,maxSubtools,
+
             //read a line into a string variable
             [VarSet,lineBytes,[MemReadString,GoB_ObjectList_InputMem,objectLineStr,objectCount,1]]
+
             //extract objects string
             [VarDef,objectName,""]
             [VarSet,objectName,[StrExtract,objectLineStr,[StrLength,gozProjectPath],lineBytes]]
-            // call routine for import here  
-        
+
+
+            // call routines for import here          
             [VarDef,objectPath,""]
 	        [If,[ZBrushInfo,6],//is MacOS 
                 [VarSet,objectPath,[StrMerge,"!:",gozProjectPath,objectName,fileExtension]]
@@ -311,43 +317,46 @@ author: Daniel Grauer
     
 
             
-            
+            //find subtool
             [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]
-
             [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,timer]
+           
             [VarDef, isNewSubtool, importAsSubtool]
+           
+
+
+
             // add new tool  
             [If, isNewSubtool == 0, // | [ToolGetSubToolID] == 0,                      
                 //[Note,[StrMerge, "\n test condition: ", isNewSubtool, "   ", [ToolGetSubToolID] ],,timer]                
                 [RoutineCall, AddTool, objectName, objectPath, isNewSubtool]
                 
                 
-            , //else       
-                // update subtools
+            , // update subtools                    
+                //[RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
-            
-            [Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,0]  
+            //[Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,0]  
+
+
+
+
             // add subtools
             [If, subtoolExists != -1,
                 //[RoutineCall, AddSubTool, objectName, objectPath]
-            ,//else       
-                // update subtools
+            
+            ,//update subtools
                 //[RoutineCall, UpdateSubTool, objectName, objectPath]
             ]
+
+
 
             //next loop or exit if end of file
             [VarSet,objectCount,objectCount+lineBytes]
             [If,objectCount >= [MemGetSize,GoB_ObjectList_InputMem],
                 [LoopExit]
             ]
-        ]
-
-        [If, isNewTool == 1, // if a new tool was created frame it to the canvas otherwise it might not be visible 
-            [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
-            [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot] 
-        ]        
+        ]     
     ]
-    [VarSet, isNewTool, 0]
     [MemDelete,GoB_ObjectList_InputMem]        //all done, delete memblock
     
 
