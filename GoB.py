@@ -64,6 +64,17 @@ icons = None
 cached_last_edition_time = time.time() - 10.0
 
 preview_collections = {}
+
+""" def modal(self, context, event):
+    if event.type == 'MOUSEMOVE': 
+        if event.type == 'LEFT_SHIFT' and event.value == 'PRESS':
+            #do something
+
+    import keyboard as kb
+    while True:
+        if kb.is_pressed("a"):break
+"""
+
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
