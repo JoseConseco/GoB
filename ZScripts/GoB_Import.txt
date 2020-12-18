@@ -5,10 +5,10 @@ tracker_url: https://github.com/JoseConseco/GoB
 author: Daniel Grauer
 */
 
-[VarDef,GoBImport,1]
-[VarDef,timer,-1]
-[VarDef,finalReport,-1]
-[VarDef,finalReportTimer,100]
+[VarDef,GoBImport,1]        
+[VarDef,reportDuration,-1]   //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
+[VarDef,showFinalReport,-1]      // Final Report (1: show, 0 Hide)
+[VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,maxSubtools,999]  
 
 [VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
@@ -47,7 +47,7 @@ author: Daniel Grauer
 
     [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/"],1]]
     [RoutineCall,AdjustPath,publicPath] //just as Notes don't display backslashes!
-    //[Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,timer]
+    //[Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,reportDuration]
 
     [VarDef,GoZProjectsPath,""]
     [VarDef, GoZBrushPath, ""]
@@ -59,8 +59,8 @@ author: Daniel Grauer
 		 	[VarSet,GoZBrushPath,[StrExtract,publicPath,0,([StrFind,"Shared",publicPath]+6)]]
 		 	[VarSet,GoZBrushPath,[StrMerge,GoZBrushPath,"Pixologic/GoZBrush/"]]
 
-            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,timer]
-            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,reportDuration]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,reportDuration]
 		 ]	 	
 	 	//note that ZBrush paths on MacOS start with "!:"
 	 	//this needs to be removed if passing paths to dynamic libraries etc. - see GetFullPath routine above
@@ -75,8 +75,8 @@ author: Daniel Grauer
 		 	[VarSet,GoZBrushPath,[StrMerge,GoZBrushPath,"Pixologic/GoZBrush/"]]
 		 	[RoutineCall,AdjustPath,GoZBrushPath]//just as Notes don't display backslashes!
 
-            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,timer]
-            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,timer]
+            //[Note,[StrMerge, "\nThe GoZ Projects path is: \n    ", GoZProjectsPath],,reportDuration]
+            //[Note,[StrMerge, "\nThe GoZ objects list path is: \n    ", GoZBrushPath],,reportDuration]
 		 ]
 	]
 
@@ -98,10 +98,10 @@ author: Daniel Grauer
         [VarSet,gobVersion,[StrMerge,GoBList(5),""]]  
         [VarSet,gozProjectPath,[StrMerge,GoBList(6),""]]      
     , 
-        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,timer]
+        [Note,[StrMerge,"\n\nGoB_variables.zvr not Found", "\naborting import"],,reportDuration]
         [Exit]
     ]   
-    [Note,[StrMerge, "\CFFFFFFGoB Version: ",gobVersion, "\n"],,timer]
+    [Note,[StrMerge, "\CFFFFFFGoB Version: ",gobVersion, "\n"],,reportDuration]
        
 
     [RoutineDef,LoadTextures,
@@ -112,24 +112,24 @@ author: Daniel Grauer
         [If,[FileExists,diffTexture],
             [IPress,Tool:Texture Map:TextureMap]
             [FileNameSetNext,diffTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,diffSuffix,textureFormat]],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,diffSuffix,textureFormat]],, reportDuration]
         ]
         [If,[FileExists,dispTexture],
             [IPress,Tool:Displacement Map:DisplacementMap]
             [FileNameSetNext,dispTexture] [IPress,Alpha:Import]
-            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, reportDuration]
         ]
         [If,[FileExists,normTexture],            
             [IPress,Tool:Normal Map:Normal Map]
             [FileNameSetNext,normTexture] [IPress,Texture:Import]
-            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, timer]
+            [Note, [StrMerge, "\n   Texture:   ", [StrMerge,objectName,dispSuffix,textureFormat]],, reportDuration]
         ]
     ]
 
 
     //[IButton,ReadObjectList,"Read objects from GoZ_ObjectList.txt",
     [VarSet,objectlistFile,[StrMerge,GoZBrushPath,"GoZ_ObjectList.txt"]] 
-    //[Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,timer] 
+    //[Note,[StrMerge, "\objectlistFile \n    ", objectlistFile],,reportDuration] 
 
     [If,[FileExists,objectlistFile],
         //create memory block from the file
@@ -186,7 +186,7 @@ author: Daniel Grauer
             ]    
             //next loop or exit if end of file
             [VarSet,configCount,configCount+lineBytes]
-                //[Note,[StrMerge, "\nconfigCount: ", configCount],,timer]
+                [Note,[StrMerge, "\nconfigCount: ", configCount],,reportDuration]
                 [If,configCount >= [MemGetSize,GoB_Config_InputMem],
                     [LoopExit]
                 ]
@@ -201,7 +201,7 @@ author: Daniel Grauer
     // and return a list with the names of s
         [VarSet,count,0]
         [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
-            //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,timer] 
+            //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,reportDuration] 
             
             [If, ([StrFind,SubtoolList(count),objectName]==0) && ([StrLength,SubtoolList(count)]==[StrLength,objectName]),
                 [VarSet, subtoolExists, objectName] //subtoolExists (str:objectName/ -1: for no subtool match
@@ -233,7 +233,7 @@ author: Daniel Grauer
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
         [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
         
-        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,timer]
+        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]
     
     , objectName, objectPath]
 
@@ -265,7 +265,9 @@ author: Daniel Grauer
                 [RoutineCall, LoadTextures]  
             ] 
         ]
-        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,timer] 
+        
+        
+        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration] 
     
     , objectName, objectPath]
 
@@ -279,7 +281,7 @@ author: Daniel Grauer
             [IPress,Tool:Import]                        
             [RoutineCall, LoadTextures]  
         ] 
-        [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,timer]  
+        [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,reportDuration]  
 
     , objectName, objectPath]
 
@@ -318,12 +320,12 @@ author: Daniel Grauer
             
             //find subtool
             [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]
-            [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,timer]         
+            [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,reportDuration]         
               
 
             // import as Tool
             [If, importAsSubtool == 0, // | [ToolGetSubToolID] == 0,                      
-                //[Note,[StrMerge, "\n test condition: ", importAsSubtool, "   ", [ToolGetSubToolID] ],,timer]                
+                //[Note,[StrMerge, "\n test condition: ", importAsSubtool, "   ", [ToolGetSubToolID] ],,reportDuration]                
                 [RoutineCall, AddTool, objectName, objectPath]                
                 
             , // Import as Subtools            
@@ -349,11 +351,11 @@ author: Daniel Grauer
     
 
     // show summary of what was imorted
-    [If, finalReport == 1,
+    [If, showFinalReport == 1,
         [Note,
             "\n\n\CFFFFFF GoB import finished!",
             none, //Optional path1 of an interface item to be pointed out (default:none), 
-            finalReportTimer, //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
+            finalReportreportDuration, //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
             0x606060, //Popup background color (0x000000<->0xffffff, default:0x606060, 0:No Background), 
             48, //Prefered distance of the note from the specified interface item (default:48), 
             600, //Prefered Note width (in pixels, default:400), 
