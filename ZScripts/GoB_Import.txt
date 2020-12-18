@@ -7,7 +7,7 @@ author: Daniel Grauer
 
 [VarDef,GoBImport,1]        
 [VarDef,reportDuration,-1]   //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
-[VarDef,showFinalReport,-1]      // Final Report (1: show, 0 Hide)
+[VarDef,showFinalReport,0]      // Final Report (1: show, 0 Hide)
 [VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,maxSubtools,999]  
 
@@ -329,14 +329,14 @@ author: Daniel Grauer
                 [RoutineCall, AddTool, objectName, objectPath]                
                 
             , // Import as Subtools            
-                [Note,[StrMerge, "\n importAsSubtool passed: ", importAsSubtool],,0] 
+                [Note,[StrMerge, "\n importAsSubtool passed: ", importAsSubtool],,reportDuration] 
                 [If, subtoolExists != -1, //subtoolExists (str:objectName/ -1: for no subtool match
                     [RoutineCall, AddSubTool, objectName, objectPath]                
                 ,//update subtools
                     [RoutineCall, UpdateSubTool, objectName, objectPath]
                 ]                            
             ]
-            //[Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,0] 
+            //[Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,reportDuration] 
 
 
 
