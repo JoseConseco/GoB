@@ -1311,13 +1311,11 @@ class GoB_OT_export(Operator):
                 import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tFALSE'
                 print(import_as_subtool)
                 replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tTRUE', import_as_subtool) 
-                replace_string = file_source.replace('IMPORT_AS_SUBTOOL = TRUE', import_as_subtool)
                 print(replace_string)
             else:
                 import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tTRUE'
                 print(import_as_subtool)
                 replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tFALSE', import_as_subtool) 
-                replace_string = file_source.replace('IMPORT_AS_SUBTOOL = FALSE', import_as_subtool) 
                 print(replace_string)
             f.close()
             
