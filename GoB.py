@@ -65,16 +65,6 @@ cached_last_edition_time = time.time() - 10.0
 
 preview_collections = {}
 
-""" def modal(self, context, event):
-    if event.type == 'MOUSEMOVE': 
-        if event.type == 'LEFT_SHIFT' and event.value == 'PRESS':
-            #do something
-
-    import keyboard as kb
-    while True:
-        if kb.is_pressed("a"):break
-"""
-
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
@@ -832,8 +822,10 @@ def run_import_periodically():
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export selected Objects to ZBrush"
-    
+    bl_description = "Export selected Objects to ZBrush\n" \
+                        "LeftMouse: as Subtool\n"\
+                        "SHIFT + LeftMouse: as Tool"
+
     @classmethod
     def poll(cls, context):
         selected_objects = context.selected_objects
@@ -875,8 +867,8 @@ class GoB_OT_export(Operator):
         bm.free()
 
         return export_mesh
-
-
+    
+    
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences        
         PATH_PROJECT = pref.project_path.replace("\\", "/")   
@@ -1258,8 +1250,14 @@ class GoB_OT_export(Operator):
         bpy.data.meshes.remove(me)
         return
 
-    def execute(self, context):  
+    ## alternate button input
+    def invoke(self, context, event):
+        self.modifier_shift = event.shift
+        self.modifier_alt = event.alt
+        return self.execute(context)
 
+
+    def execute(self, context):  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences             
         PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
@@ -1275,8 +1273,8 @@ class GoB_OT_export(Operator):
 
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
-                GoZ_Config.write(f"PATH = \"{PATH_BLENDER}\"")
+            with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoB_Config:
+                GoB_Config.write(f"PATH = \"{PATH_BLENDER}\"")
             #specify GoZ application
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")            
@@ -1285,8 +1283,7 @@ class GoB_OT_export(Operator):
         #update project path
         print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
-            GoZ_Application.write(PATH_PROJECT)  
-            
+            GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
         if pref.clean_project_path:
@@ -1295,6 +1292,37 @@ class GoB_OT_export(Operator):
                 if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
                     print('cleaning file:', file_name)
                     os.remove(PATH_PROJECT + file_name)
+
+
+        
+        """
+        # a object can either be imported as tool or as subtool in zbrush
+        # the IMPORT_AS_SUBTOOL needs to be changed in ..\Pixologic\GoZBrush\GoZ_Config.txt 
+        # for zbrush to recognize the import mode   
+            GoZ_Config.txt
+                PATH = "C:\PROGRAM FILES\PIXOLOGIC\ZBRUSH 2021/ZBrush.exe"
+                IMPORT_AS_SUBTOOL\t=\tTRUE
+                SHOW_HELP_WINDOW\t=\tTRUE 
+        """         
+
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as f:
+            file_source = f.read()
+            if self.modifier_shift or self.modifier_alt:  ## see invoke function for modifier states 
+                import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tFALSE'
+                print(import_as_subtool)
+                replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tTRUE', import_as_subtool) 
+                print(replace_string)
+            else:
+                import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tTRUE'
+                print(import_as_subtool)
+                replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tFALSE', import_as_subtool) 
+                print(replace_string)
+            f.close()
+            
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt", "w") as f: 
+            f.write(replace_string) 
+            f.close()
+            
 
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
@@ -1306,7 +1334,8 @@ class GoB_OT_export(Operator):
                 filepath = f"/Applications/"
             else:
                 filepath = f"C:/Program Files/Pixologic/"
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)              
+            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)      
+
         else:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
                 for obj in context.selected_objects:
@@ -1330,12 +1359,14 @@ class GoB_OT_export(Operator):
             if 'ZBrush.exe' in pref.zbrush_exec:    
                 Popen([pref.zbrush_exec, PATH_SCRIPT])
             elif 'ZBrush.app' in pref.zbrush_exec:
-                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT]) 
-                
+                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])   
+
         if context.object:
             bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
+    
+    
 
     def escape_object_name(self, obj):
         """
