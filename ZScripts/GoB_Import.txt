@@ -6,12 +6,12 @@ author: Daniel Grauer
 */
 
 [VarDef,GoBImport,1]        
-[VarDef,reportDuration,-1]   //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
-[VarDef,showFinalReport,0]      // Final Report (1: show, 0 Hide)
+[VarDef,reportDuration,-1]      //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
+[VarDef,showFinalReport,1]      // Final Report (1: show, 0 Hide)
 [VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,maxSubtools,999]  
 
-[VarDef,GoBList(7),""] // NOTE: if list size changes gob export list size needs to be udpated as well
+[VarDef,GoBList(7),""]          // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
     0: object name, 
     1: fileExtension, 
@@ -24,8 +24,8 @@ author: Daniel Grauer
     */
 
 
-[If,GoBImport==1, //make sure this script runs when loaded
-    [RoutineDef,AdjustPath,//replace backslashes with forward slashes
+[If,GoBImport==1,               //make sure this script runs when loaded
+    [RoutineDef,AdjustPath,     //replace backslashes with forward slashes
         [VarDef,pathStr,""]
         [Loop,maxSubtools,
             [VarSet,in,[StrFind,[StrFromAsc,92],pathStr]]
@@ -39,14 +39,14 @@ author: Daniel Grauer
 
     [RoutineDef,GetFullPath,	
         [VarSet,path,[FileNameResolvePath,path]]
-        [If,[ZBrushInfo,6],//is MacOS
+        [If,[ZBrushInfo,6],     //is MacOS
             //adjust for Mac OSX
             [VarSet,path,[StrExtract,path,2,256]]
         ]
     ,path]
 
     [VarSet,publicPath,[FileNameExtract,[FileNameResolvePath,"ZPUBLIC_ZPluginData/"],1]]
-    [RoutineCall,AdjustPath,publicPath] //just as Notes don't display backslashes!
+    [RoutineCall,AdjustPath,publicPath]         //just as Notes don't display backslashes!
     //[Note,[StrMerge, "\nThe ZBrush Data folder path is: \n    ", publicPath],,reportDuration]
 
     [VarDef,GoZProjectsPath,""]
@@ -169,6 +169,7 @@ author: Daniel Grauer
         [MemCreateFromFile,GoB_Config_InputMem,configFile]
     ]
 
+
     [If,[MemGetSize,GoB_Config_InputMem],
         [Loop,3,
             //read a line into a string variable
@@ -186,7 +187,7 @@ author: Daniel Grauer
             ]    
             //next loop or exit if end of file
             [VarSet,configCount,configCount+lineBytes]
-                [Note,[StrMerge, "\nconfigCount: ", configCount],,reportDuration]
+                //[Note,[StrMerge, "\nconfigCount: ", configCount],,reportDuration]
                 [If,configCount >= [MemGetSize,GoB_Config_InputMem],
                     [LoopExit]
                 ]
@@ -198,7 +199,7 @@ author: Daniel Grauer
 
    [RoutineDef, FindSubtool,  
     // search for subtools with object name in subtoolList 
-    // and return a list with the names of s
+    // and return a list with the names of subtools
         [VarSet,count,0]
         [Loop,[VarSize,SubtoolList],   // search for subtools with object name in subtoolList 
             //[Note,[StrMerge,"\nStrLength: \n index:", count, " >length: ",[StrLength,SubtoolList(count)], " > Name: ", SubtoolList(count)],,reportDuration] 
@@ -218,6 +219,21 @@ author: Daniel Grauer
     , objectName, SubtoolList, subtoolExists]
 
 
+    [RoutineDef, setOrigin,
+        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
+        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
+        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
+        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
+        // set offset and scale to default, this has been transfered to the subtool.
+        [ISet,Tool:Export:Scale,1]
+        [ISet,Tool:Export:X Offset,0.0]
+        [ISet,Tool:Export:Y Offset,0.0]
+        [ISet,Tool:Export:Z Offset,0.0]        
+        //[Note,[StrMerge, "\n GoB Origin transfered", ""],,reportDuration]  
+    ]
+
+
     [RoutineDef, AddTool, 
         //create a new tool if option in GoZ is set to import as new tool
         [IKeyPress,13,[IPress,Tool:Plane3D]] //select simple brush to create new tool from it   
@@ -231,21 +247,8 @@ author: Daniel Grauer
         [IPress, Transform: Edit] 
         [IPress,Transform: Fit]
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
-        [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
-        
-        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
-        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
-        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
-        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
-        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
-        // set offset and scale to default, this has been transfered to the subtool.
-        [ISet,Tool:Export:Scale,1]
-        [ISet,Tool:Export:X Offset,0.0]
-        [ISet,Tool:Export:Y Offset,0.0]
-        [ISet,Tool:Export:Z Offset,0.0]
-
-        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]
-    
+        [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]   
+        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]    
     , objectName, objectPath]
 
 
@@ -261,7 +264,7 @@ author: Daniel Grauer
             ]
             [CanvasClick,10,10,10,20]
             [IPress,Transform: Edit]
-            //[IPress,Transform: Fit]
+            [IPress,Transform: Fit]
         ,
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
@@ -275,51 +278,24 @@ author: Daniel Grauer
                 [IPress,Tool:Import]                            
                 [RoutineCall, LoadTextures]  
             ] 
-        ]
-        
-        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
-        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
-        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
-        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
-        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
-        // set offset and scale to default, this has been transfered to the subtool.
-        [ISet,Tool:Export:Scale,1]
-        [ISet,Tool:Export:X Offset,0.0]
-        [ISet,Tool:Export:Y Offset,0.0]
-        [ISet,Tool:Export:Z Offset,0.0]
-        
-        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration] 
-    
+        ]                
+        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]     
     , objectName, objectPath]
 
 
     [RoutineDef, UpdateSubTool,
-        [VarDef, subtoolCount, 0] 
-
+        //[VarDef, subtoolCount, objectMemIndex]       // TODO: this needs to be set to the correct index, find it in the subtool List the object name
         [SubToolSelect,subtoolCount]
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath] 
             [IPress,Tool:Import]                        
             [RoutineCall, LoadTextures]  
-        ] 
-        
-        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
-        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
-        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
-        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
-        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
-        // set offset and scale to default, this has been transfered to the subtool.
-        [ISet,Tool:Export:Scale,1]
-        [ISet,Tool:Export:X Offset,0.0]
-        [ISet,Tool:Export:Y Offset,0.0]
-        [ISet,Tool:Export:Z Offset,0.0]
-
+        ]         
         [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,reportDuration]  
+    , objectName, objectPath, subtoolCount]
 
-    , objectName, objectPath]
-
-
-    [VarSet,objectCount,0]
+    [VarSet,subtoolCount,0] 
+    [VarSet,objectMemIndex,0] 
     [VarDef,objectLineStr,""]  
     [VarDef,subtoolName,""]    
     [VarDef, SubtoolList(maxSubtools), ""]  
@@ -327,17 +303,12 @@ author: Daniel Grauer
     [VarDef, subtoolExists, ""]             //subtoolExists (str:objectName/ -1: for no subtool match
 
     [If,[MemGetSize,GoB_ObjectList_InputMem],
-
         [Loop,maxSubtools,
-
             //read a line into a string variable
-            [VarSet,lineBytes,[MemReadString,GoB_ObjectList_InputMem,objectLineStr,objectCount,1]]
-
+            [VarSet,lineBytes,[MemReadString,GoB_ObjectList_InputMem,objectLineStr,objectMemIndex,1]]
             //extract objects string
             [VarDef,objectName,""]
             [VarSet,objectName,[StrExtract,objectLineStr,[StrLength,gozProjectPath],lineBytes]]
-
-
             // call routines for import here          
             [VarDef,objectPath,""]
 	        [If,[ZBrushInfo,6],//is MacOS 
@@ -347,36 +318,34 @@ author: Daniel Grauer
             ]             
             //[Note,[StrMerge, "\nobjectName \n    ", objectName],,0]
             //[Note,[StrMerge, "\nobjectPath \n    ", objectPath],,0]
- 
-    
 
-            
             //find subtool
             [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]            
-            [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,reportDuration]         
-              
+            //[Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,reportDuration]                  
 
             // import as Tool
-            [If, importAsSubtool == 0, // | [ToolGetSubToolID] == 0,                      
-                //[Note,[StrMerge, "\n test condition: ", importAsSubtool, "   ", [ToolGetSubToolID] ],,reportDuration]                
-                [RoutineCall, AddTool, objectName, objectPath]                
-                
-            , // Import as Subtools  
-                [Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,reportDuration]           
-                [Note,[StrMerge, "\n importAsSubtool passed: ", importAsSubtool],,reportDuration] 
+            [If, importAsSubtool == 0,                                   
+                [RoutineCall, AddTool, objectName, objectPath] 
+            , 
+            // Import as Subtools  
                 [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
                     [RoutineCall, AddSubTool, objectName, objectPath]                
-                ,//update subtools
-                    [RoutineCall, UpdateSubTool, objectName, objectPath]
+                ,
+                    //update subtools
+                    [If, subtoolExists == objectName, 
+                        [RoutineCall, UpdateSubTool, objectName, objectPath, subtoolCount]
+                    ,
+                        //does a exception exist?
+                        [Note,[StrMerge, "\n GoB subtool exception: ", subtoolExists, objectName],,reportDuration] 
+                    ]
                 ]                            
             ]
-            //[Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,reportDuration] 
 
-
-
+            [RoutineCall, setOrigin]
             //next loop or exit if end of file
-            [VarSet,objectCount,objectCount+lineBytes]
-            [If,objectCount >= [MemGetSize,GoB_ObjectList_InputMem],
+            [VarSet, subtoolCount, subtoolCount + 1]
+            [VarSet, objectMemIndex, objectMemIndex + lineBytes]
+            [If, objectMemIndex >= [MemGetSize, GoB_ObjectList_InputMem],
                 [LoopExit]
             ]
         ]     
@@ -402,6 +371,9 @@ author: Daniel Grauer
         ]
     ]
 ]/*End of ZScript*/
+
+
+
 
 
 //[SubToolGetFolderName,4] //return the folder name that the 5th subtool was in, or an empty string if it wasn’t in a folder.
