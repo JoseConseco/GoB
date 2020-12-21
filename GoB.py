@@ -401,13 +401,13 @@ class GoB_OT_import(Operator):
                                 pass
                             
                     try:
-                        print("VGs: ", obj.vertex_groups.get('0'))
+                        #print("VGs: ", obj.vertex_groups.get('0'))
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
                     try:
-                        print("FMs: ", obj.face_maps.get('0'))
+                        #print("FMs: ", obj.face_maps.get('0'))
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
@@ -568,7 +568,7 @@ class GoB_OT_import(Operator):
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':
             currentContext = context.object.mode
-            print("currentContext: ", currentContext)
+            #print("currentContext: ", currentContext)
             # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
             bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
         
@@ -1061,12 +1061,12 @@ class GoB_OT_export(Operator):
            
             # --Polygroups--     
             if not pref.export_polygroups == 'NONE':  
-                print("Export Polygroups: ", pref.export_polygroups)
+                #print("Export Polygroups: ", pref.export_polygroups)
                 import random
 
                 #Polygroups from Face Maps
                 if pref.export_polygroups == 'FACE_MAPS':
-                    print(obj.face_maps.items)
+                    #print(obj.face_maps.items)
                     if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
@@ -1158,8 +1158,8 @@ class GoB_OT_export(Operator):
                             if vg is None:
                                 vg = obj.vertex_groups.new(name=slot.material.name)
                                 vg.add(verts, 1.0, 'ADD')
-                else:
-                    print("Export Polygroups: ", pref.export_polygroups)
+                """ else:
+                    #print("Export Polygroups: ", pref.export_polygroups) """
                     
 
             # Diff, disp and norm maps
@@ -1291,7 +1291,7 @@ class GoB_OT_export(Operator):
             for file_name in os.listdir(PATH_PROJECT):
                 #print(file_name)
                 if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
-                    print('cleaning file:', file_name)
+                    #print('cleaning file:', file_name)
                     os.remove(PATH_PROJECT + file_name)
 
 
