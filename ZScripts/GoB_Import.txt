@@ -266,6 +266,17 @@ author: Daniel Grauer
             ] 
         ]
         
+        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
+        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
+        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
+        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
+        // set offset and scale to default, this has been transfered to the subtool.
+        [ISet,Tool:Export:Scale,1]
+        [ISet,Tool:Export:X Offset,0.0]
+        [ISet,Tool:Export:Y Offset,0.0]
+        [ISet,Tool:Export:Z Offset,0.0]
+
         
         [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration] 
     
