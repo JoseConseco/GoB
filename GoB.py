@@ -1301,29 +1301,25 @@ class GoB_OT_export(Operator):
         # for zbrush to recognize the import mode   
             GoZ_Config.txt
                 PATH = "C:\PROGRAM FILES\PIXOLOGIC\ZBRUSH 2021/ZBrush.exe"
-                IMPORT_AS_SUBTOOL\t=\tTRUE
-                SHOW_HELP_WINDOW\t=\tTRUE 
+                IMPORT_AS_SUBTOOL = TRUE
+                SHOW_HELP_WINDOW = TRUE 
         """         
+        import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
+        import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
 
-        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as f:
-            file_source = f.read()
-            if self.modifier_shift or self.modifier_alt:  ## see invoke function for modifier states 
-                import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tFALSE'
-                print(import_as_subtool)
-                replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tTRUE', import_as_subtool) 
-                print(replace_string)
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as r:
+            # IMPORT AS SUBTOOL
+            r = r.read().replace('\t', ' ')
+            if self.modifier_shift or self.modifier_alt:  ## see invoke function for modifier states
+                new_config = r.replace(import_as_subtool, import_as_tool)
+            # IMPORT AS TOOL
             else:
-                import_as_subtool = 'IMPORT_AS_SUBTOOL\t=\tTRUE'
-                print(import_as_subtool)
-                replace_string = file_source.replace('IMPORT_AS_SUBTOOL\t=\tFALSE', import_as_subtool) 
-                print(replace_string)
-            f.close()
-            
-        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt", "w") as f: 
-            f.write(replace_string) 
-            f.close()
-            
+                new_config = r.replace(import_as_tool, import_as_subtool)
 
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt", "w") as w:
+            w.write(new_config)
+
+            
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode

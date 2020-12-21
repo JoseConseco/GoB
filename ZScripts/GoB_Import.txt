@@ -319,7 +319,7 @@ author: Daniel Grauer
 
             
             //find subtool
-            [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]
+            [RoutineCall, FindSubtool, objectName, SubtoolList, subtoolExists]            
             [Note,[StrMerge, "\n\n importAsSubtool: ", importAsSubtool, "\n toolid: ", [ToolGetSubToolID], "\n subtoolExists:  ",subtoolExists ],,reportDuration]         
               
 
@@ -328,9 +328,10 @@ author: Daniel Grauer
                 //[Note,[StrMerge, "\n test condition: ", importAsSubtool, "   ", [ToolGetSubToolID] ],,reportDuration]                
                 [RoutineCall, AddTool, objectName, objectPath]                
                 
-            , // Import as Subtools            
+            , // Import as Subtools  
+                [Note,[StrMerge, "\n subtoolExists2: ", subtoolExists],,reportDuration]           
                 [Note,[StrMerge, "\n importAsSubtool passed: ", importAsSubtool],,reportDuration] 
-                [If, subtoolExists != -1, //subtoolExists (str:objectName/ -1: for no subtool match
+                [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
                     [RoutineCall, AddSubTool, objectName, objectPath]                
                 ,//update subtools
                     [RoutineCall, UpdateSubTool, objectName, objectPath]
