@@ -7,7 +7,7 @@ author: Daniel Grauer
 
 [VarDef,GoBImport,1]        
 [VarDef,reportDuration,-1]      //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
-[VarDef,showFinalReport,1]      // Final Report (1: show, 0 Hide)
+[VarDef,showFinalReport,0]      // Final Report (1: show, 0 Hide)
 [VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,maxSubtools,130]  
 
