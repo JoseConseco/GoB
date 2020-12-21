@@ -824,7 +824,7 @@ class GoB_OT_export(Operator):
     bl_label = "Export to ZBrush"
     bl_description = "Export selected Objects to ZBrush\n" \
                         "LeftMouse: as Subtool\n"\
-                        "SHIFT + LeftMouse: as Tool"
+                        "SHIFT/CTRL/ALT + LeftMouse: as Tool"
 
     @classmethod
     def poll(cls, context):
@@ -1253,6 +1253,7 @@ class GoB_OT_export(Operator):
     ## alternate button input
     def invoke(self, context, event):
         self.modifier_shift = event.shift
+        self.modifier_ctrl = event.ctrl
         self.modifier_alt = event.alt
         return self.execute(context)
 
@@ -1309,8 +1310,8 @@ class GoB_OT_export(Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as r:
             # IMPORT AS SUBTOOL
-            r = r.read().replace('\t', ' ')
-            if self.modifier_shift or self.modifier_alt:  ## see invoke function for modifier states
+            r = r.read().replace('\t', ' ') #fix indentations in source data
+            if self.modifier_shift or self.modifier_ctrl or self.modifier_alt:  ## see invoke function for modifier states
                 new_config = r.replace(import_as_subtool, import_as_tool)
             # IMPORT AS TOOL
             else:

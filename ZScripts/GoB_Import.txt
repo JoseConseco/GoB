@@ -233,6 +233,17 @@ author: Daniel Grauer
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
         [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]         
         
+        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
+        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
+        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
+        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
+        // set offset and scale to default, this has been transfered to the subtool.
+        [ISet,Tool:Export:Scale,1]
+        [ISet,Tool:Export:X Offset,0.0]
+        [ISet,Tool:Export:Y Offset,0.0]
+        [ISet,Tool:Export:Z Offset,0.0]
+
         [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]
     
     , objectName, objectPath]
@@ -276,7 +287,6 @@ author: Daniel Grauer
         [ISet,Tool:Export:X Offset,0.0]
         [ISet,Tool:Export:Y Offset,0.0]
         [ISet,Tool:Export:Z Offset,0.0]
-
         
         [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration] 
     
@@ -292,6 +302,18 @@ author: Daniel Grauer
             [IPress,Tool:Import]                        
             [RoutineCall, LoadTextures]  
         ] 
+        
+        // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
+        [ISet,Tool:Geometry:XYZ Size,[IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:X Position,[IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
+        [ISet,Tool:Geometry:Y Position,[IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
+        [ISet,Tool:Geometry:Z Position,[IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
+        // set offset and scale to default, this has been transfered to the subtool.
+        [ISet,Tool:Export:Scale,1]
+        [ISet,Tool:Export:X Offset,0.0]
+        [ISet,Tool:Export:Y Offset,0.0]
+        [ISet,Tool:Export:Z Offset,0.0]
+
         [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,reportDuration]  
 
     , objectName, objectPath]
