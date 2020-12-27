@@ -58,7 +58,7 @@ def gob_init_os_paths():
 isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
 
-time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
+time_interval = 1.0  # Check GoZ import for changes (in seconds) 
 run_background_update = False
 icons = None
 cached_last_edition_time = time.time() - 10.0
@@ -206,7 +206,7 @@ class GoB_OT_import(Operator):
                     bm = bmesh.new()
                     bm.from_mesh(me)
                     bm.faces.ensure_lookup_table() 
-                    #udpate vertex positions
+                    #update vertex positions
                     for i, v in enumerate(bm.verts):
                         v.co  = mathutils.Vector(vertsData[i])  
                     bm.to_mesh(me)   
@@ -566,16 +566,26 @@ class GoB_OT_import(Operator):
             return{'CANCELLED'}
 
         currentContext = 'OBJECT'
-        if context.object and context.object.mode != 'OBJECT':
-            currentContext = context.object.mode
-            #print("currentContext: ", currentContext)
-            # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
-            bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
+        if context.object:
+            if context.object.mode != 'EDIT':
+                currentContext = context.object.mode
+                #print("currentContext: ", currentContext)
+                # ! cant get proper context from timers for now to change mode: 
+                # https://developer.blender.org/T62074
+                bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
+            else:
+                bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
         
-        for ztool_path in goz_obj_paths:
+        
+        wm = context.window_manager
+        wm.progress_begin(0,100)
+        step =  100  / len(goz_obj_paths)
+        print("GoB Process Tools: ", len(goz_obj_paths))
+        for i, ztool_path in enumerate(goz_obj_paths):
             self.GoZit(ztool_path)
-            bpy.ops.object.mode_set(context.copy(), mode=currentContext)
-        self.report({'INFO'}, "Done")
+            wm.progress_update(step * i)
+        wm.progress_end()
+        self.report({'INFO'}, "Done\n\n")
         return{'FINISHED'}
 
     
@@ -806,7 +816,8 @@ def run_import_periodically():
 
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time
-        # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
+        # ! cant get proper context from timers for now. 
+        # Override context: https://developer.blender.org/T62074
         window = bpy.context.window_manager.windows[0]
         ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
         bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
@@ -1334,8 +1345,12 @@ class GoB_OT_export(Operator):
             bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)      
 
         else:
+            wm = context.window_manager
+            wm.progress_begin(0,100)
+            step =  100  / len(context.selected_objects)
+
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
-                for obj in context.selected_objects:
+                for i, obj in enumerate(context.selected_objects):
                     if  obj.type == 'MESH':
                         numFaces = len(obj.data.polygons)
                         if numFaces:
@@ -1346,8 +1361,10 @@ class GoB_OT_export(Operator):
                             GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                         else:
                             print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
-
-                        
+                    
+                    wm.progress_update(step * i)                
+                wm.progress_end()
+                
             global cached_last_edition_time
             cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
             
