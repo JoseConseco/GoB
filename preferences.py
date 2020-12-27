@@ -145,6 +145,15 @@ class GoBPreferences(AddonPreferences):
 
 
     # IMPORT
+    import_timer: FloatProperty(
+        name="Update interval",
+        description="Interval (in seconds) to look for changes in GoZ_ObjectList.txt",
+        default=0.5,
+        min = 0.1,
+        soft_max=2.0,
+        step=0.1,
+        precision=1,
+        subtype='FACTOR') 
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
@@ -269,7 +278,7 @@ class GoBPreferences(AddonPreferences):
         #EXPORT
         col = layout.column()
         box = layout.box()
-        box.label(text='Export', icon='EXPORT')  
+        box.label(text='Export Options', icon='EXPORT')  
         box.prop(self, 'export_modifiers')
         box.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
@@ -279,8 +288,9 @@ class GoBPreferences(AddonPreferences):
         # IMPORT
         col = layout.column(align=True)
         box = layout.box() 
-        box.label(text='Import', icon='IMPORT')
+        box.label(text='Import Options', icon='IMPORT')
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
+        box.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
         box.prop(self, 'import_material')  
         col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')

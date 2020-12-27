@@ -58,12 +58,12 @@ def gob_init_os_paths():
 isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
 
-time_interval = 1.0  # Check GoZ import for changes (in seconds) 
 run_background_update = False
 icons = None
-cached_last_edition_time = time.time() - 10.0
-
+cached_last_edition_time = time.time()
+last_cache = 0
 preview_collections = {}
+gob_import_cache = []
 
 def draw_goz_buttons(self, context):
     global run_background_update, icons
@@ -570,24 +570,29 @@ class GoB_OT_import(Operator):
                                            
             if pref.performance_profiling: 
                 profiler(start_total_time, "Total Import Time")  
-                print(30*"=")
+                print(30*"=")                
         return
              
 
     def execute(self, context):
+        global gob_import_cache
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
         goz_obj_paths = []
         try:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
-
         except PermissionError:
-            print("File already in use! Try again Later")
+            if pref.debug_output:
+                print("GoB: GoZ_ObjectList already in use! Try again Later")
 
+        # Goz wipes this file before each export so it can be used to reset the import cache
         if len(goz_obj_paths) == 0:
-            self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
+            if pref.debug_output:
+                self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList")            
+            gob_import_cache.clear()   #reset impor tool list
             return{'CANCELLED'}
-
+        
         currentContext = 'OBJECT'
         if context.object:
             if context.object.mode != 'EDIT':
@@ -599,16 +604,18 @@ class GoB_OT_import(Operator):
             else:
                 bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
         
-        
         wm = context.window_manager
-        wm.progress_begin(0,100)
+        wm.progress_begin(0,100)   
         step =  100  / len(goz_obj_paths)
-        print("GoB Process Tools: ", len(goz_obj_paths))
-        for i, ztool_path in enumerate(goz_obj_paths):
-            self.GoZit(ztool_path)
-            wm.progress_update(step * i)
+        for i, ztool_path in enumerate(goz_obj_paths):              
+            if not ztool_path in gob_import_cache:
+                gob_import_cache.append(ztool_path)
+                self.GoZit(ztool_path)            
+            wm.progress_update(step * i)               
         wm.progress_end()
-        self.report({'INFO'}, "Done\n\n")
+        if pref.debug_output:
+            self.report({'INFO'}, "GoB: Imoprt cycle finished")
+        
         return{'FINISHED'}
 
     
@@ -825,38 +832,42 @@ def avg_list_value(list):
 
 
 def run_import_periodically():
+    
+    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
 
     try:
         file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)
         run_background_update = False
         if bpy.app.timers.is_registered(run_import_periodically):
             bpy.app.timers.unregister(run_import_periodically)
-        return time_interval
-
+        return pref.import_timer
+    
+    
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time
         # ! cant get proper context from timers for now. 
-        # Override context: https://developer.blender.org/T62074
+        # Override context: https://developer.blender.org/T62074     
         window = bpy.context.window_manager.windows[0]
         ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
         bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-    else:
-        # print("GOZ: Nothing to update")
-        return time_interval
+    else: 
+        #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+        return pref.import_timer       
     
     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
         bpy.app.timers.unregister(run_import_periodically)
-    return time_interval
+    return pref.import_timer
 
 
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export selected Objects to ZBrush\n" \
+    bl_description = "Export selected Objects to ZBrush\n"\
                         "LeftMouse: as Subtool\n"\
                         "SHIFT/CTRL/ALT + LeftMouse: as Tool"
 
