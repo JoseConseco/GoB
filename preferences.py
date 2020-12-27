@@ -95,6 +95,10 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: BoolProperty(
         name="[Dev] Debug performance",
         description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
+        default=False)        
+    debug_output: BoolProperty(
+        name="[Dev] debug_output",
+        description="Show debug output in console, note this will slow down the GoZ transfer if enabled!",
         default=False)
     """      
     texture_format: EnumProperty(
@@ -259,6 +263,7 @@ class GoBPreferences(AddonPreferences):
             layout.prop(self, 'zbrush_scale')
         layout.prop(self, 'show_button_text')  
         layout.prop(self, 'performance_profiling')
+        layout.prop(self, 'debug_output')
         #layout.prop(self, 'texture_format')
 
         #EXPORT

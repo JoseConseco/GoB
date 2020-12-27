@@ -118,19 +118,22 @@ class GoB_OT_import(Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
-            print(f"Importing: {pathFile, objName}")            
+            if pref.debug_output:
+                print(f"Importing: {pathFile, objName}")            
             tag = goz_file.read(4)
             
             while tag:                
                 # Name
                 if tag == b'\x89\x13\x00\x00':
-                    print("name:", tag)
+                    if pref.debug_output:
+                        print("name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
-                    #print("Vertices:", tag)                    
+                    if pref.debug_output:
+                        print("Vertices:", tag)                    
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -141,7 +144,8 @@ class GoB_OT_import(Operator):
                 
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
-                    #print("Faces:", tag)
+                    if pref.debug_output:
+                        print("Faces:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -157,29 +161,35 @@ class GoB_OT_import(Operator):
                             facesData.append((v1, v2, v3, v4))
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
-                    #print("UVs:", tag)
+                    if pref.debug_output:
+                        print("UVs:", tag)
                     break
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00':  
-                    #print("Polypainting:", tag)
+                    if pref.debug_output:
+                        print("Polypainting:", tag)
                     break
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':  
-                    #print("Mask:", tag)
+                    if pref.debug_output:
+                        print("Mask:", tag)
                     break
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00': 
-                    #print("Polyroups:", tag) 
+                    if pref.debug_output:
+                        print("Polyroups:", tag) 
                     break
                 # End
                 elif tag == b'\x00\x00\x00\x00':  
-                    #print("End:", tag)
+                    if pref.debug_output:
+                        print("End:", tag)
                     break
                 # Unknown tags
                 else:
                     print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many mesh tags unknown...\n")
+                        if pref.debug_output:
+                            print("...Too many mesh tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
@@ -242,7 +252,8 @@ class GoB_OT_import(Operator):
                 
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':                    
-                    print("Import UV: ", pref.import_uv)
+                    if pref.debug_output:
+                        print("Import UV: ", pref.import_uv)
 
                     if pref.import_uv:  
                         goz_file.seek(4, 1)
@@ -281,7 +292,8 @@ class GoB_OT_import(Operator):
 
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00': 
-                    print("Import Polypaint: ", pref.import_polypaint)  
+                    if pref.debug_output:
+                        print("Import Polypaint: ", pref.import_polypaint)  
 
                     if pref.import_polypaint:
                         goz_file.seek(4, 1)
@@ -331,7 +343,8 @@ class GoB_OT_import(Operator):
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
-                    print("Import Mask: ", pref.import_mask)
+                    if pref.debug_output:
+                        print("Import Mask: ", pref.import_mask)
                     
                     
                     if pref.import_mask:
@@ -355,7 +368,8 @@ class GoB_OT_import(Operator):
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
-                    print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
+                    if pref.debug_output:
+                        print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
                     
                     #wipe face maps before importing new ones due to random naming
                     if pref.import_polygroups_to_facemaps:
@@ -424,12 +438,14 @@ class GoB_OT_import(Operator):
                 
                 # Diffuse Texture 
                 elif tag == b'\xc9\xaf\x00\x00':  
-                    #print("Diff map:", tag)
+                    if pref.debug_output:
+                        print("Diff map:", tag)
                     texture_name = (obj.name + pref.import_diffuse_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(diffName.decode('utf-8'))
+                    if pref.debug_output:
+                        print(diffName.decode('utf-8'))
                     img = bpy.data.images.load(diffName.strip().decode('utf-8'), check_existing=True) 
                     img.name = texture_name                                        
                     img.reload()
@@ -442,12 +458,14 @@ class GoB_OT_import(Operator):
 
                 # Displacement Texture 
                 elif tag == b'\xd9\xd6\x00\x00':  
-                    #print("Disp map:", tag)
+                    if pref.debug_output:
+                        print("Disp map:", tag)
                     texture_name = (obj.name + pref.import_displace_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]                    
-                    print(dispName.decode('utf-8'))                    
+                    if pref.debug_output:
+                        print(dispName.decode('utf-8'))                    
                     img = bpy.data.images.load(dispName.strip().decode('utf-8'), check_existing=True)  
                     img.name = texture_name                                       
                     img.reload()
@@ -459,12 +477,14 @@ class GoB_OT_import(Operator):
 
                 # Normal Map Texture
                 elif tag == b'\x51\xc3\x00\x00':   
-                    #print("Normal map:", tag)
+                    if pref.debug_output:
+                        print("Normal map:", tag)
                     texture_name = (obj.name + pref.import_normal_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(normName.decode('utf-8'))
+                    if pref.debug_output:
+                        print(normName.decode('utf-8'))
                     img = bpy.data.images.load(normName.strip().decode('utf-8'), check_existing=True) 
                     img.name = texture_name                                       
                     img.reload()
@@ -476,9 +496,11 @@ class GoB_OT_import(Operator):
                 
                 # Unknown tags
                 else: 
-                    print("Unknown tag:{0}".format(tag))
+                    if pref.debug_output:
+                        print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many object tags unknown...\n")
+                        if pref.debug_output:
+                            print("...Too many object tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
@@ -491,7 +513,8 @@ class GoB_OT_import(Operator):
             
             # Materials
             if pref.import_material == 'NONE':
-                print("Import Material: ", pref.import_material) 
+                if pref.debug_output:
+                    print("Import Material: ", pref.import_material) 
             else:
                 
                 if len(obj.material_slots) > 0:
