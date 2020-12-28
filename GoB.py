@@ -97,9 +97,8 @@ class GoB_OT_import(Operator):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
 
         if pref.performance_profiling: 
-            print("\n", 100*"=")
-            start_time = profiler(time.time(), "Start Import Profiling")
-            start_total_time = profiler(time.time(), "")
+            start_time = profiler(time.time(), "Start Object Profiling")
+            start_total_time = profiler(time.time(), "...")
 
         utag = 0
         vertsData = []
@@ -119,7 +118,8 @@ class GoB_OT_import(Operator):
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             if pref.debug_output:
-                print(f"Importing: {pathFile, objName}")            
+                print(f"Importing: {pathFile, objName}")  
+            print(f"GoB Importing: {objName}")            
             tag = goz_file.read(4)
             
             while tag:                
@@ -257,10 +257,11 @@ class GoB_OT_import(Operator):
 
                     if pref.import_uv:  
                         goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count                        
                         bm = bmesh.new()
-                        bm.from_mesh(me)
+                        bm.from_mesh(me) 
                         bm.faces.ensure_lookup_table()
+
                         if me.uv_layers:
                             if pref.import_uv_name in me.uv_layers:                            
                                 uv_layer = bm.loops.layers.uv.get(pref.import_uv_name)
@@ -280,7 +281,8 @@ class GoB_OT_import(Operator):
                                 x, y = unpack('<2f', goz_file.read(8))
 
                         bm.to_mesh(me)   
-                        bm.free()                       
+                        bm.free()    
+                                           
                         me.update(calc_edges=True, calc_edges_loose=True)  
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "UV Map") 
@@ -398,6 +400,7 @@ class GoB_OT_import(Operator):
                                 vg = obj.vertex_groups[str(group)]
                             vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
                         
+
                         # Face maps import
                         if pref.import_polygroups_to_facemaps:
                             if group not in facemapsData:
@@ -413,6 +416,7 @@ class GoB_OT_import(Operator):
                                     faceMap.add([i])     # add faces to facemap
                             except:
                                 pass
+                            
                             
                     try:
                         #print("VGs: ", obj.vertex_groups.get('0'))
@@ -569,7 +573,8 @@ class GoB_OT_import(Operator):
                     start_time = profiler(start_time, "Reveal Mesh Elements")
                                            
             if pref.performance_profiling: 
-                profiler(start_total_time, "Total Import Time")  
+                print(30*"=") 
+                profiler(start_total_time, "Object Import Time")  
                 print(30*"=")                
         return
              
@@ -587,7 +592,7 @@ class GoB_OT_import(Operator):
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
 
         # Goz wipes this file before each export so it can be used to reset the import cache
-        if len(goz_obj_paths) == 0:
+        if not goz_obj_paths:
             if pref.debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList")            
             gob_import_cache.clear()   #reset impor tool list
@@ -604,6 +609,12 @@ class GoB_OT_import(Operator):
             else:
                 bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
         
+
+        if pref.performance_profiling: 
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "GoB: Start Import Profiling")             
+            print(100*"=")
+
         wm = context.window_manager
         wm.progress_begin(0,100)   
         step =  100  / len(goz_obj_paths)
@@ -615,6 +626,11 @@ class GoB_OT_import(Operator):
         wm.progress_end()
         if pref.debug_output:
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
+
+        if pref.performance_profiling:  
+            start_time = profiler(start_time, "GoB: Total Import Time")            
+            print(100*"=")
+        
         
         return{'FINISHED'}
 
