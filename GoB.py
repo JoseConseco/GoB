@@ -375,9 +375,8 @@ class GoB_OT_import(Operator):
                         print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
                     
                     #wipe face maps before importing new ones due to random naming
-                    if pref.import_polygroups_to_facemaps:
-                        for i,facemap in enumerate(obj.face_maps):                              
-                            obj.face_maps.remove(facemap)
+                    if pref.import_polygroups_to_facemaps:              
+                        [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
 
 
                     groupsData = []
@@ -593,10 +592,10 @@ class GoB_OT_import(Operator):
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
 
         # Goz wipes this file before each export so it can be used to reset the import cache
-        if not goz_obj_paths:
+        if len(goz_obj_paths) == 0:
             if pref.debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList")            
-            gob_import_cache.clear()   #reset impor tool list
+            gob_import_cache.clear()   #reset import tool list
             return{'CANCELLED'}
         
         currentContext = 'OBJECT'
