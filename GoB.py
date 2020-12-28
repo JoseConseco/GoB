@@ -120,7 +120,8 @@ class GoB_OT_import(Operator):
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             if pref.debug_output:
                 print(f"Importing: {pathFile, objName}")  
-            print(f"GoB Importing: {objName}")            
+            if pref.performance_profiling:                
+                print(f"GoB Importing: {objName}")            
             tag = goz_file.read(4)
             
             while tag:                
@@ -582,7 +583,7 @@ class GoB_OT_import(Operator):
     def execute(self, context):
         global gob_import_cache
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-        goz_obj_paths = []
+        goz_obj_paths = []             
         try:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
@@ -592,10 +593,9 @@ class GoB_OT_import(Operator):
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
 
         # Goz wipes this file before each export so it can be used to reset the import cache
-        if len(goz_obj_paths) == 0:
+        if not goz_obj_paths:
             if pref.debug_output:
-                self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList")            
-            gob_import_cache.clear()   #reset import tool list
+                self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
         
         currentContext = 'OBJECT'
@@ -613,7 +613,7 @@ class GoB_OT_import(Operator):
         if pref.performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.time(), "GoB: Start Import Profiling")             
-            print(100*"-")
+            print(100*"-") 
 
         wm = context.window_manager
         wm.progress_begin(0,100)   
@@ -626,11 +626,10 @@ class GoB_OT_import(Operator):
         wm.progress_end()
         if pref.debug_output:
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
-
+            
         if pref.performance_profiling:  
             start_time = profiler(start_time, "GoB: Total Import Time")            
             print(100*"=")       
-        
         return{'FINISHED'}
 
     
@@ -660,7 +659,7 @@ class GoB_OT_import(Operator):
 
 
 def run_import_periodically():
-    
+    global gob_import_cache
     pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
@@ -677,14 +676,20 @@ def run_import_periodically():
     
     
     if file_edition_time > cached_last_edition_time:
-        cached_last_edition_time = file_edition_time
+        cached_last_edition_time = file_edition_time           
         # ! cant get proper context from timers for now. 
         # Override context: https://developer.blender.org/T62074     
         window = bpy.context.window_manager.windows[0]
         ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
         bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-    else: 
-        #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+    else:         
+        if gob_import_cache:  
+            if pref.debug_output:   
+                print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
+            gob_import_cache.clear()   #reset import cache
+        else:
+            #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+            pass    
         return pref.import_timer       
     
     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
