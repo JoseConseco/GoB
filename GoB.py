@@ -97,6 +97,7 @@ class GoB_OT_import(Operator):
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
 
         if pref.performance_profiling: 
+            print("\n")
             start_time = profiler(time.time(), "Start Object Profiling")
             start_total_time = profiler(time.time(), "...")
 
@@ -573,9 +574,9 @@ class GoB_OT_import(Operator):
                     start_time = profiler(start_time, "Reveal Mesh Elements")
                                            
             if pref.performance_profiling: 
-                print(30*"=") 
+                print(30*"-") 
                 profiler(start_total_time, "Object Import Time")  
-                print(30*"=")                
+                print(30*"-")                
         return
              
 
@@ -613,7 +614,7 @@ class GoB_OT_import(Operator):
         if pref.performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.time(), "GoB: Start Import Profiling")             
-            print(100*"=")
+            print(100*"-")
 
         wm = context.window_manager
         wm.progress_begin(0,100)   
@@ -629,8 +630,7 @@ class GoB_OT_import(Operator):
 
         if pref.performance_profiling:  
             start_time = profiler(start_time, "GoB: Total Import Time")            
-            print(100*"=")
-        
+            print(100*"=")       
         
         return{'FINISHED'}
 
@@ -657,6 +657,41 @@ class GoB_OT_import(Operator):
                     print('Disabling GOZ background listener')
                 run_background_update = False
             return{'FINISHED'}
+
+
+
+def run_import_periodically():
+    
+    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    # print("Runing timers update check")
+    global cached_last_edition_time, run_background_update
+
+    try:
+        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        #print("file_edition_time: ", file_edition_time, end='\n\n')
+    except Exception as e:
+        print(e)
+        run_background_update = False
+        if bpy.app.timers.is_registered(run_import_periodically):
+            bpy.app.timers.unregister(run_import_periodically)
+        return pref.import_timer
+    
+    
+    if file_edition_time > cached_last_edition_time:
+        cached_last_edition_time = file_edition_time
+        # ! cant get proper context from timers for now. 
+        # Override context: https://developer.blender.org/T62074     
+        window = bpy.context.window_manager.windows[0]
+        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+    else: 
+        #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+        return pref.import_timer       
+    
+    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
+        bpy.app.timers.unregister(run_import_periodically)
+    return pref.import_timer
+
 
 
 def create_node(mat, pref, diff=None, norm=None, disp=None):
@@ -846,38 +881,6 @@ def avg_list_value(list):
     avg = numpy.average(avgData)
     return (avg)
 
-
-def run_import_periodically():
-    
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
-    # print("Runing timers update check")
-    global cached_last_edition_time, run_background_update
-
-    try:
-        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-        #print("file_edition_time: ", file_edition_time, end='\n\n')
-    except Exception as e:
-        print(e)
-        run_background_update = False
-        if bpy.app.timers.is_registered(run_import_periodically):
-            bpy.app.timers.unregister(run_import_periodically)
-        return pref.import_timer
-    
-    
-    if file_edition_time > cached_last_edition_time:
-        cached_last_edition_time = file_edition_time
-        # ! cant get proper context from timers for now. 
-        # Override context: https://developer.blender.org/T62074     
-        window = bpy.context.window_manager.windows[0]
-        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-    else: 
-        #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
-        return pref.import_timer       
-    
-    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
-        bpy.app.timers.unregister(run_import_periodically)
-    return pref.import_timer
 
 
 class GoB_OT_export(Operator):
