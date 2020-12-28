@@ -587,8 +587,8 @@ class GoB_OT_import(Operator):
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
 
         # Goz wipes this file before each export so it can be used to reset the import cache
-        if len(goz_obj_paths) == 0:
-            if pref.debug_output:
+        if not goz_obj_paths:
+            if not pref.debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList")            
             gob_import_cache.clear()   #reset impor tool list
             return{'CANCELLED'}
