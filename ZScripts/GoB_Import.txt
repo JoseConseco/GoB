@@ -340,9 +340,7 @@ author: Daniel Grauer
                         //does a exception exist?
                         [Note,[StrMerge, "\n GoB subtool exception: ", subtoolExists, objectName],,reportDuration] 
                     ]
-                ]       
-                          
-                [VarSet, isSubtool, 0]                                 
+                ]                                      
             ]
     
             [RoutineCall, setOrigin]
