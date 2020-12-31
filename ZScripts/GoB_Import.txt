@@ -159,7 +159,7 @@ author: Daniel Grauer
     ]
     
     
-    [VarDef,importAsSubtool, 0]
+    [VarDef,importAsSubtool, 0] // True:1 / False: 0 
     [VarSet,configCount,0]
     [VarDef,configLineStr,""]  
 
@@ -216,15 +216,16 @@ author: Daniel Grauer
                 [LoopExit]
             ]
         ]
-    , objectName, SubtoolList, subtoolExists]
+    , objectName, SubtoolList, subtoolExists
+    ]
 
 
-    [RoutineDef, setOrigin,
+    [RoutineDef, setOrigin, 
         // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
         [ISet,Tool:Geometry:XYZ Size, [IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
-        [ISet,Tool:Geometry:X Position, [IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]]
-        [ISet,Tool:Geometry:Y Position, [IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]]
-        [ISet,Tool:Geometry:Z Position, [IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]]
+        [ISet,Tool:Geometry:X Position, ([IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]) * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:Y Position, ([IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]) * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Geometry:Z Position, ([IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]) * [IGet,Tool:Export: Scale]]
         // set offset and scale to default, this has been transfered to the subtool.
         [ISet,Tool:Export:Scale,1]
         [ISet,Tool:Export:X Offset,0.0]
@@ -236,18 +237,19 @@ author: Daniel Grauer
 
     [RoutineDef, AddTool, 
         //create a new tool if option in GoZ is set to import as new tool
-        [IKeyPress,13,[IPress,Tool:Plane3D]] //select simple brush to create new tool from it   
+        [IKeyPress,13,[IPress,Tool:Plane3D]] //select simple brush to create new tool from it 
+        [SubToolSelect,subtoolCount]
         [If,[FileExists, objectPath],
             [FileNameSetNext, objectPath] 
-            [IPress, Tool:Import]                            
+            [IPress, Tool:Import]                         
             [RoutineCall, LoadTextures]  
-        ]                      
+        ] 
         // new tool was created, frame it to the canvas otherwise it might not be visible
         [CanvasClick, 10, 10, 10, 20]
         [IPress, Transform: Edit] 
         [IPress,Transform: Fit]
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
-        [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]   
+        [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]
         [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]    
     , objectName, objectPath]
 
@@ -259,7 +261,7 @@ author: Daniel Grauer
         [If, [ToolGetSubToolID] == 0,
             [If,[FileExists, objectPath],
                 [FileNameSetNext, objectPath] 
-                [IPress, Tool:Import]                            
+                [IPress, Tool:Import]                      
                 [RoutineCall, LoadTextures]  
             ]
             [CanvasClick,10,10,10,20]
@@ -325,7 +327,7 @@ author: Daniel Grauer
 
             // import as Tool
             [If, importAsSubtool == 0,                                   
-                [RoutineCall, AddTool, objectName, objectPath] 
+                [RoutineCall, AddTool, objectName, objectPath]     
             , 
             // Import as Subtools  
                 [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
@@ -338,9 +340,11 @@ author: Daniel Grauer
                         //does a exception exist?
                         [Note,[StrMerge, "\n GoB subtool exception: ", subtoolExists, objectName],,reportDuration] 
                     ]
-                ]                            
+                ]       
+                          
+                [VarSet, isSubtool, 0]                                 
             ]
-
+    
             [RoutineCall, setOrigin]
             //next loop or exit if end of file
             [VarSet, subtoolCount, subtoolCount + 1]
