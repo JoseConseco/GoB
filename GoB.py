@@ -1458,6 +1458,8 @@ class GoB_OT_export(Operator):
 
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
+    '''Open file browser to specify Zbrush executable path, 
+        this path will be used by GoB to run the import zscripts'''
     bl_idname = "gob.open_filebrowser"
       
     if isMacOS:
@@ -1466,7 +1468,7 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
         bl_label = "Load ZBrush.exe" 
 
     def execute(self, context):
-        """Do something with the selected file(s)."""  
+        """open file browser to select the zbrush executable."""  
         pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
         filename, extension = os.path.splitext(self.filepath)
         if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
@@ -1477,5 +1479,30 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
             print("ZBrush executable not found, try selecting it again.")
 
         return {'FINISHED'}
+
+
+
+class GoB_OT_GoZ_Installer_WIN(Operator):
+    ''' Run the Pixologic GoZ installer 
+        //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
+
+    bl_idname = "gob.install_goz"
+      
+    if isMacOS:
+        bl_label = "Load ZBrush.app" 
+    else:
+        bl_label = "Load ZBrush.exe" 
+
+    def execute(self, context):
+        """Install goZ for windows"""  
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences          
+        if 'ZBrush.exe' in pref.zbrush_exec: 
+            path = pref.zbrush_exec.strip("\ZBrush.exe")            
+            GOZ_INSTALLER = f"{path}/Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe"
+            Popen([GOZ_INSTALLER], shell=True) 
+
+
+        return {'FINISHED'}
+
 
 

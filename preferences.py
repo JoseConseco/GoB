@@ -260,6 +260,13 @@ class GoBPreferences(AddonPreferences):
         #GLOBAL
         layout = self.layout
         layout.use_property_split = True
+        import platform
+        if platform.system() == 'Windows':
+            icons = GoB.preview_collections["main"]      
+            row = layout.row(align=True)
+            row.scale_y = 1.5     
+            row.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id )
+
         layout.prop(self, 'zbrush_exec') 
         layout.prop(self, 'project_path') 
         layout.prop(self, 'clean_project_path')    
