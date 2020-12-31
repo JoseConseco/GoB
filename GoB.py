@@ -74,13 +74,21 @@ def draw_goz_buttons(self, context):
         row = layout.row(align=True)
 
         if pref.show_button_text:
-            row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if pref.zbrush_exec:
+                row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            else:
+                row.operator(operator="gob.install_goz", text="Select ZBrush.exe", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            if pref.zbrush_exec:
+                row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)            
+            else:
+                row.operator(operator="gob.install_goz", text="Select ZBrush.exe", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
@@ -1463,9 +1471,9 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
     bl_idname = "gob.open_filebrowser"
       
     if isMacOS:
-        bl_label = "Load ZBrush.app" 
+        bl_label = "Select ZBrush.app" 
     else:
-        bl_label = "Load ZBrush.exe" 
+        bl_label = "Select ZBrush.exe" 
 
     def execute(self, context):
         """open file browser to select the zbrush executable."""  
@@ -1485,23 +1493,22 @@ class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
         //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
-
-    bl_idname = "gob.install_goz"
-      
-    if isMacOS:
-        bl_label = "Load ZBrush.app" 
-    else:
-        bl_label = "Load ZBrush.exe" 
+    bl_idname = "gob.install_goz"  
+    bl_label = "Select ZBrush.exe" 
 
     def execute(self, context):
         """Install goZ for windows"""  
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences          
+        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences  
+        
+        if not pref.zbrush_exec and (not 'ZBrush.exe' in pref.zbrush_exec):     
+            filepath = f"C:/Program Files/Pixologic/"
+            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)  
+                    
         if 'ZBrush.exe' in pref.zbrush_exec: 
             path = pref.zbrush_exec.strip("\ZBrush.exe")            
             GOZ_INSTALLER = f"{path}/Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe"
             Popen([GOZ_INSTALLER], shell=True) 
-
-
+    
         return {'FINISHED'}
 
 

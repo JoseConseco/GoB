@@ -264,8 +264,11 @@ class GoBPreferences(AddonPreferences):
         if platform.system() == 'Windows':
             icons = GoB.preview_collections["main"]      
             row = layout.row(align=True)
-            row.scale_y = 1.5     
-            row.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id )
+            row.scale_y = 1.5  
+            if self.zbrush_exec:   
+                row.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id )
+            else:
+                row.operator( "gob.install_goz", text="Install Zbrush", icon_value=icons["GOZ_SEND"].icon_id )
 
         layout.prop(self, 'zbrush_exec') 
         layout.prop(self, 'project_path') 
