@@ -1506,11 +1506,9 @@ class GoB_OT_Find_ZBrush(Operator):
             [folder_List.append(i) for i in os.listdir(self.filepath) if 'ZBrush' in i]
             i, zfolder = max_list_value(folder_List)
             pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace( "\\", "/") 
-
         else:
             i,zfolder = max_list_value(os.listdir(self.filepath))
             pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace("/", "\\") 
-
         #bpy.ops.wm.save_userpref()
 
         return {'FINISHED'}

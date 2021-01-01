@@ -9,7 +9,7 @@ author: Daniel Grauer
 [VarDef,reportDuration,-1]      //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,showFinalReport,0]      // Final Report (1: show, 0 Hide)
 [VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
-[VarDef,maxSubtools,130]  
+[VarDef,maxSubtools,999]  
 
 [VarDef,GoBList(7),""]          // NOTE: if list size changes gob export list size needs to be udpated as well
     /* File: Gob_variables.zvr
@@ -171,7 +171,7 @@ author: Daniel Grauer
 
 
     [If,[MemGetSize,GoB_Config_InputMem],
-        [Loop,3,
+        [Loop,100,
             //read a line into a string variable
             [VarSet,lineBytes,[MemReadString,GoB_Config_InputMem,configLineStr,configCount,1]]
             //extract objects string
@@ -244,12 +244,14 @@ author: Daniel Grauer
             [IPress, Tool:Import]                         
             [RoutineCall, LoadTextures]  
         ] 
+        [IPress,Edit:Tool:DelUH]
         // new tool was created, frame it to the canvas otherwise it might not be visible
         [CanvasClick, 10, 10, 10, 20]
         [IPress, Transform: Edit] 
         [IPress,Transform: Fit]
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
         [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]
+        
         [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]    
     , objectName, objectPath]
 
@@ -280,7 +282,8 @@ author: Daniel Grauer
                 [IPress,Tool:Import]                            
                 [RoutineCall, LoadTextures]  
             ] 
-        ]                
+        ]      
+        [IPress,Edit:Tool:DelUH]        
         [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]     
     , objectName, objectPath]
 
