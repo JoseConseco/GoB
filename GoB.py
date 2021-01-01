@@ -68,27 +68,19 @@ gob_import_cache = []
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = context.preferences.addons[__package__.split(".")[0]].preferences
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
 
         if pref.show_button_text:
-            if pref.zbrush_exec:
-                row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
-            else:
-                row.operator(operator="gob.install_goz", text="Select ZBrush.exe", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
-
+            row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            if pref.zbrush_exec:
-                row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)            
-            else:
-                row.operator(operator="gob.install_goz", text="Select ZBrush.exe", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
-
+            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)            
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
@@ -590,7 +582,7 @@ class GoB_OT_import(Operator):
 
     def execute(self, context):
         global gob_import_cache
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences
         goz_obj_paths = []             
         try:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
@@ -642,7 +634,7 @@ class GoB_OT_import(Operator):
 
     
     def invoke(self, context, event):        
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences
         if pref.import_method == 'AUTOMATIC':
             global run_background_update
             if run_background_update:
@@ -1335,7 +1327,7 @@ class GoB_OT_export(Operator):
 
 
     def execute(self, context):  
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences             
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences             
         PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
         #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
@@ -1400,48 +1392,49 @@ class GoB_OT_export(Operator):
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
+            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
+        
+        
+        wm = context.window_manager
+        wm.progress_begin(0,100)
+        step =  100  / len(context.selected_objects)
 
-        if not pref.zbrush_exec and (not 'ZBrush.exe' in pref.zbrush_exec or not 'ZBrush.app' in pref.zbrush_exec):     
-            if isMacOS:
-                filepath = f"/Applications/"
-            else:
-                filepath = f"C:/Program Files/Pixologic/"
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)      
-
-        else:
-            wm = context.window_manager
-            wm.progress_begin(0,100)
-            step =  100  / len(context.selected_objects)
-
-            with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
-                for i, obj in enumerate(context.selected_objects):
-                    if  obj.type == 'MESH':
-                        numFaces = len(obj.data.polygons)
-                        if numFaces:
-                            self.escape_object_name(obj)
-                            self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
-                            with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
-                                ztn.write(f'{PATH_PROJECT}{obj.name}')
-                            GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
-                        else:
-                            print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
-                    
-                    wm.progress_update(step * i)                
-                wm.progress_end()
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
+            for i, obj in enumerate(context.selected_objects):
+                if  obj.type == 'MESH':
+                    numFaces = len(obj.data.polygons)
+                    if numFaces:
+                        self.escape_object_name(obj)
+                        self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                        with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
+                            ztn.write(f'{PATH_PROJECT}{obj.name}')
+                        GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
+                    else:
+                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
                 
-            global cached_last_edition_time
-            cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+                wm.progress_update(step * i)                
+            wm.progress_end()
             
-            PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
-
-            if 'ZBrush.exe' in pref.zbrush_exec:    
-                Popen([pref.zbrush_exec, PATH_SCRIPT])
-            elif 'ZBrush.app' in pref.zbrush_exec:
-                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])   
+        global cached_last_edition_time
+        cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
+        
+        # if no Zbrush application is specified apply the latest version.
+        if isMacOS: 
+            if not 'ZBrush.app' in pref.zbrush_exec:                
+                bpy.ops.gob.find_zbrush()
+                #print("no ZBrush.app: ", pref.zbrush_exec)             
+            Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
+        #windows
+        else: 
+            if not 'ZBrush.exe' in pref.zbrush_exec:              
+                bpy.ops.gob.find_zbrush()   
+                #print("no ZBrush.exe: ", pref.zbrush_exec)              
+            Popen([pref.zbrush_exec, PATH_SCRIPT])
+          
 
         if context.object:
-            bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
+            bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
     
@@ -1466,44 +1459,72 @@ class GoB_OT_export(Operator):
 
 
 class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    '''Open file browser to specify Zbrush executable path, 
-        this path will be used by GoB to run the import zscripts'''
-    bl_idname = "gob.open_filebrowser"
-      
+    '''ZBrush app not specified!
+        Open file browser and select the Zbrush executable (ZBrush.exe/ZBrush.app), 
+        this will be used by GoB to run the import zscripts'''
+    bl_idname = "gob.open_filebrowser"      
     if isMacOS:
         bl_label = "Select ZBrush.app" 
+        filepath = "/Applications/"
     else:
         bl_label = "Select ZBrush.exe" 
+        filepath = "C:/Program Files/Pixologic/"    
 
     def execute(self, context):
         """open file browser to select the zbrush executable."""  
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
-        filename, extension = os.path.splitext(self.filepath)
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences   
+        
+        #filename, extension = os.path.splitext(filepath)
+
+        print("FILEPATH:", self.filepath)
         if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
             pref.zbrush_exec = self.filepath        
             bpy.ops.wm.save_userpref()
         else:
-            self.filepath = ""
+            filepath = ""
             print("ZBrush executable not found, try selecting it again.")
 
         return {'FINISHED'}
 
+
+class GoB_OT_Find_ZBrush(Operator):
+    ''' find the zbrush application '''
+    bl_idname = "gob.find_zbrush"      
+    if isMacOS:
+        bl_label = f"/ZBrush.app" 
+        filepath = f"/Applications/"
+    else:
+        bl_label = f"/ZBrush.exe"   
+        filepath = f"C:/Program Files/Pixologic/" 
+
+    def execute(self, context):
+        """Install goZ for windows"""  
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences  
+        #get the highest version of zbrush and use it as default zbrush to send to
+        i,zfolder = max_list_value(os.listdir(self.filepath))
+        pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace("/", "\\") 
+        #bpy.ops.wm.save_userpref()
+        
+        return {'FINISHED'}
 
 
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
         //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
     bl_idname = "gob.install_goz"  
-    bl_label = "Select ZBrush.exe" 
-
+    
+    if isMacOS:
+        bl_label = f"/ZBrush.app" 
+        filepath = f"/Applications/"
+    else:
+        bl_label = f"/ZBrush.exe"   
+        filepath = f"C:/Program Files/Pixologic/" 
+      
     def execute(self, context):
-        """Install goZ for windows"""  
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences  
-        
-        if not pref.zbrush_exec and (not 'ZBrush.exe' in pref.zbrush_exec):     
-            filepath = f"C:/Program Files/Pixologic/"
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)  
-                    
+        """Install GoZ for Windows"""  
+        pref = context.preferences.addons[__package__.split(".")[0]].preferences 
+        bpy.ops.gob.find_zbrush()
+                            
         if 'ZBrush.exe' in pref.zbrush_exec: 
             path = pref.zbrush_exec.strip("\ZBrush.exe")            
             GOZ_INSTALLER = f"{path}/Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe"
