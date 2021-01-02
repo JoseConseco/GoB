@@ -230,7 +230,7 @@ author: Daniel Grauer
         [ISet,Tool:Export:Scale,1]
         [ISet,Tool:Export:X Offset,0.0]
         [ISet,Tool:Export:Y Offset,0.0]
-        [ISet,Tool:Export:Z Offset,0.0]        
+        [ISet,Tool:Export:Z Offset,0.0]     
         //[Note,[StrMerge, "\n GoB Origin transfered", ""],,reportDuration]  
     ]
 
@@ -244,15 +244,13 @@ author: Daniel Grauer
             [IPress, Tool:Import]                         
             [RoutineCall, LoadTextures]  
         ] 
-        [IPress,Edit:Tool:DelUH]
         // new tool was created, frame it to the canvas otherwise it might not be visible
         [CanvasClick, 10, 10, 10, 20]
         [IPress, Transform: Edit] 
-        [IPress,Transform: Fit]
         [TransformGet, xPos, yPos, zPos, xSc, ySc, zSc, xRot, yRot, zRot ]
         [TransformSet, (Document:Width/2), (Document:Height/2), zPos,  xSc, ySc, zSc, xRot, yRot, zRot]
         
-        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]    
+        [Note,[StrMerge, "\n\C00FF00 Created new tool: ",  objectName],,reportDuration]
     , objectName, objectPath]
 
 
@@ -268,7 +266,6 @@ author: Daniel Grauer
             ]
             [CanvasClick,10,10,10,20]
             [IPress,Transform: Edit]
-            [IPress,Transform: Fit]
         ,
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
@@ -282,9 +279,8 @@ author: Daniel Grauer
                 [IPress,Tool:Import]                            
                 [RoutineCall, LoadTextures]  
             ] 
-        ]      
-        [IPress,Edit:Tool:DelUH]        
-        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]     
+        ]       
+        [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]
     , objectName, objectPath]
 
 
@@ -346,11 +342,13 @@ author: Daniel Grauer
                 ]                                      
             ]
     
-            [RoutineCall, setOrigin]
+            [RoutineCall, setOrigin] 
             //next loop or exit if end of file
             [VarSet, subtoolCount, subtoolCount + 1]
             [VarSet, objectMemIndex, objectMemIndex + lineBytes]
             [If, objectMemIndex >= [MemGetSize, GoB_ObjectList_InputMem],
+            
+                [IPress,Transform: Fit]
                 [LoopExit]
             ]
         ]     
