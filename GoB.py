@@ -68,7 +68,7 @@ gob_import_cache = []
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-    pref = context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = context.preferences.addons[__package__].preferences
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
@@ -94,7 +94,7 @@ class GoB_OT_import(Operator):
     
     
     def GoZit(self, pathFile):     
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
+        pref = bpy.context.preferences.addons[__package__].preferences   
 
         if pref.performance_profiling: 
             print("\n")
@@ -582,7 +582,7 @@ class GoB_OT_import(Operator):
 
     def execute(self, context):
         global gob_import_cache
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences
+        pref = context.preferences.addons[__package__].preferences
         goz_obj_paths = []             
         try:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
@@ -634,7 +634,7 @@ class GoB_OT_import(Operator):
 
     
     def invoke(self, context, event):        
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences
+        pref = context.preferences.addons[__package__].preferences
         if pref.import_method == 'AUTOMATIC':
             global run_background_update
             if run_background_update:
@@ -660,7 +660,7 @@ class GoB_OT_import(Operator):
 
 def run_import_periodically():
     global gob_import_cache
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = bpy.context.preferences.addons[__package__].preferences
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
 
@@ -778,7 +778,7 @@ def create_node(mat, pref, diff=None, norm=None, disp=None):
     
 
 def apply_transformation(me, is_import=True): 
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = bpy.context.preferences.addons[__package__].preferences
     mat_transform = None
     scale = 1.0
     
@@ -938,7 +938,7 @@ class GoB_OT_export(Operator):
     
     
     def exportGoZ(self, path, scn, obj, pathImport):
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences        
+        pref = bpy.context.preferences.addons[__package__].preferences        
         PATH_PROJECT = pref.project_path.replace("\\", "/")   
         if pref.performance_profiling: 
             print("\n", 100*"=")
@@ -1269,8 +1269,7 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write diff")
 
@@ -1285,8 +1284,7 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write disp")
 
@@ -1301,11 +1299,9 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write norm")
-
             # end
             goz_file.write(pack('16x'))
             
@@ -1325,9 +1321,8 @@ class GoB_OT_export(Operator):
         self.modifier_alt = event.alt
         return self.execute(context)
 
-
     def execute(self, context):  
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences             
+        pref = context.preferences.addons[__package__].preferences             
         PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
         #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
@@ -1361,8 +1356,6 @@ class GoB_OT_export(Operator):
                 if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
                     #print('cleaning file:', file_name)
                     os.remove(PATH_PROJECT + file_name)
-
-
         
         """
         # a object can either be imported as tool or as subtool in zbrush
@@ -1387,13 +1380,11 @@ class GoB_OT_export(Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt", "w") as w:
             w.write(new_config)
-
             
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
-        
+            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')       
         
         wm = context.window_manager
         wm.progress_begin(0,100)
@@ -1411,7 +1402,6 @@ class GoB_OT_export(Operator):
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
                         print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
-                
                 wm.progress_update(step * i)                
             wm.progress_end()
             
@@ -1437,8 +1427,6 @@ class GoB_OT_export(Operator):
             bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
-    
-    
 
     def escape_object_name(self, obj):
         """
@@ -1458,35 +1446,6 @@ class GoB_OT_export(Operator):
         obj.name = new_name
 
 
-class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    '''ZBrush app not specified!
-        Open file browser and select the Zbrush executable (ZBrush.exe/ZBrush.app), 
-        this will be used by GoB to run the import zscripts'''
-    bl_idname = "gob.open_filebrowser"      
-    if isMacOS:
-        bl_label = "Select ZBrush.app" 
-        filepath = "/Applications/"
-    else:
-        bl_label = "Select ZBrush.exe" 
-        filepath = "C:/Program Files/Pixologic/"    
-
-    def execute(self, context):
-        """open file browser to select the zbrush executable."""  
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences   
-        
-        #filename, extension = os.path.splitext(filepath)
-
-        print("FILEPATH:", self.filepath)
-        if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
-            pref.zbrush_exec = self.filepath        
-            bpy.ops.wm.save_userpref()
-        else:
-            filepath = ""
-            print("ZBrush executable not found, try selecting it again.")
-
-        return {'FINISHED'}
-
-
 class GoB_OT_Find_ZBrush(Operator):
     ''' find the zbrush application '''
     bl_idname = "gob.find_zbrush"      
@@ -1499,7 +1458,7 @@ class GoB_OT_Find_ZBrush(Operator):
 
     def execute(self, context):
         """Install goZ for windows"""  
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences  
+        pref = context.preferences.addons[__package__].preferences  
         #get the highest version of zbrush and use it as default zbrush to send to
         if isMacOS:
             folder_List = [] 
@@ -1517,8 +1476,7 @@ class GoB_OT_Find_ZBrush(Operator):
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
         //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
-    bl_idname = "gob.install_goz"  
-    
+    bl_idname = "gob.install_goz"      
     if isMacOS:
         bl_label = f"/ZBrush.app" 
         filepath = f"/Applications/"
@@ -1528,7 +1486,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
       
     def execute(self, context):
         """Install GoZ for Windows"""  
-        pref = context.preferences.addons[__package__.split(".")[0]].preferences 
+        pref = context.preferences.addons[__package__].preferences 
         bpy.ops.gob.find_zbrush()
                             
         if 'ZBrush.exe' in pref.zbrush_exec: 
