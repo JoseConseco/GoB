@@ -28,7 +28,6 @@ from bpy.types import AddonPreferences
 from bpy.props import ( StringProperty, 
                         BoolProperty, 
                         FloatProperty,
-                        PointerProperty,
                         EnumProperty)
 
 
@@ -95,6 +94,10 @@ class GoBPreferences(AddonPreferences):
     performance_profiling: BoolProperty(
         name="[Dev] Debug performance",
         description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
+        default=False)        
+    debug_output: BoolProperty(
+        name="[Dev] debug_output",
+        description="Show debug output in console, note this will slow down the GoZ transfer if enabled!",
         default=False)
     """      
     texture_format: EnumProperty(
@@ -141,6 +144,15 @@ class GoBPreferences(AddonPreferences):
 
 
     # IMPORT
+    import_timer: FloatProperty(
+        name="Update interval",
+        description="Interval (in seconds) to look for changes in GoZ_ObjectList.txt",
+        default=0.5,
+        min = 0.1,
+        soft_max=2.0,
+        step=0.1,
+        precision=1,
+        subtype='FACTOR') 
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
@@ -244,40 +256,54 @@ class GoBPreferences(AddonPreferences):
     
   
     def draw(self, context):
-        #GLOBAL
+        # GoB Troubleshooting
         layout = self.layout
         layout.use_property_split = True
-        layout.prop(self, 'zbrush_exec') 
-        layout.prop(self, 'project_path') 
-        layout.prop(self, 'clean_project_path')    
-        layout.prop(self, 'flip_up_axis')
-        layout.prop(self, 'flip_forward_axis')   
-        layout.prop(self, 'use_scale')
-        if self.use_scale == 'MANUAL':                   
-            layout.prop(self, 'manual_scale')
-        if self.use_scale == 'ZUNITS':                   
-            layout.prop(self, 'zbrush_scale')
-        layout.prop(self, 'show_button_text')  
-        layout.prop(self, 'performance_profiling')
-        #layout.prop(self, 'texture_format')
 
-        #EXPORT
-        col = layout.column()
-        box = layout.box()
-        box.label(text='Export', icon='EXPORT')  
-        box.prop(self, 'export_modifiers')
-        box.prop(self, 'export_polygroups')    
-        if self.export_polygroups == 'VERTEX_GROUPS':  
-            box.prop(self, 'export_weight_threshold')
-        box.prop(self, 'export_clear_mask') 
-        
-        # IMPORT
-        col = layout.column(align=True)
         box = layout.box() 
-        box.label(text='Import', icon='IMPORT')
+        box.label(text='GoB Troubleshooting', icon='QUESTION')   
+        import platform
+        if platform.system() == 'Windows':
+            icons = GoB.preview_collections["main"]  
+            box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
+            
+        # GoB General Options 
+        box = layout.box()
+        box.label(text='GoB General Options', icon='PREFERENCES') 
+        col = box.column(align=True) 
+        col.prop(self, 'zbrush_exec') 
+        col.prop(self, 'project_path') 
+        col.prop(self, 'clean_project_path')    
+        col.prop(self, 'flip_up_axis')
+        col.prop(self, 'flip_forward_axis')   
+        col.prop(self, 'use_scale')
+        if self.use_scale == 'MANUAL':                   
+            col.prop(self, 'manual_scale')
+        if self.use_scale == 'ZUNITS':                   
+            col.prop(self, 'zbrush_scale')
+        col.prop(self, 'show_button_text')  
+        col.prop(self, 'performance_profiling')
+        col.prop(self, 'debug_output')
+        #col.prop(self, 'texture_format')
+
+        # GoB Export Options
+        box = layout.box()
+        box.label(text='GoB Export Options', icon='EXPORT')   
+        col = box.column(align=True) 
+        col.prop(self, 'export_modifiers')
+        col.prop(self, 'export_polygroups')    
+        if self.export_polygroups == 'VERTEX_GROUPS':  
+            col.prop(self, 'export_weight_threshold')
+        col.prop(self, 'export_clear_mask') 
+        
+        # GoB Import Options
+        box = layout.box() 
+        box.label(text='GoB Import Options', icon='IMPORT')  
+        col = box.column(align=True) 
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
-        box.prop(self, 'import_material')  
-        col = box.column(align=True)  #TODO: add heading ="" in 2.9
+        col.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
+        col.prop(self, 'import_material')  
+        #col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
         col.prop(self, 'import_uv')
         col.prop(self, 'import_polypaint')       

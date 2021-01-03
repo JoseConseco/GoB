@@ -58,16 +58,17 @@ def gob_init_os_paths():
 isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
 
-time_interval = 2.0  # Check GoZ import for changes every 2.0 seconds
 run_background_update = False
 icons = None
-cached_last_edition_time = time.time() - 10.0
-
+cached_last_edition_time = time.time()
+last_cache = 0
 preview_collections = {}
+gob_import_cache = []
+
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = context.preferences.addons[__package__].preferences
     if context.region.alignment != 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
@@ -79,7 +80,7 @@ def draw_goz_buttons(self, context):
             else:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)            
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
@@ -93,12 +94,12 @@ class GoB_OT_import(Operator):
     
     
     def GoZit(self, pathFile):     
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
+        pref = bpy.context.preferences.addons[__package__].preferences   
 
         if pref.performance_profiling: 
-            print("\n", 100*"=")
-            start_time = profiler(time.time(), "Start Import Profiling")
-            start_total_time = profiler(time.time(), "")
+            print("\n")
+            start_time = profiler(time.time(), "Start Object Profiling")
+            start_total_time = profiler(time.time(), "...")
 
         utag = 0
         vertsData = []
@@ -117,19 +118,24 @@ class GoB_OT_import(Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
-            print(f"Importing: {pathFile, objName}")            
+            if pref.debug_output:
+                print(f"Importing: {pathFile, objName}")  
+            if pref.performance_profiling:                
+                print(f"GoB Importing: {objName}")            
             tag = goz_file.read(4)
             
             while tag:                
                 # Name
                 if tag == b'\x89\x13\x00\x00':
-                    print("name:", tag)
+                    if pref.debug_output:
+                        print("name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
-                    #print("Vertices:", tag)                    
+                    if pref.debug_output:
+                        print("Vertices:", tag)                    
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -140,7 +146,8 @@ class GoB_OT_import(Operator):
                 
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
-                    #print("Faces:", tag)
+                    if pref.debug_output:
+                        print("Faces:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -156,29 +163,35 @@ class GoB_OT_import(Operator):
                             facesData.append((v1, v2, v3, v4))
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
-                    #print("UVs:", tag)
+                    if pref.debug_output:
+                        print("UVs:", tag)
                     break
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00':  
-                    #print("Polypainting:", tag)
+                    if pref.debug_output:
+                        print("Polypainting:", tag)
                     break
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':  
-                    #print("Mask:", tag)
+                    if pref.debug_output:
+                        print("Mask:", tag)
                     break
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00': 
-                    #print("Polyroups:", tag) 
+                    if pref.debug_output:
+                        print("Polyroups:", tag) 
                     break
                 # End
                 elif tag == b'\x00\x00\x00\x00':  
-                    #print("End:", tag)
+                    if pref.debug_output:
+                        print("End:", tag)
                     break
                 # Unknown tags
                 else:
                     print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many mesh tags unknown...\n")
+                        if pref.debug_output:
+                            print("...Too many mesh tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
@@ -205,7 +218,7 @@ class GoB_OT_import(Operator):
                     bm = bmesh.new()
                     bm.from_mesh(me)
                     bm.faces.ensure_lookup_table() 
-                    #udpate vertex positions
+                    #update vertex positions
                     for i, v in enumerate(bm.verts):
                         v.co  = mathutils.Vector(vertsData[i])  
                     bm.to_mesh(me)   
@@ -241,14 +254,16 @@ class GoB_OT_import(Operator):
                 
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':                    
-                    print("Import UV: ", pref.import_uv)
+                    if pref.debug_output:
+                        print("Import UV: ", pref.import_uv)
 
                     if pref.import_uv:  
                         goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # face count                        
                         bm = bmesh.new()
-                        bm.from_mesh(me)
+                        bm.from_mesh(me) 
                         bm.faces.ensure_lookup_table()
+
                         if me.uv_layers:
                             if pref.import_uv_name in me.uv_layers:                            
                                 uv_layer = bm.loops.layers.uv.get(pref.import_uv_name)
@@ -268,7 +283,8 @@ class GoB_OT_import(Operator):
                                 x, y = unpack('<2f', goz_file.read(8))
 
                         bm.to_mesh(me)   
-                        bm.free()                       
+                        bm.free()    
+                                           
                         me.update(calc_edges=True, calc_edges_loose=True)  
                         if pref.performance_profiling: 
                             start_time = profiler(start_time, "UV Map") 
@@ -280,7 +296,8 @@ class GoB_OT_import(Operator):
 
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00': 
-                    print("Import Polypaint: ", pref.import_polypaint)  
+                    if pref.debug_output:
+                        print("Import Polypaint: ", pref.import_polypaint)  
 
                     if pref.import_polypaint:
                         goz_file.seek(4, 1)
@@ -330,7 +347,8 @@ class GoB_OT_import(Operator):
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
-                    print("Import Mask: ", pref.import_mask)
+                    if pref.debug_output:
+                        print("Import Mask: ", pref.import_mask)
                     
                     
                     if pref.import_mask:
@@ -354,12 +372,12 @@ class GoB_OT_import(Operator):
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
-                    print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
+                    if pref.debug_output:
+                        print("Import Polyroups: ", pref.import_polygroups_to_vertexgroups, pref.import_polygroups_to_facemaps)
                     
                     #wipe face maps before importing new ones due to random naming
-                    if pref.import_polygroups_to_facemaps:
-                        for i,facemap in enumerate(obj.face_maps):                              
-                            obj.face_maps.remove(facemap)
+                    if pref.import_polygroups_to_facemaps:              
+                        [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
 
 
                     groupsData = []
@@ -383,6 +401,7 @@ class GoB_OT_import(Operator):
                                 vg = obj.vertex_groups[str(group)]
                             vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
                         
+
                         # Face maps import
                         if pref.import_polygroups_to_facemaps:
                             if group not in facemapsData:
@@ -399,14 +418,15 @@ class GoB_OT_import(Operator):
                             except:
                                 pass
                             
+                            
                     try:
-                        print("VGs: ", obj.vertex_groups.get('0'))
+                        #print("VGs: ", obj.vertex_groups.get('0'))
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
                     except:
                         pass
 
                     try:
-                        print("FMs: ", obj.face_maps.get('0'))
+                        #print("FMs: ", obj.face_maps.get('0'))
                         obj.face_maps.remove(obj.face_maps.get('0'))
                     except:
                         pass
@@ -423,12 +443,14 @@ class GoB_OT_import(Operator):
                 
                 # Diffuse Texture 
                 elif tag == b'\xc9\xaf\x00\x00':  
-                    #print("Diff map:", tag)
+                    if pref.debug_output:
+                        print("Diff map:", tag)
                     texture_name = (obj.name + pref.import_diffuse_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     diffName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(diffName.decode('utf-8'))
+                    if pref.debug_output:
+                        print(diffName.decode('utf-8'))
                     img = bpy.data.images.load(diffName.strip().decode('utf-8'), check_existing=True) 
                     img.name = texture_name                                        
                     img.reload()
@@ -441,12 +463,14 @@ class GoB_OT_import(Operator):
 
                 # Displacement Texture 
                 elif tag == b'\xd9\xd6\x00\x00':  
-                    #print("Disp map:", tag)
+                    if pref.debug_output:
+                        print("Disp map:", tag)
                     texture_name = (obj.name + pref.import_displace_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     dispName = unpack('%ss' % cnt, goz_file.read(cnt))[0]                    
-                    print(dispName.decode('utf-8'))                    
+                    if pref.debug_output:
+                        print(dispName.decode('utf-8'))                    
                     img = bpy.data.images.load(dispName.strip().decode('utf-8'), check_existing=True)  
                     img.name = texture_name                                       
                     img.reload()
@@ -458,12 +482,14 @@ class GoB_OT_import(Operator):
 
                 # Normal Map Texture
                 elif tag == b'\x51\xc3\x00\x00':   
-                    #print("Normal map:", tag)
+                    if pref.debug_output:
+                        print("Normal map:", tag)
                     texture_name = (obj.name + pref.import_normal_suffix)
                     cnt = unpack('<I', goz_file.read(4))[0] - 16
                     goz_file.seek(8, 1)
                     normName = unpack('%ss' % cnt, goz_file.read(cnt))[0]
-                    print(normName.decode('utf-8'))
+                    if pref.debug_output:
+                        print(normName.decode('utf-8'))
                     img = bpy.data.images.load(normName.strip().decode('utf-8'), check_existing=True) 
                     img.name = texture_name                                       
                     img.reload()
@@ -475,9 +501,11 @@ class GoB_OT_import(Operator):
                 
                 # Unknown tags
                 else: 
-                    print("Unknown tag:{0}".format(tag))
+                    if pref.debug_output:
+                        print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
-                        print("...Too many object tags unknown...\n")
+                        if pref.debug_output:
+                            print("...Too many object tags unknown...\n")
                         break
                     utag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
@@ -490,7 +518,8 @@ class GoB_OT_import(Operator):
             
             # Materials
             if pref.import_material == 'NONE':
-                print("Import Material: ", pref.import_material) 
+                if pref.debug_output:
+                    print("Import Material: ", pref.import_material) 
             else:
                 
                 if len(obj.material_slots) > 0:
@@ -545,41 +574,67 @@ class GoB_OT_import(Operator):
                     start_time = profiler(start_time, "Reveal Mesh Elements")
                                            
             if pref.performance_profiling: 
-                profiler(start_total_time, "Total Import Time")  
-                print(30*"=")
+                print(30*"-") 
+                profiler(start_total_time, "Object Import Time")  
+                print(30*"-")                
         return
              
 
     def execute(self, context):
-        goz_obj_paths = []
+        global gob_import_cache
+        pref = context.preferences.addons[__package__].preferences
+        goz_obj_paths = []             
         try:
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
-
         except PermissionError:
-            print("File already in use! Try again Later")
+            if pref.debug_output:
+                print("GoB: GoZ_ObjectList already in use! Try again Later")
 
-        if len(goz_obj_paths) == 0:
-            self.report({'INFO'}, message="No goz files in GoZ_ObjectList.txt")
+        # Goz wipes this file before each export so it can be used to reset the import cache
+        if not goz_obj_paths:
+            if pref.debug_output:
+                self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
-
-        currentContext = 'OBJECT'
-        if context.object and context.object.mode != 'OBJECT':
-            currentContext = context.object.mode
-            print("currentContext: ", currentContext)
-            # ! cant get proper context from timers for now to change mode: https://developer.blender.org/T62074
-            bpy.ops.object.mode_set(context.copy(), mode='OBJECT') #hack
         
-        for ztool_path in goz_obj_paths:
-            self.GoZit(ztool_path)
-            bpy.ops.object.mode_set(context.copy(), mode=currentContext)
-        self.report({'INFO'}, "Done")
+        currentContext = 'OBJECT'
+        if context.object:
+            if context.object.mode != 'EDIT':
+                currentContext = context.object.mode
+                #print("currentContext: ", currentContext)
+                # ! cant get proper context from timers for now to change mode: 
+                # https://developer.blender.org/T62074
+                bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
+            else:
+                bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
+        
+
+        if pref.performance_profiling: 
+            print("\n", 100*"=")
+            start_time = profiler(time.time(), "GoB: Start Import Profiling")             
+            print(100*"-") 
+
+        wm = context.window_manager
+        wm.progress_begin(0,100)   
+        step =  100  / len(goz_obj_paths)
+        for i, ztool_path in enumerate(goz_obj_paths):              
+            if not ztool_path in gob_import_cache:
+                gob_import_cache.append(ztool_path)
+                self.GoZit(ztool_path)            
+            wm.progress_update(step * i)               
+        wm.progress_end()
+        if pref.debug_output:
+            self.report({'INFO'}, "GoB: Imoprt cycle finished")
+            
+        if pref.performance_profiling:  
+            start_time = profiler(start_time, "GoB: Total Import Time")            
+            print(100*"=")       
         return{'FINISHED'}
 
     
     def invoke(self, context, event):        
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+        pref = context.preferences.addons[__package__].preferences
         if pref.import_method == 'AUTOMATIC':
             global run_background_update
             if run_background_update:
@@ -600,6 +655,47 @@ class GoB_OT_import(Operator):
                     print('Disabling GOZ background listener')
                 run_background_update = False
             return{'FINISHED'}
+
+
+
+def run_import_periodically():
+    global gob_import_cache
+    pref = bpy.context.preferences.addons[__package__].preferences
+    # print("Runing timers update check")
+    global cached_last_edition_time, run_background_update
+
+    try:
+        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        #print("file_edition_time: ", file_edition_time, end='\n\n')
+    except Exception as e:
+        print(e)
+        run_background_update = False
+        if bpy.app.timers.is_registered(run_import_periodically):
+            bpy.app.timers.unregister(run_import_periodically)
+        return pref.import_timer
+    
+    
+    if file_edition_time > cached_last_edition_time:
+        cached_last_edition_time = file_edition_time           
+        # ! cant get proper context from timers for now. 
+        # Override context: https://developer.blender.org/T62074     
+        window = bpy.context.window_manager.windows[0]
+        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+    else:         
+        if gob_import_cache:  
+            if pref.debug_output:   
+                print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
+            gob_import_cache.clear()   #reset import cache
+        else:
+            #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+            pass    
+        return pref.import_timer       
+    
+    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
+        bpy.app.timers.unregister(run_import_periodically)
+    return pref.import_timer
+
 
 
 def create_node(mat, pref, diff=None, norm=None, disp=None):
@@ -682,7 +778,7 @@ def create_node(mat, pref, diff=None, norm=None, disp=None):
     
 
 def apply_transformation(me, is_import=True): 
-    pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences
+    pref = bpy.context.preferences.addons[__package__].preferences
     mat_transform = None
     scale = 1.0
     
@@ -790,39 +886,14 @@ def avg_list_value(list):
     return (avg)
 
 
-def run_import_periodically():
-    # print("Runing timers update check")
-    global cached_last_edition_time, run_background_update
-
-    try:
-        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-    except Exception as e:
-        print(e)
-        run_background_update = False
-        if bpy.app.timers.is_registered(run_import_periodically):
-            bpy.app.timers.unregister(run_import_periodically)
-        return time_interval
-
-    if file_edition_time > cached_last_edition_time:
-        cached_last_edition_time = file_edition_time
-        # ! cant get proper context from timers for now. Override context: https://developer.blender.org/T62074
-        window = bpy.context.window_manager.windows[0]
-        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-    else:
-        # print("GOZ: Nothing to update")
-        return time_interval
-    
-    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
-        bpy.app.timers.unregister(run_import_periodically)
-    return time_interval
-
 
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export selected Objects to ZBrush"
-    
+    bl_description = "Export selected Objects to ZBrush\n"\
+                        "LeftMouse: as Subtool\n"\
+                        "SHIFT/CTRL/ALT + LeftMouse: as Tool"
+
     @classmethod
     def poll(cls, context):
         selected_objects = context.selected_objects
@@ -864,10 +935,10 @@ class GoB_OT_export(Operator):
         bm.free()
 
         return export_mesh
-
-
+    
+    
     def exportGoZ(self, path, scn, obj, pathImport):
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences        
+        pref = bpy.context.preferences.addons[__package__].preferences        
         PATH_PROJECT = pref.project_path.replace("\\", "/")   
         if pref.performance_profiling: 
             print("\n", 100*"=")
@@ -1058,12 +1129,12 @@ class GoB_OT_export(Operator):
            
             # --Polygroups--     
             if not pref.export_polygroups == 'NONE':  
-                print("Export Polygroups: ", pref.export_polygroups)
+                #print("Export Polygroups: ", pref.export_polygroups)
                 import random
 
                 #Polygroups from Face Maps
                 if pref.export_polygroups == 'FACE_MAPS':
-                    print(obj.face_maps.items)
+                    #print(obj.face_maps.items)
                     if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
@@ -1155,8 +1226,8 @@ class GoB_OT_export(Operator):
                             if vg is None:
                                 vg = obj.vertex_groups.new(name=slot.material.name)
                                 vg.add(verts, 1.0, 'ADD')
-                else:
-                    print("Export Polygroups: ", pref.export_polygroups)
+                """ else:
+                    #print("Export Polygroups: ", pref.export_polygroups) """
                     
 
             # Diff, disp and norm maps
@@ -1198,8 +1269,7 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write diff")
 
@@ -1214,8 +1284,7 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write disp")
 
@@ -1230,11 +1299,9 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
                 goz_file.write(pack('<Q', 1))
-                goz_file.write(pack('%ss' % len(name), name))
-                
+                goz_file.write(pack('%ss' % len(name), name))                
                 if pref.performance_profiling: 
                     start_time = profiler(start_time, "Write norm")
-
             # end
             goz_file.write(pack('16x'))
             
@@ -1247,9 +1314,15 @@ class GoB_OT_export(Operator):
         bpy.data.meshes.remove(me)
         return
 
-    def execute(self, context):  
+    ## alternate button input
+    def invoke(self, context, event):
+        self.modifier_shift = event.shift
+        self.modifier_ctrl = event.ctrl
+        self.modifier_alt = event.alt
+        return self.execute(context)
 
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences             
+    def execute(self, context):  
+        pref = context.preferences.addons[__package__].preferences             
         PATH_PROJECT = pref.project_path.replace("\\", "/") 
         #setup GoZ configuration
         #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
@@ -1264,34 +1337,61 @@ class GoB_OT_export(Operator):
 
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoZ_Config:
-                GoZ_Config.write(f"PATH = \"{PATH_BLENDER}\"")
+            with open(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt", 'wt') as GoB_Config:
+                GoB_Config.write(f"PATH = \"{PATH_BLENDER}\"")
             #specify GoZ application
             with open(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt", 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")            
 
 
         #update project path
-        print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
+        #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt", 'wt') as GoZ_Application:
-            GoZ_Application.write(PATH_PROJECT)  
-            
+            GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
         if pref.clean_project_path:
             for file_name in os.listdir(PATH_PROJECT):
                 #print(file_name)
                 if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
-                    print('cleaning file:', file_name)
+                    #print('cleaning file:', file_name)
                     os.remove(PATH_PROJECT + file_name)
+        
+        """
+        # a object can either be imported as tool or as subtool in zbrush
+        # the IMPORT_AS_SUBTOOL needs to be changed in ..\Pixologic\GoZBrush\GoZ_Config.txt 
+        # for zbrush to recognize the import mode   
+            GoZ_Config.txt
+                PATH = "C:\PROGRAM FILES\PIXOLOGIC\ZBRUSH 2021/ZBrush.exe"
+                IMPORT_AS_SUBTOOL = TRUE
+                SHOW_HELP_WINDOW = TRUE 
+        """         
+        import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
+        import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
 
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as r:
+            # IMPORT AS SUBTOOL
+            r = r.read().replace('\t', ' ') #fix indentations in source data
+            if self.modifier_shift or self.modifier_ctrl or self.modifier_alt:  ## see invoke function for modifier states
+                new_config = r.replace(import_as_subtool, import_as_tool)
+            # IMPORT AS TOOL
+            else:
+                new_config = r.replace(import_as_tool, import_as_subtool)
+
+        with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt", "w") as w:
+            w.write(new_config)
+            
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(bpy.context.copy(), mode='OBJECT')
+            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')       
+        
+        wm = context.window_manager
+        wm.progress_begin(0,100)
+        step =  100  / len(context.selected_objects)
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
-            for obj in context.selected_objects:
+            for i, obj in enumerate(context.selected_objects):
                 if  obj.type == 'MESH':
                     numFaces = len(obj.data.polygons)
                     if numFaces:
@@ -1302,28 +1402,28 @@ class GoB_OT_export(Operator):
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
                         print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
-
-                    
+                wm.progress_update(step * i)                
+            wm.progress_end()
+            
         global cached_last_edition_time
         cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-        PATH_ZBRUSH = pref.zbrush_exec
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        if 'ZBrush.exe' in PATH_ZBRUSH:    
-            Popen([PATH_ZBRUSH, PATH_SCRIPT])
-        elif 'ZBrush.app' in PATH_ZBRUSH:
-            Popen(['open', '-a', PATH_ZBRUSH, PATH_SCRIPT])     
-        else:
-            if isMacOS:
-                filepath = f"/Applications/"
-            else:
-                filepath = f"C:/Program Files/Pixologic/"
+        # if no Zbrush application is specified apply the latest version.
+        if isMacOS: 
+            if not 'ZBrush.app' in pref.zbrush_exec:                
+                bpy.ops.gob.find_zbrush()
+                bpy.ops.wm.save_userpref()            
+            Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
+        #windows
+        else: 
+            if not 'ZBrush.exe' in pref.zbrush_exec:              
+                bpy.ops.gob.find_zbrush() 
+                bpy.ops.wm.save_userpref()               
+            Popen([pref.zbrush_exec, PATH_SCRIPT])         
 
-            bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT', filepath=filepath)
-            #Popen([PATH_ZBRUSH, PATH_SCRIPT])
-            
         if context.object:
-            bpy.ops.object.mode_set(bpy.context.copy(), mode=currentContext)  
+            bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
 
@@ -1345,25 +1445,55 @@ class GoB_OT_export(Operator):
         obj.name = new_name
 
 
-class GoB_OT_OpenFilebrowser(Operator, ImportHelper):
-    bl_idname = "gob.open_filebrowser"
-      
+class GoB_OT_Find_ZBrush(Operator):
+    ''' find the zbrush application '''
+    bl_idname = "gob.find_zbrush"      
     if isMacOS:
-        bl_label = "Load ZBrush.app" 
+        bl_label = f"/ZBrush.app" 
+        filepath = f"/Applications/"
     else:
-        bl_label = "Load ZBrush.exe" 
+        bl_label = f"/ZBrush.exe"   
+        filepath = f"C:/Program Files/Pixologic/" 
 
     def execute(self, context):
-        """Do something with the selected file(s)."""  
-        pref = bpy.context.preferences.addons[__package__.split(".")[0]].preferences   
-        filename, extension = os.path.splitext(self.filepath)
-        if 'ZBrush.exe' in self.filepath or 'ZBrush.app' in self.filepath:
-            pref.zbrush_exec = self.filepath        
-            bpy.ops.wm.save_userpref()
+        """Install goZ for windows"""  
+        pref = context.preferences.addons[__package__].preferences  
+        #get the highest version of zbrush and use it as default zbrush to send to
+        if isMacOS:
+            folder_List = [] 
+            [folder_List.append(i) for i in os.listdir(self.filepath) if 'ZBrush' in i]
+            i, zfolder = max_list_value(folder_List)
+            pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace( "\\", "/") 
         else:
-            self.filepath = ""
-            print("ZBrush executable not found, try selecting it again.")
+            i,zfolder = max_list_value(os.listdir(self.filepath))
+            pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace("/", "\\") 
 
         return {'FINISHED'}
+
+
+class GoB_OT_GoZ_Installer_WIN(Operator):
+    ''' Run the Pixologic GoZ installer 
+        //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
+    bl_idname = "gob.install_goz"      
+    if isMacOS:
+        bl_label = f"/ZBrush.app" 
+        filepath = f"/Applications/"
+    else:
+        bl_label = f"/ZBrush.exe"   
+        filepath = f"C:/Program Files/Pixologic/" 
+      
+    def execute(self, context):
+        """Install GoZ for Windows"""  
+        pref = context.preferences.addons[__package__].preferences 
+        bpy.ops.gob.find_zbrush()
+        bpy.ops.wm.save_userpref()
+                            
+        if 'ZBrush.exe' in pref.zbrush_exec: 
+            path = pref.zbrush_exec.strip("\ZBrush.exe")            
+            GOZ_INSTALLER = f"{path}/Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe"
+            Popen([GOZ_INSTALLER], shell=True) 
+    
+        return {'FINISHED'}
+
 
 
