@@ -1486,7 +1486,6 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         """Install GoZ for Windows"""  
         pref = context.preferences.addons[__package__].preferences 
         bpy.ops.gob.find_zbrush()
-        bpy.ops.wm.save_userpref()
                             
         if 'ZBrush.exe' in pref.zbrush_exec: 
             path = pref.zbrush_exec.strip("\ZBrush.exe")            
