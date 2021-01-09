@@ -1413,13 +1413,11 @@ class GoB_OT_export(Operator):
         if isMacOS: 
             if not 'ZBrush.app' in pref.zbrush_exec:                
                 bpy.ops.gob.find_zbrush()
-                bpy.ops.wm.save_userpref()            
             Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
         #windows
         else: 
             if not 'ZBrush.exe' in pref.zbrush_exec:              
                 bpy.ops.gob.find_zbrush() 
-                bpy.ops.wm.save_userpref()               
             Popen([pref.zbrush_exec, PATH_SCRIPT])         
 
         if context.object:
@@ -1486,7 +1484,6 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         """Install GoZ for Windows"""  
         pref = context.preferences.addons[__package__].preferences 
         bpy.ops.gob.find_zbrush()
-        bpy.ops.wm.save_userpref()
                             
         if 'ZBrush.exe' in pref.zbrush_exec: 
             path = pref.zbrush_exec.strip("\ZBrush.exe")            
