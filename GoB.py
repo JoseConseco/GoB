@@ -1499,7 +1499,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
     bl_idname = "gob.update_addon"
     bl_label = "update_addon"  
     
-    def download_release_version(self, url, save_path, download_path):  
+    def download_new_version_version(self, url, save_path, download_path):  
             import webbrowser
             import requests, zipfile, io
 
@@ -1517,7 +1517,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
     
     def execute(self, context):
         package = "c:/temp/!myaddon.zip"                    
-        download_path = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
+        download_path = 'https://github.com/JoseConseco/GoB/archive/' + new_version + '.zip'
 
 """
 
@@ -1532,23 +1532,53 @@ class GoB_OT_AddonUpdater(Operator):
     
     button_input: bpy.props.IntProperty()
 
-    
-    def request_release_version(self, url):     
-        response  = requests.get(url)           # https://api.github.com/repos/JoseConseco/GoB/releases/latest
-        gitrelease = response.json()
-        version = gitrelease.get('tag_name')    # "tag_name": "v3_5_1",
-        return version
+    def max_tag(self, list):
+        i = numpy.argmax(list)
+        v = list[i]
+        return (i, v)
+
+    def find_new_version(self, api_path): 
+        pref = bpy.context.preferences.addons[__package__].preferences 
+
+        #EXPERIMENTAL VERSIONS
+        if pref.experimental_versions:
+            response  = requests.get(api_path + "/tags")           # https://api.github.com/repos/JoseConseco/GoB/tags
+            gitrelease = response.json()
+            #print("gitrelease", gitrelease)
+            tags = []
+            for tag in gitrelease:
+                version = tag.get('name')    # "name": "v3_5_1",
+                tags.append(version)
+            i, version = self.max_tag(tags)
+
+            return version
+        else:            
+            print("experimental_versions: ", pref.experimental_versions) 
+            print("path: ", api_path + "/releases/latest")
+            response  = requests.get(api_path + "/releases/latest")           # https://api.github.com/repos/JoseConseco/GoB/releases/latest
+            gitrelease = response.json()
+            version = gitrelease.get('tag_name')    # "tag_name": "v3_5_1",
+            
+            return version
 
 
-    def download_release(self, url, zip_file, zip_file_url): 
-        import requests, zipfile, io
-
+    def download_new_version(self, api_path, new_version, zip_file, zip_file_url): 
+        #import zipfile
+        pref = bpy.context.preferences.addons[__package__].preferences 
+        
         # open release page 
         import webbrowser
-        release_page ='https://github.com/JoseConseco/GoB/releases' #disable this to go directly to zip
+        
+        #EXPERIMENTAL VERSIONS
+        if pref.experimental_versions:        
+            release_page = api_path + "/zipball/" + new_version  # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
+        else:
+            release_page = pref.repository_path + "/releases"   # "https://github.com/JoseConseco/GoB/releases") 
+
         webbrowser.open_new_tab(release_page)
 
-        #response  = requests.get(url)
+
+        #response  = requests.get(api_path)
         #gitrelease = response.json()        
         #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
         #zip_file_url ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
@@ -1578,27 +1608,30 @@ class GoB_OT_AddonUpdater(Operator):
     def execute(self, context): 
         global update_available 
         pref = context.preferences.addons[__package__].preferences 
-        release_url = pref.release_path    
+        
+        api_path = pref.repository_path.replace("https://github.com/", "https://api.github.com/repos/")
+
+        
+
         print("self.button_input: ", self.button_input)
         if self.button_input != -1:
             try:    
-                response  = requests.get(release_url)
-                print("response", response)    
+                response  = requests.get(api_path + "/releases/latest")   
                 if response.status_code == 200:         
                     print("self.button_input1: ", self.button_input)
                     current_version = self.addon_version()
-                    release_version = self.request_release_version(release_url)
-                    print("\n\nCurrent: ", current_version, "\nRelease: ", release_version)  
+                    new_version = self.find_new_version(api_path)
+                    print("\n\nCurrent: ", current_version, "\nRelease: ", new_version)  
 
-                    if release_version > current_version:
-                        print("GoB update available: ", release_version)                     
+                    if new_version > current_version:
+                        print("GoB update available: ", new_version)                     
                         if update_available and self.button_input == 1:
                             temp_path = context.preferences.filepaths.temporary_directory 
-                            zip_file  = (temp_path + "blender_addon_updater.zip")
+                            zip_file  = (temp_path + pref.zip_filename)
                             #print("temp_path ", temp_path, zip_file)               
-                            zip_file_url = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
-                            self.download_release(release_url, zip_file, zip_file_url)                    
-                        update_available = release_version
+                            zip_file_url = pref.repository_path + "/archive/" + new_version + ".zip" #'https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+                            self.download_new_version(api_path, new_version, zip_file, zip_file_url)                    
+                        update_available = new_version
                     else:
                         print("Addon is up to date: ", current_version)
                         update_available = False  

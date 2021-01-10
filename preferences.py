@@ -34,18 +34,31 @@ from bpy.props import ( StringProperty,
 class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
-    #GLOBAL
-    release_path: StringProperty(
-        name="latest release", 
-        description="latest release", 
+    #ADDON UPDATER
+    repository_path: StringProperty(
+        name="Project", 
+        description="Github Project url example: https://github.com/JoseConseco/GoB", 
+        subtype='DIR_PATH',
+        default="https://github.com/JoseConseco/GoB") 
+    
+    zip_filename: StringProperty(
+        name="zip_filename", 
+        description="zip_filename", 
         subtype='FILE_PATH',
-        default="https://api.github.com/repos/JoseConseco/GoB/releases/latest") 
+        default="blender_addon_updater.zip") 
 
     auto_udpate_check: BoolProperty(
         name="Check for udpates automaticaly",
         description="auto_udpate_check",
         default=False)
 
+    experimental_versions: BoolProperty(
+        name="Experimental Verions",
+        description="Check for experimental verions",
+        default=False)
+
+
+    #GLOBAL
     zbrush_exec: StringProperty(
         name="ZBrush", 
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
@@ -56,7 +69,7 @@ class GoBPreferences(AddonPreferences):
     project_path: StringProperty(
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
-        subtype='FILE_PATH',
+        subtype='DIR_PATH',
         default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
     
     clean_project_path: BoolProperty(
@@ -278,20 +291,23 @@ class GoBPreferences(AddonPreferences):
         row  = col.row(align=False)         
         
         row.operator("gob.check_udpates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
-        if GoB.update_available == True:
-            row.operator("gob.check_udpates", text="Download: " + GoB.update_available, icon='COLORSET_03_VEC').button_input = 1
-        elif GoB.update_available == False:
+        if GoB.update_available == False:
             row.operator("gob.check_udpates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
         elif GoB.update_available == None:
             row.operator("gob.check_udpates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
         elif GoB.update_available == 'TIME':
             row.operator("gob.check_udpates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
-       
-       
-        #col.prop(self, 'release_path') 
+        else:
+            row.operator("gob.check_udpates", text="Download: " + GoB.update_available, icon='COLORSET_03_VEC').button_input = 1
+        
+        col  = box.column(align=False)              
+        col.prop(self, 'repository_path') 
+        #col.prop(self, 'zip_filename')
+        col.prop(self, 'experimental_versions') 
         #col.prop(self, 'auto_udpate_check')
 
 
+        layout.use_property_split = True
         box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
