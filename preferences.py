@@ -35,14 +35,14 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
-    update_path: StringProperty(
-        name="Update url", 
-        description="Update url", 
+    release_path: StringProperty(
+        name="latest release", 
+        description="latest release", 
         subtype='FILE_PATH',
-        default="https://github.com/JoseConseco/GoB/releases/tag/") 
+        default="https://api.github.com/repos/JoseConseco/GoB/releases/latest") 
 
     auto_udpate_check: BoolProperty(
-        name="auto_udpate_check",
+        name="Check for udpates automaticaly",
         description="auto_udpate_check",
         default=False)
 
@@ -271,6 +271,22 @@ class GoBPreferences(AddonPreferences):
         layout = self.layout
         layout.use_property_split = True
 
+        #advanced & dev options
+        box = layout.box() 
+        box.label(text='GoB Advanced Options', icon='PREFERENCES')  
+        col  = box.column(align=False) 
+        row  = col.row(align=False) 
+        if GoB.update_available:
+            row.operator("gob.check_udpates", text="Update Addon", icon='IMPORT') 
+        elif GoB.update_available == False:
+            row.operator("gob.check_udpates", text="No Update Found", icon='ERROR') 
+        elif GoB.update_available == None:
+            row.operator("gob.check_udpates", text="Check for Updates", icon='ERROR') 
+
+        #col.prop(self, 'release_path') 
+        col.prop(self, 'auto_udpate_check') 
+
+
         box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
@@ -340,15 +356,7 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_polypaint_name') 
 
 
-        #advanced & dev options
-
         
-        box = layout.box() 
-        box.label(text='GoB Advanced Options', icon='PREFERENCES')  
-        col = box.column(align=False) 
-        col.operator( "gob.check_udpates", text="Check Updates", icon='FILE_REFRESH') 
-        col.prop(self, 'update_path') 
-        col.prop(self, 'auto_udpate_check') 
 
 
  

@@ -34,7 +34,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 5, 1),
+    "version": (3, 5, 2),
     "blender": (2, 83, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -47,7 +47,7 @@ classes = (
     GoB.GoB_OT_export,
     GoB.GoB_OT_GoZ_Installer_WIN,
     GoB.GoB_OT_Find_ZBrush,
-    GoB.GoB_OT_AddonUpdater,
+    GoB.GoB_OT_LookForAddonUpdates,
     preferences.GoBPreferences,
     )
 

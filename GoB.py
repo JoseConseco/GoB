@@ -19,6 +19,7 @@
 import bpy
 import os
 import shutil
+import requests
 from subprocess import Popen
 import addon_utils
 import bmesh
@@ -1493,60 +1494,118 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         return {'FINISHED'}
 
 
-class GoB_OT_AddonUpdater(Operator):
-    ''' Look for a new GoB version on Github '''
-    bl_idname = "gob.check_udpates"
-    bl_label = "Update" 
+""" class GoB_OT_UpdateAddon(Operator):
+    ''' update addon '''
+    bl_idname = "gob.update_addon"
+    bl_label = "update_addon"  
     
-    def extract_number(self, input_str):
-        if input_str is None or input_str == '':
-            return 0
+    def download_release_version(self, url, save_path, download_path):  
+            import webbrowser
+            import requests, zipfile, io
 
-        out_number = []
-        for ele in input_str:
-            if ele.isdigit():
-                out_number.append(int(ele))
-        return out_number
+            response  = requests.get(url)
+            gitrelease = response.json()        
+            #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
+            #print("zip_file_url", zip_file_url)
+            #download_path ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+            webbrowser.open_new_tab(download_path)
 
-    def get_latest_release_version(self, url):
-        import requests
-        response  = requests.get(url)
-        gitrelease = response.json()
-        tag = gitrelease.get('tag_name')
-        print("latest GoB release: ", gitrelease.get('tag_name'))
-        #extract numbers from tag
-        return tag
-
-
+            #download = requests.get(download_path)
+            ''' with open(save_path, 'wb') as f:
+                print("downloading udpate", save_path)
+                f.write(download.content)   '''
+    
     def execute(self, context):
-        import urllib.request
-        import re        
-        pref = context.preferences.addons[__package__].preferences 
+        package = "c:/temp/!myaddon.zip"                    
+        download_path = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
 
+"""
+
+
+update_available = None   
+
+class GoB_OT_LookForAddonUpdates(Operator):
+    ''' Look for a new Addon version on Github '''
+    bl_idname = "gob.check_udpates"
+    bl_label = "Check for Updates" 
+    
+    def request_release_version(self, url):     
+        response  = requests.get(url)           # https://api.github.com/repos/JoseConseco/GoB/releases/latest
+        gitrelease = response.json()
+        version = gitrelease.get('tag_name')    # "tag_name": "v3_5_1",
+        return version
+
+    def download_release_version(self, url, save_path, download_path):  
+        import webbrowser
+        import requests, zipfile, io
+
+        response  = requests.get(url)
+        gitrelease = response.json()        
+        #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
+        #print("zip_file_url", zip_file_url)
+        #download_path ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+        webbrowser.open_new_tab(download_path)
+
+        #download = requests.get(download_path)
+        """ with open(save_path, 'wb') as f:
+            print("downloading udpate", save_path)
+            f.write(download.content)    """
+
+
+    def addon_version(self):
         for mod in addon_utils.modules():
             if mod.bl_info.get('name') == 'GoB':
-                version = self.extract_number(str(mod.bl_info.get('version', (-1, -1, -1))))
-                print(version[0], version[1], version[2])
+                n = self.extract_numbers(str(mod.bl_info.get('version', (-1, -1, -1))))
+                version = "v"+ str(n[0]) + "_"+ str(n[1]) + "_"+ str(n[2])
+                return version
 
-        current_version = 'v3_5_01'
-        update_version = 'v3_5_2'
+    def extract_numbers(self, input_str):    
+        if input_str is None or input_str == '':
+            return 0
+        number = [n for n in input_str if n.isdigit()] 
+        return number
+
+
+    def execute(self, context): 
+        global update_available 
+        pref = context.preferences.addons[__package__].preferences 
+        release_url = pref.release_path    
+        try:          
+            response  = requests.get(release_url)       
+            if response.status_code==200:         
+                current_version = self.addon_version()
+                release_version = self.request_release_version(release_url)
+                print("\n\nCurrent: ", current_version, "\nRelease: ", release_version)  
+
+                if release_version > current_version:
+                    print("GoB update available: ", release_version)                     
+                    if update_available:
+                        temp_path = context.preferences.filepaths.temporary_directory 
+                        download_file  = (temp_path + "!myaddon.zip")
+                        print("temp_path ", temp_path, download_file)               
+                        download_path = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
+                        self.download_release_version(release_url, download_file, download_path)
+                    
+                    update_available = True
+                else:
+                    print("Addon is up to date: ", current_version)
+                    update_available = False  
+        except requests.ConnectionError as e:
+            print("update doesn't exists!", e)              
+            update_available = False         
+
         
+        #bpy.ops.preferences.addon_install(overwrite=True, target='DEFAULT', filepath=package, filter_folder=True, filter_python=True, filter_glob='*.py;*.zip')
+        '''
+        Install an add-on
+        Parameters
+        overwrite (boolean, (optional)) – Overwrite, Remove existing add-ons with the same ID
+        target (enum in ['DEFAULT', 'PREFS'], (optional)) – Target Path
+        filepath (string, (optional, never None)) – filepath
+        filter_folder (boolean, (optional)) – Filter folders
+        filter_python (boolean, (optional)) – Filter python
+        filter_glob (string, (optional, never None)) – filter_glob
+        '''
 
-        url = 'https://api.github.com/repos/JoseConseco/GoB/releases/latest'
-        tag = self.get_latest_release_version(url)
-
-        if tag > current_version:
-            print("test: ", tag, current_version)
-        else:
-            print("no new verison: ", tag, current_version)
-
-        try: 
-            response = urllib.request.urlopen(url + current_version)
-            if response.code==200 and (url + current_version) < (url + update_version):
-                
-                print("udpate found") 
-        except: 
-            print("update doesn't exists!") 
-        
         return {'FINISHED'}
     
