@@ -273,18 +273,23 @@ class GoBPreferences(AddonPreferences):
 
         #advanced & dev options
         box = layout.box() 
-        box.label(text='GoB Advanced Options', icon='PREFERENCES')  
+        box.label(text='Addon Updater', icon='PREFERENCES')  
         col  = box.column(align=False) 
-        row  = col.row(align=False) 
-        if GoB.update_available:
-            row.operator("gob.check_udpates", text="Update Addon", icon='IMPORT') 
+        row  = col.row(align=False)         
+        
+        row.operator("gob.check_udpates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
+        if GoB.update_available == True:
+            row.operator("gob.check_udpates", text="Download: " + GoB.update_available, icon='COLORSET_03_VEC').button_input = 1
         elif GoB.update_available == False:
-            row.operator("gob.check_udpates", text="No Update Found", icon='ERROR') 
+            row.operator("gob.check_udpates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
         elif GoB.update_available == None:
-            row.operator("gob.check_udpates", text="Check for Updates", icon='ERROR') 
-
+            row.operator("gob.check_udpates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
+        elif GoB.update_available == 'TIME':
+            row.operator("gob.check_udpates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+       
+       
         #col.prop(self, 'release_path') 
-        col.prop(self, 'auto_udpate_check') 
+        #col.prop(self, 'auto_udpate_check')
 
 
         box = layout.box() 

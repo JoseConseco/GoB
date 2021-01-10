@@ -1524,10 +1524,14 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
 
 update_available = None   
 
-class GoB_OT_LookForAddonUpdates(Operator):
+
+class GoB_OT_AddonUpdater(Operator):
     ''' Look for a new Addon version on Github '''
     bl_idname = "gob.check_udpates"
     bl_label = "Check for Updates" 
+    
+    button_input: bpy.props.IntProperty()
+
     
     def request_release_version(self, url):     
         response  = requests.get(url)           # https://api.github.com/repos/JoseConseco/GoB/releases/latest
@@ -1535,20 +1539,24 @@ class GoB_OT_LookForAddonUpdates(Operator):
         version = gitrelease.get('tag_name')    # "tag_name": "v3_5_1",
         return version
 
-    def download_release_version(self, url, save_path, download_path):  
-        import webbrowser
+
+    def download_release(self, url, zip_file, zip_file_url): 
         import requests, zipfile, io
 
-        response  = requests.get(url)
-        gitrelease = response.json()        
-        #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
-        #print("zip_file_url", zip_file_url)
-        #download_path ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
-        webbrowser.open_new_tab(download_path)
+        # open release page 
+        import webbrowser
+        release_page ='https://github.com/JoseConseco/GoB/releases' #disable this to go directly to zip
+        webbrowser.open_new_tab(release_page)
 
-        #download = requests.get(download_path)
-        """ with open(save_path, 'wb') as f:
-            print("downloading udpate", save_path)
+        #response  = requests.get(url)
+        #gitrelease = response.json()        
+        #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
+        #zip_file_url ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+        #print("zip_file_url", zip_file_url)
+
+        #download = requests.get(zip_file_url)
+        """ with open(zip_file, 'wb') as f:
+            print("downloading udpate", zip_file)
             f.write(download.content)    """
 
 
@@ -1558,6 +1566,7 @@ class GoB_OT_LookForAddonUpdates(Operator):
                 n = self.extract_numbers(str(mod.bl_info.get('version', (-1, -1, -1))))
                 version = "v"+ str(n[0]) + "_"+ str(n[1]) + "_"+ str(n[2])
                 return version
+
 
     def extract_numbers(self, input_str):    
         if input_str is None or input_str == '':
@@ -1570,29 +1579,37 @@ class GoB_OT_LookForAddonUpdates(Operator):
         global update_available 
         pref = context.preferences.addons[__package__].preferences 
         release_url = pref.release_path    
-        try:          
-            response  = requests.get(release_url)       
-            if response.status_code==200:         
-                current_version = self.addon_version()
-                release_version = self.request_release_version(release_url)
-                print("\n\nCurrent: ", current_version, "\nRelease: ", release_version)  
+        print("self.button_input: ", self.button_input)
+        if self.button_input != -1:
+            try:    
+                response  = requests.get(release_url)
+                print("response", response)    
+                if response.status_code == 200:         
+                    print("self.button_input1: ", self.button_input)
+                    current_version = self.addon_version()
+                    release_version = self.request_release_version(release_url)
+                    print("\n\nCurrent: ", current_version, "\nRelease: ", release_version)  
 
-                if release_version > current_version:
-                    print("GoB update available: ", release_version)                     
-                    if update_available:
-                        temp_path = context.preferences.filepaths.temporary_directory 
-                        download_file  = (temp_path + "!myaddon.zip")
-                        print("temp_path ", temp_path, download_file)               
-                        download_path = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
-                        self.download_release_version(release_url, download_file, download_path)
-                    
-                    update_available = True
-                else:
-                    print("Addon is up to date: ", current_version)
-                    update_available = False  
-        except requests.ConnectionError as e:
-            print("update doesn't exists!", e)              
-            update_available = False         
+                    if release_version > current_version:
+                        print("GoB update available: ", release_version)                     
+                        if update_available and self.button_input == 1:
+                            temp_path = context.preferences.filepaths.temporary_directory 
+                            zip_file  = (temp_path + "blender_addon_updater.zip")
+                            #print("temp_path ", temp_path, zip_file)               
+                            zip_file_url = 'https://github.com/JoseConseco/GoB/archive/' + release_version + '.zip'
+                            self.download_release(release_url, zip_file, zip_file_url)                    
+                        update_available = release_version
+                    else:
+                        print("Addon is up to date: ", current_version)
+                        update_available = False  
+                
+                if response.status_code == 403:   #"message":"API rate limit exceeded for IP
+                    update_available = 'TIME'
+
+            except requests.ConnectionError as e:
+                print("update doesn't exists!", e)              
+                update_available = False
+
 
         
         #bpy.ops.preferences.addon_install(overwrite=True, target='DEFAULT', filepath=package, filter_folder=True, filter_python=True, filter_glob='*.py;*.zip')
