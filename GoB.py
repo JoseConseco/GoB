@@ -1493,4 +1493,60 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         return {'FINISHED'}
 
 
+class GoB_OT_AddonUpdater(Operator):
+    ''' Look for a new GoB version on Github '''
+    bl_idname = "gob.check_udpates"
+    bl_label = "Update" 
+    
+    def extract_number(self, input_str):
+        if input_str is None or input_str == '':
+            return 0
 
+        out_number = []
+        for ele in input_str:
+            if ele.isdigit():
+                out_number.append(int(ele))
+        return out_number
+
+    def get_latest_release_version(self, url):
+        import requests
+        response  = requests.get(url)
+        gitrelease = response.json()
+        tag = gitrelease.get('tag_name')
+        print("latest GoB release: ", gitrelease.get('tag_name'))
+        #extract numbers from tag
+        return tag
+
+
+    def execute(self, context):
+        import urllib.request
+        import re        
+        pref = context.preferences.addons[__package__].preferences 
+
+        for mod in addon_utils.modules():
+            if mod.bl_info.get('name') == 'GoB':
+                version = self.extract_number(str(mod.bl_info.get('version', (-1, -1, -1))))
+                print(version[0], version[1], version[2])
+
+        current_version = 'v3_5_01'
+        update_version = 'v3_5_2'
+        
+
+        url = 'https://api.github.com/repos/JoseConseco/GoB/releases/latest'
+        tag = self.get_latest_release_version(url)
+
+        if tag > current_version:
+            print("test: ", tag, current_version)
+        else:
+            print("no new verison: ", tag, current_version)
+
+        try: 
+            response = urllib.request.urlopen(url + current_version)
+            if response.code==200 and (url + current_version) < (url + update_version):
+                
+                print("udpate found") 
+        except: 
+            print("update doesn't exists!") 
+        
+        return {'FINISHED'}
+    

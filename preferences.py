@@ -35,6 +35,17 @@ class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
     #GLOBAL
+    update_path: StringProperty(
+        name="Update url", 
+        description="Update url", 
+        subtype='FILE_PATH',
+        default="https://github.com/JoseConseco/GoB/releases/tag/") 
+
+    auto_udpate_check: BoolProperty(
+        name="auto_udpate_check",
+        description="auto_udpate_check",
+        default=False)
+
     zbrush_exec: StringProperty(
         name="ZBrush", 
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
@@ -271,6 +282,9 @@ class GoBPreferences(AddonPreferences):
         box = layout.box()
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=True) 
+
+            
+
         col.prop(self, 'zbrush_exec') 
         col.prop(self, 'project_path') 
         col.prop(self, 'clean_project_path')    
@@ -324,6 +338,17 @@ class GoBPreferences(AddonPreferences):
         col = box.column(align=True) 
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
+
+
+        #advanced & dev options
+
+        
+        box = layout.box() 
+        box.label(text='GoB Advanced Options', icon='PREFERENCES')  
+        col = box.column(align=False) 
+        col.operator( "gob.check_udpates", text="Check Updates", icon='FILE_REFRESH') 
+        col.prop(self, 'update_path') 
+        col.prop(self, 'auto_udpate_check') 
 
 
  
