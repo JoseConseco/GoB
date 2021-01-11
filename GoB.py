@@ -1153,10 +1153,10 @@ class GoB_OT_export(Operator):
                                 if map.value >= 0:
                                     goz_file.write(pack('<H', groupColor[map.value]))  
                                 else: #face without facemaps (value = -1)
-                                    goz_file.write(pack('<H', 65535))
+                                    goz_file.write(pack('<H', 65504))
                         else:   #assign empty when no face maps are found                 
                             for face in me.polygons:         
-                                goz_file.write(pack('<H', 65535))
+                                goz_file.write(pack('<H', 65504))
                                  
 
                     if pref.performance_profiling: 
@@ -1204,9 +1204,9 @@ class GoB_OT_export(Operator):
                                 #print("full:", face.index,  "\n")
                                 goz_file.write(pack('<H', groupColor[group]))
                             else:
-                                goz_file.write(pack('<H', 65535))
+                                goz_file.write(pack('<H', 65504))
                         else:
-                            goz_file.write(pack('<H', 65535))
+                            goz_file.write(pack('<H', 65504))
 
                     #print(vgData)
                     #print(groupColor)
