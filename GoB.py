@@ -1396,8 +1396,7 @@ class GoB_OT_export(Operator):
         wm = context.window_manager
         wm.progress_begin(0,100)
         step =  100  / len(context.selected_objects)
-
-        with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
+        with open(PATH_OBJLIST, 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
                 
                 if  (obj.type == 'SURFACE' or
@@ -1556,36 +1555,8 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         return {'FINISHED'}
 
 
-""" class GoB_OT_UpdateAddon(Operator):
-    ''' update addon '''
-    bl_idname = "gob.update_addon"
-    bl_label = "update_addon"  
-    
-    def download_new_version_version(self, url, save_path, download_path):  
-            import webbrowser
-            import requests, zipfile, io
-
-            response  = requests.get(url)
-            gitrelease = response.json()        
-            #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
-            #print("zip_file_url", zip_file_url)
-            #download_path ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
-            webbrowser.open_new_tab(download_path)
-
-            #download = requests.get(download_path)
-            ''' with open(save_path, 'wb') as f:
-                print("downloading udpate", save_path)
-                f.write(download.content)   '''
-    
-    def execute(self, context):
-        package = "c:/temp/!myaddon.zip"                    
-        download_path = 'https://github.com/JoseConseco/GoB/archive/' + new_version + '.zip'
-
-"""
-
 
 update_available = None   
-
 
 class GoB_OT_AddonUpdater(Operator):
     ''' Look for a new Addon version on Github '''
@@ -1721,3 +1692,29 @@ class GoB_OT_AddonUpdater(Operator):
 
         return {'FINISHED'}
     
+""" class GoB_OT_UpdateAddon(Operator):
+    ''' update addon '''
+    bl_idname = "gob.update_addon"
+    bl_label = "update_addon"  
+    
+    def download_new_version_version(self, url, save_path, download_path):  
+            import webbrowser
+            import requests, zipfile, io
+
+            response  = requests.get(url)
+            gitrelease = response.json()        
+            #zip_file_url = gitrelease.get('zipball_url')     # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
+            #print("zip_file_url", zip_file_url)
+            #download_path ='https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+            webbrowser.open_new_tab(download_path)
+
+            #download = requests.get(download_path)
+            ''' with open(save_path, 'wb') as f:
+                print("downloading udpate", save_path)
+                f.write(download.content)   '''
+    
+    def execute(self, context):
+        package = "c:/temp/!myaddon.zip"                    
+        download_path = 'https://github.com/JoseConseco/GoB/archive/' + new_version + '.zip'
+
+"""
