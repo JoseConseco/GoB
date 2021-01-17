@@ -908,20 +908,22 @@ class GoB_OT_export(Operator):
 
     @staticmethod
     def apply_modifiers(obj, pref):
-        dg = bpy.context.evaluated_depsgraph_get()
+        depsgraph = bpy.context.evaluated_depsgraph_get()           
+        
         if pref.export_modifiers == 'APPLY_EXPORT':
-            # me = object_eval.to_mesh() #with modifiers - crash need to_mesh_clear()?
-            me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
-            obj.data = me
-            obj.modifiers.clear()
+            mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+            obj.data = mesh_tmp
+            obj.modifiers.clear()     
+
         elif pref.export_modifiers == 'ONLY_EXPORT':
-            me = bpy.data.meshes.new_from_object(obj.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
+            mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
+
         else:
-            me = obj.data
+            mesh_tmp = obj.data
 
         #DO the triangulation of Ngons only, but do not write it to original object.    
         bm = bmesh.new()
-        bm.from_mesh(me)
+        bm.from_mesh(mesh_tmp)
         #join traingles only that are result of ngon triangulation        
         for f in bm.faces:
             if len(f.edges) > 4:
@@ -931,9 +933,10 @@ class GoB_OT_export(Operator):
                                         cmp_vcols=False,cmp_materials=False, 
                                         angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
         
-        export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop anyway
+        export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
         bm.to_mesh(export_mesh)
-        bm.free()
+        bm.free()       
+        obj.to_mesh_clear()
 
         return export_mesh
     
@@ -1393,9 +1396,41 @@ class GoB_OT_export(Operator):
 
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
-                if  obj.type == 'MESH':
-                    numFaces = len(obj.data.polygons)
-                    if numFaces:
+                
+                if obj.type in ['SURFACE','CURVE', 'META']:
+                    """ if  (obj.type == 'SURFACE' or
+                            obj.type == 'CURVE'):  """
+                    
+                    print("obj.type: ", obj.type, obj.name)
+
+                    depsgraph = context.evaluated_depsgraph_get()
+                    obj_to_convert = obj.evaluated_get(depsgraph)
+
+                    #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+                    mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
+                    mesh_tmp.transform(obj.matrix_world)
+                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
+                    #context.view_layer.active_layer_collection.collection.objects.link(obj_tmp) 
+
+                    print("PRE: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
+                    
+
+                    if len(mesh_tmp.polygons):
+                        print(obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
+                        self.escape_object_name(obj_tmp)
+                        self.exportGoZ(PATH_GOZ, context.scene, obj_tmp, f'{PATH_PROJECT}')
+                        with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
+                            ztn.write(f'{PATH_PROJECT}{obj_tmp.name}')
+                        GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')                        
+                        #cleanup
+                        bpy.data.meshes.remove(mesh_tmp)
+                    else:
+                        print("ELSE: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
+                        pass
+
+                elif  obj.type == 'MESH':
+                    print("obj.type: ", obj.type, obj.name)
+                    if len(obj.data.polygons):
                         self.escape_object_name(obj)
                         self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
@@ -1403,6 +1438,9 @@ class GoB_OT_export(Operator):
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
                         print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+
+                else:
+                    print("GoB: unsupported obj.type found:", obj.type, obj.name)
                 wm.progress_update(step * i)                
             wm.progress_end()
             
