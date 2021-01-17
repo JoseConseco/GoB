@@ -52,11 +52,11 @@ def gob_init_os_paths():
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = bpy.app.binary_path.replace("\\", "/")
+    PATH_OBJLIST = f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"
+    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST
 
-    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER
 
-
-isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
+isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST = gob_init_os_paths()
 
 
 run_background_update = False
@@ -886,7 +886,10 @@ def avg_list_value(list):
     avg = numpy.average(avgData)
     return (avg)
 
-
+def is_file_empty(file_path):
+    """ Check if file is empty by confirming if its size is 0 bytes"""
+    # Check if file exist and it is empty
+    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
 
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
@@ -1445,22 +1448,25 @@ class GoB_OT_export(Operator):
             wm.progress_end()
             
         global cached_last_edition_time
-        cached_last_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        # if no Zbrush application is specified apply the latest version.
-        if isMacOS: 
-            if not 'ZBrush.app' in pref.zbrush_exec:                
-                bpy.ops.gob.find_zbrush()
-            Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
-        #windows
-        else: 
-            if not 'ZBrush.exe' in pref.zbrush_exec:              
-                bpy.ops.gob.find_zbrush() 
-            Popen([pref.zbrush_exec, PATH_SCRIPT])         
+        # only run if file is not empty
+        is_empty = is_file_empty(PATH_OBJLIST)
+        if not is_empty:
+            # if no Zbrush application is specified apply the latest version.
+            if isMacOS: 
+                if not 'ZBrush.app' in pref.zbrush_exec:                
+                    bpy.ops.gob.find_zbrush()
+                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
+            #windows
+            else: 
+                if not 'ZBrush.exe' in pref.zbrush_exec:              
+                    bpy.ops.gob.find_zbrush() 
+                Popen([pref.zbrush_exec, PATH_SCRIPT])         
 
-        if context.object:
-            bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
+            if context.object:
+                bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
         return{'FINISHED'}
 
 
