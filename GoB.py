@@ -1400,23 +1400,44 @@ class GoB_OT_export(Operator):
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt", 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
                 
-                if obj.type in ['SURFACE','CURVE', 'META']:
-                    """ if  (obj.type == 'SURFACE' or
-                            obj.type == 'CURVE'):  """
-                    
-                    print("obj.type: ", obj.type, obj.name)
+                if  (obj.type == 'SURFACE' or
+                        obj.type == 'CURVE' or
+                        obj.type == 'FONT' or                                           
+                        obj.type == 'META'): 
+
+
+
+                    """ 
+                    # Avoid annoying None checks later on.
+                    if obj.type not in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
+                        self.report({'INFO'}, "Object can not be converted to mesh")
+                        return {'CANCELLED'}
+                        
+                    depsgraph = context.evaluated_depsgraph_get()
+                    # Invoke to_mesh() for original object.
+                    mesh_from_orig = obj.to_mesh()
+                    self.report({'INFO'}, f"{len(mesh_from_orig.vertices)} in new mesh without modifiers.")
+
+                    # Remove temporary mesh.
+                    obj.to_mesh_clear()
+                    # Invoke to_mesh() for evaluated object.
+                    object_eval = obj.evaluated_get(depsgraph)
+                    mesh_from_eval = object_eval.to_mesh()
+                    self.report({'INFO'}, f"{len(mesh_from_eval.vertices)} in new mesh with modifiers.")
+                    # Remove temporary mesh.
+                    object_eval.to_mesh_clear() 
+                    #"""
+
+
+
 
                     depsgraph = context.evaluated_depsgraph_get()
                     obj_to_convert = obj.evaluated_get(depsgraph)
 
-                    #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+                    #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
-                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
-                    #context.view_layer.active_layer_collection.collection.objects.link(obj_tmp) 
-
-                    print("PRE: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
-                    
+                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)                    
 
                     if len(mesh_tmp.polygons):
                         print(obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
@@ -1427,9 +1448,6 @@ class GoB_OT_export(Operator):
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')                        
                         #cleanup
                         bpy.data.meshes.remove(mesh_tmp)
-                    else:
-                        print("ELSE: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
-                        pass
 
                 elif  obj.type == 'MESH':
                     print("obj.type: ", obj.type, obj.name)
