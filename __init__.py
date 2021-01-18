@@ -49,7 +49,7 @@ classes = (
     GoB.GoB_OT_export,
     GoB.GoB_OT_GoZ_Installer_WIN,
     GoB.GoB_OT_Find_ZBrush,
-    preferences.GoBPreferences,
+    preferences.GoB_Preferences,
     addon_updater.BAU_OT_SearchUpdates,
     )
 

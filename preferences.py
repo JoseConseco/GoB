@@ -33,7 +33,7 @@ from bpy.props import ( StringProperty,
                         EnumProperty)
 
 
-class GoBPreferences(AddonPreferences):
+class GoB_Preferences(AddonPreferences):
     bl_idname = __package__
 
     ############################################
