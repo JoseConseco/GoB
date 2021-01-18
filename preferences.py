@@ -19,8 +19,10 @@
 if "bpy" in locals():
     import importlib
     importlib.reload(GoB)
+    importlib.reload(addon_updater)
 else:
     from . import GoB
+    from . import addon_updater
     
 """Addon preferences"""
 import bpy
@@ -34,7 +36,9 @@ from bpy.props import ( StringProperty,
 class GoBPreferences(AddonPreferences):
     bl_idname = __package__
 
-    #ADDON UPDATER
+    ############################################
+    #       ADDON UPDATER    
+    ############################################
     repository_path: StringProperty(
         name="Project", 
         description="Github Project url example: https://github.com/JoseConseco/GoB", 
@@ -47,16 +51,16 @@ class GoBPreferences(AddonPreferences):
         subtype='FILE_PATH',
         default="blender_addon_updater.zip") 
 
-    auto_udpate_check: BoolProperty(
-        name="Check for udpates automaticaly",
-        description="auto_udpate_check",
+    auto_update_check: BoolProperty(
+        name="Check for updates automaticaly",
+        description="auto_update_check",
         default=False)
 
     experimental_versions: BoolProperty(
         name="Experimental Verions",
         description="Check for experimental verions",
         default=False)
-
+    ############################################
 
     #GLOBAL
     zbrush_exec: StringProperty(
@@ -285,26 +289,32 @@ class GoBPreferences(AddonPreferences):
         layout.use_property_split = True
 
         #advanced & dev options
+        #         
+        ############################################
+        #       ADDON UPDATER
+        ############################################
         box = layout.box() 
         box.label(text='Addon Updater', icon='PREFERENCES')  
         col  = box.column(align=False) 
         row  = col.row(align=False)         
         
-        row.operator("gob.check_udpates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
-        if GoB.update_available == False:
-            row.operator("gob.check_udpates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
-        elif GoB.update_available == None:
-            row.operator("gob.check_udpates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
-        elif GoB.update_available == 'TIME':
-            row.operator("gob.check_udpates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+        row.operator("bau.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
+        if addon_updater.update_available == False:
+            row.operator("bau.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
+        elif addon_updater.update_available == None:
+            row.operator("bau.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
+        elif addon_updater.update_available == 'TIME':
+            row.operator("bau.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
         else:
-            row.operator("gob.check_udpates", text="Download: " + GoB.update_available, icon='COLORSET_03_VEC').button_input = 1
+            row.operator("bau.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
         
         col  = box.column(align=False)              
         col.prop(self, 'repository_path') 
         #col.prop(self, 'zip_filename')
         col.prop(self, 'experimental_versions') 
-        #col.prop(self, 'auto_udpate_check')
+        #col.prop(self, 'auto_update_check')
+
+        ############################################
 
 
         layout.use_property_split = True

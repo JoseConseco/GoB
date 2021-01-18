@@ -21,9 +21,11 @@ if "bpy" in locals():
     import importlib
     importlib.reload(GoB)
     importlib.reload(preferences)
+    importlib.reload(addon_updater)
 else:
     from . import GoB
     from . import preferences
+    from . import addon_updater
 
 import bpy
 import os
@@ -34,7 +36,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 5, 3),
+    "version": (3, 5, 31),
     "blender": (2, 83, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -47,8 +49,8 @@ classes = (
     GoB.GoB_OT_export,
     GoB.GoB_OT_GoZ_Installer_WIN,
     GoB.GoB_OT_Find_ZBrush,
-    GoB.GoB_OT_AddonUpdater,
     preferences.GoBPreferences,
+    addon_updater.BAU_OT_SearchUpdates,
     )
 
 

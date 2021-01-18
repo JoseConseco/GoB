@@ -11,7 +11,7 @@ author: Daniel Grauer
 [VarDef,finalReportreportDuration,100] //Display Duration (in seconds) (0:wait for user action(default), -1:combine with next note command),
 [VarDef,maxSubtools,999]  
 
-[VarDef,GoBList(7),""]          // NOTE: if list size changes gob export list size needs to be udpated as well
+[VarDef,GoBList(7),""]          // NOTE: if list size changes gob export list size needs to be updated as well
     /* File: Gob_variables.zvr
     0: object name, 
     1: fileExtension, 
