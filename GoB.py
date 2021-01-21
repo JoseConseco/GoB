@@ -1480,7 +1480,7 @@ class GoB_OT_export(Operator):
             else: 
                 if not 'ZBrush.exe' in pref.zbrush_exec:              
                     bpy.ops.gob.find_zbrush() 
-                Popen([pref.zbrush_exec, PATH_SCRIPT])         
+                Popen([pref.zbrush_exec, PATH_SCRIPT], shell=True)         
 
             if context.object:
                 bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
