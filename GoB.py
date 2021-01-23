@@ -536,13 +536,13 @@ class GoB_OT_import(Operator):
 
                 if pref.import_material == 'POLYPAINT':                    
                     if pref.import_polypaint_name in me.vertex_colors:
-                        create_node(objMat, pref, diff, norm, disp)  
+                        create_material_node(objMat, pref, diff, norm, disp)  
                     
                 elif pref.import_material == 'TEXTURES':
-                    create_node(objMat, pref, diff, norm, disp)  
+                    create_material_node(objMat, pref, diff, norm, disp)  
                     
                 elif pref.import_material == 'POLYGROUPS':
-                    create_node(objMat, pref, diff, norm, disp)  
+                    create_material_node(objMat, pref, diff, norm, disp)  
           
             if pref.performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
@@ -657,240 +657,6 @@ class GoB_OT_import(Operator):
                 run_background_update = False
             return{'FINISHED'}
 
-
-
-def run_import_periodically():
-    global gob_import_cache
-    pref = bpy.context.preferences.addons[__package__].preferences
-    # print("Runing timers update check")
-    global cached_last_edition_time, run_background_update
-
-    try:
-        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-        #print("file_edition_time: ", file_edition_time, end='\n\n')
-    except Exception as e:
-        print(e)
-        run_background_update = False
-        if bpy.app.timers.is_registered(run_import_periodically):
-            bpy.app.timers.unregister(run_import_periodically)
-        return pref.import_timer
-    
-    
-    if file_edition_time > cached_last_edition_time:
-        cached_last_edition_time = file_edition_time           
-        # ! cant get proper context from timers for now. 
-        # Override context: https://developer.blender.org/T62074     
-        window = bpy.context.window_manager.windows[0]
-        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
-    else:         
-        if gob_import_cache:  
-            if pref.debug_output:   
-                print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
-            gob_import_cache.clear()   #reset import cache
-        else:
-            #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
-            pass    
-        return pref.import_timer       
-    
-    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
-        bpy.app.timers.unregister(run_import_periodically)
-    return pref.import_timer
-
-
-
-def create_node(mat, pref, diff=None, norm=None, disp=None):
-
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    """ for node in nodes:
-        print(node) """
-    shader_node = nodes.get('Principled BSDF')  
-    output_node = nodes.get('Material Output')    
-    
-    if pref.import_material == 'TEXTURES':        
-        # Diffiuse Color Map
-        if diff:
-            diffTxt_node = False  
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == diff.name:
-                    diffTxt_node = node
-            if not diffTxt_node:    
-                diffTxt_node = nodes.new('ShaderNodeTexImage')
-                diffTxt_node.location = -700, 500  
-                diffTxt_node.image = diff
-                diffTxt_node.label = 'Diffuse Color Map'
-                diffTxt_node.image.colorspace_settings.name = pref.import_diffuse_colorspace
-                mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
-
-        # Normal Map
-        if norm:
-            norm_node = False  
-            normTxt_node = False 
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm.name:
-                    normTxt_node = node
-                if node.bl_idname == 'ShaderNodeNormalMap':
-                    norm_node = node
-            if not norm_node:
-                norm_node = nodes.new('ShaderNodeNormalMap')
-                norm_node.location = -300, -100  
-                mat.node_tree.links.new(shader_node.inputs[19], norm_node.outputs[0])
-            if not normTxt_node:    
-                normTxt_node = nodes.new('ShaderNodeTexImage')
-                normTxt_node.location = -700, -100  
-                normTxt_node.image = norm
-                normTxt_node.label = 'Normal Map'
-                normTxt_node.image.colorspace_settings.name = pref.import_normal_colorspace
-                mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
-
-        # Displacement Map
-        if disp:
-            disp_node = False  
-            dispTxt_node = False  
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp.name:
-                    dispTxt_node = node     
-                if node.bl_idname == 'ShaderNodeDisplacement':
-                    disp_node = node
-            if not disp_node:
-                disp_node = nodes.new('ShaderNodeDisplacement')
-                disp_node.location = -300, 200  
-                mat.node_tree.links.new(output_node.inputs[2], disp_node.outputs[0])
-            if not dispTxt_node:    
-                dispTxt_node = nodes.new('ShaderNodeTexImage')
-                dispTxt_node.location = -700, 200  
-                dispTxt_node.image = disp
-                dispTxt_node.label = 'Displacement Map'
-                dispTxt_node.image.colorspace_settings.name = pref.import_displace_colorspace
-                mat.node_tree.links.new(disp_node.inputs[3], dispTxt_node.outputs[0])
-
-    if pref.import_material == 'POLYPAINT':
-        vcol_node = False   
-        for node in nodes:
-            if node.bl_idname == 'ShaderNodeVertexColor':
-                if pref.import_polypaint_name in node.layer_name:
-                    vcol_node = nodes.get(node.name) 
-        if not vcol_node:
-            vcol_node = nodes.new('ShaderNodeVertexColor')
-            vcol_node.location = -300, 200
-            vcol_node.layer_name = pref.import_polypaint_name    
-            mat.node_tree.links.new(shader_node.inputs[0], vcol_node.outputs[0])
-    
-
-def apply_transformation(me, is_import=True): 
-    pref = bpy.context.preferences.addons[__package__].preferences
-    mat_transform = None
-    scale = 1.0
-    
-    if pref.use_scale == 'BUNITS':
-        scale = bpy.context.scene.unit_settings.scale_length
-
-    if pref.use_scale == 'MANUAL':        
-        scale =  1/pref.manual_scale
-
-    if pref.use_scale == 'ZUNITS':
-        if bpy.context.active_object:
-            obj = bpy.context.active_object
-            i, max = max_list_value(obj.dimensions)
-            scale =  1 / pref.zbrush_scale * max
-            #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
-            
-    #import
-    if pref.flip_up_axis:  # fixes bad mesh orientation for some people
-        if pref.flip_forward_axis:
-            if is_import:
-                me.transform(mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
-                )
-                me.flip_normals()
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
-        else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
-    else:
-        if pref.flip_forward_axis:            
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
-                )
-                me.flip_normals()
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
-        else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
-    return me, mat_transform
-                
-def profiler(start_time=0, string=None):               
-    
-    elapsed = time.time()
-    print("{:.4f}".format(elapsed-start_time), "<< ", string)  
-    start_time = time.time()
-    return start_time  
-
-def max_list_value(list):
-    i = numpy.argmax(list)
-    v = list[i]
-    return (i, v)
-    
-def avg_list_value(list):
-    avgData=[]
-    for obj in list:
-        i = numpy.argmax(obj)
-        avgData.append(obj[i])
-    avg = numpy.average(avgData)
-    return (avg)
-
-def is_file_empty(file_path):
-    """ Check if file is empty by confirming if its size is 0 bytes"""
-    # Check if file exist and it is empty
-    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
-
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
@@ -909,40 +675,7 @@ class GoB_OT_export(Operator):
             #elif selected_objects[0].type == 'MESH':
             return selected_objects
 
-    @staticmethod
-    def apply_modifiers(obj, pref):
-        depsgraph = bpy.context.evaluated_depsgraph_get()           
-        
-        if pref.export_modifiers == 'APPLY_EXPORT':
-            mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
-            obj.data = mesh_tmp
-            obj.modifiers.clear()     
-
-        elif pref.export_modifiers == 'ONLY_EXPORT':
-            mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
-
-        else:
-            mesh_tmp = obj.data
-
-        #DO the triangulation of Ngons only, but do not write it to original object.    
-        bm = bmesh.new()
-        bm.from_mesh(mesh_tmp)
-        #join traingles only that are result of ngon triangulation        
-        for f in bm.faces:
-            if len(f.edges) > 4:
-                result = bmesh.ops.triangulate(bm, faces=[f])
-                bmesh.ops.join_triangles(bm, faces= result['faces'], 
-                                        cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-                                        cmp_vcols=False,cmp_materials=False, 
-                                        angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
-        
-        export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
-        bm.to_mesh(export_mesh)
-        bm.free()       
-        obj.to_mesh_clear()
-
-        return export_mesh
-    
+       
     
     def exportGoZ(self, path, scn, obj, pathImport):
         pref = bpy.context.preferences.addons[__package__].preferences        
@@ -951,23 +684,10 @@ class GoB_OT_export(Operator):
             print("\n", 100*"=")
             start_time = profiler(time.time(), "Export Profiling: " + obj.name)
             start_total_time = profiler(time.time(), "-------------")
-        
-        # TODO: when linked system is finalized it could be possible to provide
-        #  a option to modify the linked object. for now a copy
-        #  of the linked object is created to goz it
-        if obj.type == 'MESH':
-            if obj.library:
-                new_ob = obj.copy()
-                new_ob.data = obj.data.copy()
-                scn.collection.objects.link(new_ob)
-                new_ob.select_set(state=True)
-                obj.select_set(state=False)
-                bpy.context.view_layer.objects.active = new_ob
 
-                if pref.performance_profiling: 
-                    start_time = profiler(start_time, "Linked Object")
-               
-        me = self.apply_modifiers(obj, pref)
+
+
+        me = apply_modifiers(obj)
         me.calc_loop_triangles()
         me, mat_transform = apply_transformation(me, is_import=False)
 
@@ -1427,17 +1147,15 @@ class GoB_OT_export(Operator):
                     object_eval.to_mesh_clear() 
                     #"""
 
-
-
-
                     depsgraph = context.evaluated_depsgraph_get()
                     obj_to_convert = obj.evaluated_get(depsgraph)
-
                     #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
-                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)                    
-
+                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)  
+                                      
+                    mesh_welder(obj_tmp)
+                    
                     if len(mesh_tmp.polygons):
                         print(obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
                         self.escape_object_name(obj_tmp)
@@ -1449,6 +1167,10 @@ class GoB_OT_export(Operator):
                         bpy.data.meshes.remove(mesh_tmp)
 
                 elif  obj.type == 'MESH':
+                    process_linked_objects(obj) 
+
+                    remove_internal_faces(obj)   
+
                     print("obj.type: ", obj.type, obj.name)
                     if len(obj.data.polygons):
                         self.escape_object_name(obj)
@@ -1555,4 +1277,333 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         return {'FINISHED'}
 
 
+def run_import_periodically():
+    global gob_import_cache
+    pref = bpy.context.preferences.addons[__package__].preferences
+    # print("Runing timers update check")
+    global cached_last_edition_time, run_background_update
 
+    try:
+        file_edition_time = os.path.getmtime(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        #print("file_edition_time: ", file_edition_time, end='\n\n')
+    except Exception as e:
+        print(e)
+        run_background_update = False
+        if bpy.app.timers.is_registered(run_import_periodically):
+            bpy.app.timers.unregister(run_import_periodically)
+        return pref.import_timer
+    
+    
+    if file_edition_time > cached_last_edition_time:
+        cached_last_edition_time = file_edition_time           
+        # ! cant get proper context from timers for now. 
+        # Override context: https://developer.blender.org/T62074     
+        window = bpy.context.window_manager.windows[0]
+        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+    else:         
+        if gob_import_cache:  
+            if pref.debug_output:   
+                print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
+            gob_import_cache.clear()   #reset import cache
+        else:
+            #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+            pass    
+        return pref.import_timer       
+    
+    if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
+        bpy.app.timers.unregister(run_import_periodically)
+    return pref.import_timer
+
+
+def create_material_node(mat, pref, diff=None, norm=None, disp=None):
+
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    """ for node in nodes:
+        print(node) """
+    shader_node = nodes.get('Principled BSDF')  
+    output_node = nodes.get('Material Output')    
+    
+    if pref.import_material == 'TEXTURES':        
+        # Diffiuse Color Map
+        if diff:
+            diffTxt_node = False  
+            for node in nodes:
+                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == diff.name:
+                    diffTxt_node = node
+            if not diffTxt_node:    
+                diffTxt_node = nodes.new('ShaderNodeTexImage')
+                diffTxt_node.location = -700, 500  
+                diffTxt_node.image = diff
+                diffTxt_node.label = 'Diffuse Color Map'
+                diffTxt_node.image.colorspace_settings.name = pref.import_diffuse_colorspace
+                mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
+
+        # Normal Map
+        if norm:
+            norm_node = False  
+            normTxt_node = False 
+            for node in nodes:
+                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm.name:
+                    normTxt_node = node
+                if node.bl_idname == 'ShaderNodeNormalMap':
+                    norm_node = node
+            if not norm_node:
+                norm_node = nodes.new('ShaderNodeNormalMap')
+                norm_node.location = -300, -100  
+                mat.node_tree.links.new(shader_node.inputs[19], norm_node.outputs[0])
+            if not normTxt_node:    
+                normTxt_node = nodes.new('ShaderNodeTexImage')
+                normTxt_node.location = -700, -100  
+                normTxt_node.image = norm
+                normTxt_node.label = 'Normal Map'
+                normTxt_node.image.colorspace_settings.name = pref.import_normal_colorspace
+                mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
+
+        # Displacement Map
+        if disp:
+            disp_node = False  
+            dispTxt_node = False  
+            for node in nodes:
+                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp.name:
+                    dispTxt_node = node     
+                if node.bl_idname == 'ShaderNodeDisplacement':
+                    disp_node = node
+            if not disp_node:
+                disp_node = nodes.new('ShaderNodeDisplacement')
+                disp_node.location = -300, 200  
+                mat.node_tree.links.new(output_node.inputs[2], disp_node.outputs[0])
+            if not dispTxt_node:    
+                dispTxt_node = nodes.new('ShaderNodeTexImage')
+                dispTxt_node.location = -700, 200  
+                dispTxt_node.image = disp
+                dispTxt_node.label = 'Displacement Map'
+                dispTxt_node.image.colorspace_settings.name = pref.import_displace_colorspace
+                mat.node_tree.links.new(disp_node.inputs[3], dispTxt_node.outputs[0])
+
+    if pref.import_material == 'POLYPAINT':
+        vcol_node = False   
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeVertexColor':
+                if pref.import_polypaint_name in node.layer_name:
+                    vcol_node = nodes.get(node.name) 
+        if not vcol_node:
+            vcol_node = nodes.new('ShaderNodeVertexColor')
+            vcol_node.location = -300, 200
+            vcol_node.layer_name = pref.import_polypaint_name    
+            mat.node_tree.links.new(shader_node.inputs[0], vcol_node.outputs[0])
+    
+
+def apply_transformation(me, is_import=True): 
+    pref = bpy.context.preferences.addons[__package__].preferences
+    mat_transform = None
+    scale = 1.0
+    
+    if pref.use_scale == 'BUNITS':
+        scale = bpy.context.scene.unit_settings.scale_length
+
+    if pref.use_scale == 'MANUAL':        
+        scale =  1/pref.manual_scale
+
+    if pref.use_scale == 'ZUNITS':
+        if bpy.context.active_object:
+            obj = bpy.context.active_object
+            i, max = max_list_value(obj.dimensions)
+            scale =  1 / pref.zbrush_scale * max
+            #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+            
+    #import
+    if pref.flip_up_axis:  # fixes bad mesh orientation for some people
+        if pref.flip_forward_axis:
+            if is_import:
+                me.transform(mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]) * scale
+                )
+                me.flip_normals()
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]) * (1/scale)
+        else:
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]) * scale
+                )
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]) * (1/scale)
+    else:
+        if pref.flip_forward_axis:            
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]) * scale
+                )
+                me.flip_normals()
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (-1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]) * (1/scale)
+        else:
+            if is_import:
+                #import
+                me.transform(mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., 1., 0.),
+                    (0., -1., 0., 0.),
+                    (0., 0., 0., 1.)]) * scale
+                )
+            else:
+                #export
+                mat_transform = mathutils.Matrix([
+                    (1., 0., 0., 0.),
+                    (0., 0., -1., 0.),
+                    (0., 1., 0., 0.),
+                    (0., 0., 0., 1.)]) * (1/scale)
+    return me, mat_transform
+
+
+def profiler(start_time=0, string=None): 
+    elapsed = time.time()
+    print("{:.4f}".format(elapsed-start_time), "<< ", string)  
+    start_time = time.time()
+    return start_time  
+
+
+def max_list_value(list):
+    i = numpy.argmax(list)
+    v = list[i]
+    return (i, v)
+    
+
+def avg_list_value(list):
+    avgData=[]
+    for obj in list:
+        i = numpy.argmax(obj)
+        avgData.append(obj[i])
+    avg = numpy.average(avgData)
+    return (avg)
+
+
+def is_file_empty(file_path):
+    """ Check if file is empty by confirming if its size is 0 bytes"""
+    # Check if file exist and it is empty
+    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
+
+
+def process_linked_objects(obj):      
+    pref = bpy.context.preferences.addons[__package__].preferences                         
+    # TODO: when linked system is finalized it could be possible to provide
+    #  a option to modify the linked object. for now a copy
+    #  of the linked object is created to goz it
+    if obj.library:
+        new_obj = obj.copy()
+        new_obj.data = obj.data.copy()
+        bpy.context.view_layer.active_layer_collection.collection.objects.link(new_obj)
+        new_obj.select_set(state=True)
+        obj.select_set(state=False)
+        bpy.context.view_layer.objects.active = new_obj
+
+    
+def clone_as_object(obj, link=True):
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    obj_to_clone = obj.evaluated_get(depsgraph)
+    #mesh_clone = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+    mesh_clone = bpy.data.meshes.new_from_object(obj_to_clone)
+    mesh_clone.transform(obj.matrix_world)
+    obj_clone = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_clone)  
+    if link:
+        bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
+    return obj_clone
+
+
+def apply_modifiers(obj):    
+    pref = bpy.context.preferences.addons[__package__].preferences   
+    depsgraph = bpy.context.evaluated_depsgraph_get()  
+    if pref.export_modifiers == 'APPLY_EXPORT':
+        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+        obj.data = mesh_tmp
+        obj.modifiers.clear()     
+    elif pref.export_modifiers == 'ONLY_EXPORT':
+        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+    else:
+        mesh_tmp = obj.data
+
+    #DO the triangulation of Ngons only, but do not write it to original object.    
+    bm = bmesh.new()
+    bm.from_mesh(mesh_tmp)
+    #join traingles only that are result of ngon triangulation        
+    for f in bm.faces:
+        if len(f.edges) > 4:
+            result = bmesh.ops.triangulate(bm, faces=[f])
+            bmesh.ops.join_triangles(bm, faces= result['faces'], 
+                                    cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
+                                    cmp_vcols=False,cmp_materials=False, 
+                                    angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
+    
+    export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
+    bm.to_mesh(export_mesh)
+    bm.free()       
+    obj.to_mesh_clear()
+    return export_mesh            
+                    
+
+def mesh_welder(obj):    
+    pref = bpy.context.preferences.addons[__package__].preferences  
+    d = pref.export_merge_distance
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:],dist=d)
+    bm.to_mesh(obj.data)  
+    bm.free()
+    
+
+def remove_internal_faces(obj):   
+    pref = bpy.context.preferences.addons[__package__].preferences
+
+    if pref.export_remove_internal_faces:         
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True) 
+        bpy.context.view_layer.objects.active = obj
+        last_context = obj.mode
+        print("last_context: ", last_context)
+        last_select_mode = bpy.ops.mesh.select_mode
+
+        bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT')
+        bpy.ops.mesh.select_mode(use_extend=True, 
+                                use_expand=False,
+                                type='VERT', 
+                                action='ENABLE')   
+
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.mesh.select_interior_faces()
+        bpy.ops.mesh.select_non_manifold(extend=True, 
+                                        use_wire=True, 
+                                        use_boundary=False, 
+                                        use_multi_face=True, 
+                                        use_non_contiguous=True, #Non Contiguous, Edges between faces pointing in alternate directions
+                                        use_verts=True)
+                                        
+        bpy.ops.mesh.delete(type='FACE')
+        bpy.ops.object.mode_set(bpy.context.copy(), mode=last_context)

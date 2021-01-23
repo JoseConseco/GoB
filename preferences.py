@@ -169,6 +169,22 @@ class GoB_Preferences(AddonPreferences):
         name="Clear Mask",
         description="When enabled Masks will not be exported an cleared in ZBrush",
         default=False)
+        
+    export_remove_internal_faces: BoolProperty(
+        name="Delete non manifold faces",
+        description="Delete non manifold faces",
+        default=True)
+    
+    export_merge_distance: FloatProperty(
+        name="Vertex Merge Threshold",
+        description="Vertex Merge Threshold",
+        default=0.0001,
+        soft_min=0.0001,
+        soft_max=0.01,
+        step=0.0001,
+        precision=4,
+        subtype='DISTANCE') 
+
 
 
     # IMPORT
@@ -356,6 +372,10 @@ class GoB_Preferences(AddonPreferences):
         if self.export_polygroups == 'VERTEX_GROUPS':  
             col.prop(self, 'export_weight_threshold')
         col.prop(self, 'export_clear_mask') 
+        col.prop(self, 'export_merge_distance') 
+        col.prop(self, 'export_remove_internal_faces')
+        
+        
         
         # GoB Import Options
         box = layout.box() 
