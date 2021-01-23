@@ -1157,7 +1157,7 @@ class GoB_OT_export(Operator):
                     mesh_welder(obj_tmp)
                     
                     if len(mesh_tmp.polygons):
-                        print(obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
+                        print("GoB: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
                         self.escape_object_name(obj_tmp)
                         self.exportGoZ(PATH_GOZ, context.scene, obj_tmp, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
@@ -1171,7 +1171,7 @@ class GoB_OT_export(Operator):
 
                     remove_internal_faces(obj)   
 
-                    print("obj.type: ", obj.type, obj.name)
+                    #print("obj.type: ", obj.type, obj.name)
                     if len(obj.data.polygons):
                         self.escape_object_name(obj)
                         self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
@@ -1587,7 +1587,7 @@ def remove_internal_faces(obj):
         obj.select_set(True) 
         bpy.context.view_layer.objects.active = obj
         last_context = obj.mode
-        print("last_context: ", last_context)
+        #print("last_context: ", last_context)
         last_select_mode = bpy.ops.mesh.select_mode
 
         bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT')
