@@ -314,15 +314,15 @@ class GoB_Preferences(AddonPreferences):
         col  = box.column(align=False) 
         row  = col.row(align=False)         
         
-        row.operator("bau.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
+        row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
         if addon_updater.update_available == False:
-            row.operator("bau.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
+            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
         elif addon_updater.update_available == None:
-            row.operator("bau.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
+            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
         elif addon_updater.update_available == 'TIME':
-            row.operator("bau.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+            row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
         else:
-            row.operator("bau.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
+            row.operator("au.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
         
         col  = box.column(align=False)              
         col.prop(self, 'repository_path') 

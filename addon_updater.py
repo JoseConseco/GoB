@@ -8,7 +8,7 @@ from bpy.types import Operator
 update_available = None  
 class AU_OT_SearchUpdates(Operator):
     ''' Look for a new Addon version on Github '''
-    bl_idname = "bau.check_updates"
+    bl_idname = "au.check_updates"
     bl_label = "Check for Updates" 
     
     button_input: bpy.props.IntProperty()
@@ -141,7 +141,7 @@ class AU_OT_SearchUpdates(Operator):
     
 """ class BAU_OT_UpdateAddon(Operator):
     ''' update addon '''
-    bl_idname = "bau.update_addon"
+    bl_idname = "au.update_addon"
     bl_label = "update_addon"  
     
     def download_new_version_version(self, url, save_path, download_path):  
