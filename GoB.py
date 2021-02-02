@@ -1190,23 +1190,19 @@ class GoB_OT_export(Operator):
         cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
-        # only run if file is not empty
-        is_empty = is_file_empty(PATH_OBJLIST)
-        if not is_empty:
-            # if no Zbrush application is specified apply the latest version.
-            if isMacOS: 
-                if not 'ZBrush.app' in pref.zbrush_exec:                
-                    bpy.ops.gob.find_zbrush()
-                Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])        
-            #windows
-            else: 
-                if not 'ZBrush.exe' in pref.zbrush_exec:              
-                    bpy.ops.gob.find_zbrush() 
-                Popen([pref.zbrush_exec, PATH_SCRIPT], shell=True)         
-
+        # only run if PATH_OBJLIST file file is not empty, else zbrush errors
+        if not is_file_empty(PATH_OBJLIST):                        
+            bpy.ops.gob.find_zbrush()
+            if isMacOS:   
+                print("mac Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
+                #Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])   
+            else: #windows   
+                print("win Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
+                #Popen([pref.zbrush_exec, PATH_SCRIPT], shell=True)         
+            
             if context.object:
                 bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
-        return{'FINISHED'}
+        return {'FINISHED'}
 
 
     def escape_object_name(self, obj):
@@ -1227,30 +1223,73 @@ class GoB_OT_export(Operator):
         obj.name = new_name
 
 
+
+
 class GoB_OT_Find_ZBrush(Operator):
     ''' find the zbrush application '''
-    bl_idname = "gob.find_zbrush"      
+    bl_idname = "gob.find_zbrush"     
+
     if isMacOS:
         bl_label = f"/ZBrush.app" 
-        filepath = f"/Applications/"
     else:
         bl_label = f"/ZBrush.exe"   
-        filepath = f"C:/Program Files/Pixologic/" 
 
+
+    def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
+        def draw(self, context):
+            for i in message:
+                self.layout.label(text=i)
+        bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+        
     def execute(self, context):
         """Install goZ for windows"""  
         pref = context.preferences.addons[__package__].preferences  
         #get the highest version of zbrush and use it as default zbrush to send to
-        if isMacOS:
-            folder_List = [] 
-            [folder_List.append(i) for i in os.listdir(self.filepath) if 'ZBrush' in i]
-            i, zfolder = max_list_value(folder_List)
-            pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace( "\\", "/") 
-        else:
-            i,zfolder = max_list_value(os.listdir(self.filepath))
-            pref.zbrush_exec = (f"{self.filepath + zfolder + self.bl_label}").replace("/", "\\") 
+        
+        
+        if pref.zbrush_exec:
+            print("pref.zbrush_exec: ", pref.zbrush_exec)
+            if os.path.isfile(pref.zbrush_exec):  #validate if working file here    
+                #check if path contains zbrush, that should identify a zbrush executable
+                if 'zbrush.exe' in str.lower(pref.zbrush_exec) or \
+                    'zbrush.app' in str.lower(pref.zbrush_exec):            
+                    return # no need to change path, return and run zbrush     
+            
+            elif os.path.isdir(pref.zbrush_exec): # if the file was not found lets have a look in the specified folder    
+                #look for zbrush files in this folder and its subfodlers                
+                for file in os.listdir(pref.zbrush_exec):  
+                    if "zbrush" in str.lower(file):                
+                        if os.path.isfile(file) and ('zbrush.exe' in str.lower(file) or 'zbrush.app' in str.lower(file)):            
+                            print("folders: ", file)
+                            pref.zbrush_exec = os.path.join(pref.zbrush_exec, file)           
+                            self.ShowReport([pref.zbrush_exec, file], "GoB: Zbrush path found", 'COLORSET_03_VEC')
+                            break  
+                        
+            else:    # the  applications default pathwe can try if zbrush is installed in its defaut location                
+                
+                print("pref.zbrush_exec TEST AUTOMATION")
+                 
+                self.ShowReport([pref.zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
+                if isMacOS:
+                    folder_List = []                 
+                    filepath = f"/Applications/"
+                    [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
+                    i, zfolder = max_list_value(folder_List)
+                    pref.zbrush_exec = os.path.join(filepath, zfolder, self.bl_label)
+                else:  
+                    filepath = f"C:/Program Files/Pixologic/" 
+                    #find non version paths
+                    i,zfolder = max_list_value(os.listdir(filepath))
+                    print("find folder: ", zfolder)
+                    pref.zbrush_exec = os.path.join(filepath, zfolder, self.bl_label)
+                
 
-        return {'FINISHED'}
+                #promt user to input zbrush path, cant be detected automaticaly
+                    self.ShowReport(["promt user input"], "GoB: zbrush_exec not found", 'COLORSET_01_VEC')
+                    print("TEST")
+        
+        return  {'FINISHED'}
+
 
 
 class GoB_OT_GoZ_Installer_WIN(Operator):
@@ -1275,6 +1314,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
             Popen([GOZ_INSTALLER], shell=True) 
     
         return {'FINISHED'}
+
 
 
 def run_import_periodically():
@@ -1492,12 +1532,14 @@ def profiler(start_time=0, string=None):
 
 
 def max_list_value(list):
+    """ retrun biggest value of a list"""
     i = numpy.argmax(list)
     v = list[i]
     return (i, v)
     
 
 def avg_list_value(list):
+    """ retrun average value of a list"""
     avgData=[]
     for obj in list:
         i = numpy.argmax(obj)
@@ -1508,15 +1550,14 @@ def avg_list_value(list):
 
 def is_file_empty(file_path):
     """ Check if file is empty by confirming if its size is 0 bytes"""
-    # Check if file exist and it is empty
     return os.path.exists(file_path) and os.stat(file_path).st_size == 0
 
 
-def process_linked_objects(obj):      
-    pref = bpy.context.preferences.addons[__package__].preferences                         
-    # TODO: when linked system is finalized it could be possible to provide
+def process_linked_objects(obj):                      
+    """ TODO: when linked system is finalized it could be possible to provide
     #  a option to modify the linked object. for now a copy
-    #  of the linked object is created to goz it
+    #  of the linked object is created to goz it """
+    pref = bpy.context.preferences.addons[__package__].preferences         
     if obj.library:
         new_obj = obj.copy()
         new_obj.data = obj.data.copy()
@@ -1527,6 +1568,7 @@ def process_linked_objects(obj):
 
     
 def clone_as_object(obj, link=True):
+    " create a new object from a exiting one"
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_to_clone = obj.evaluated_get(depsgraph)
     #mesh_clone = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
@@ -1569,7 +1611,8 @@ def apply_modifiers(obj):
     return export_mesh            
                     
 
-def mesh_welder(obj):    
+def mesh_welder(obj, d = 0.0001):    
+    " merges vertices that are clsoer than d to each other"
     pref = bpy.context.preferences.addons[__package__].preferences  
     d = pref.export_merge_distance
     bm = bmesh.new()
@@ -1579,7 +1622,8 @@ def mesh_welder(obj):
     bm.free()
     
 
-def remove_internal_faces(obj):   
+def remove_internal_faces(obj): 
+    "remove nonmanifold faces that are inside a mesh"  
     pref = bpy.context.preferences.addons[__package__].preferences
 
     if pref.export_remove_internal_faces:         
