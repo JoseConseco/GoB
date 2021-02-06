@@ -48,6 +48,9 @@ classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
     GoB.GoB_OT_GoZ_Installer_WIN,
+    GoB.GOB_OT_PopupPathInput,
+    GoB.GOB_OpenFilebrowser,
+    GoB.MessageBox,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
     )

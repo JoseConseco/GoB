@@ -29,7 +29,8 @@ import time
 from struct import pack, unpack
 import string
 import numpy
-from bpy_extras.io_utils import ImportHelper 
+from bpy_extras.io_utils import ExportHelper 
+from bpy.props import StringProperty, CollectionProperty
 from bpy.types import Operator 
 
 
@@ -1192,19 +1193,22 @@ class GoB_OT_export(Operator):
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
         if not is_file_empty(PATH_OBJLIST):    
-            print(find_zbrush(self,context))                   
-            if find_zbrush(self,context):
-                if isMacOS:   
-                    print("mac Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
-                    #Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])   
-                else: #windows   
-                    print("win Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
-                    #Popen([pref.zbrush_exec, PATH_SCRIPT], shell=True)         
-                
-                if context.object:
-                    bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
-            else:
-                print("find_zbrush False")
+            #print(find_zbrush(self,context))                   
+            
+            bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+
+            #if search_zbrush(self,context):
+            if isMacOS:   
+                print("mac Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
+                #Popen(['open', '-a', pref.zbrush_exec, PATH_SCRIPT])   
+            else: #windows   
+                print("win Popen : pref.zbrush_exec:  ", pref.zbrush_exec)
+                #Popen([pref.zbrush_exec, PATH_SCRIPT], shell=True)         
+            
+            if context.object:
+                bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
+            """ else:
+                print("find_zbrush False") """
         
         return {'FINISHED'}
 
@@ -1242,10 +1246,12 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
     def execute(self, context):
         """Install GoZ for Windows"""  
         pref = context.preferences.addons[__package__].preferences 
-        if find_zbrush(self,context):
+        bpy.ops.gob.file_browser('INVOKE_DEFAULT')
+        #bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+        """ if find_zbrush(self,context):
             path = pref.zbrush_exec.strip("\ZBrush.exe")            
             GOZ_INSTALLER = f"{path}/Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe"
-            Popen([GOZ_INSTALLER], shell=True) 
+            Popen([GOZ_INSTALLER], shell=True)  """
     
         return {'FINISHED'}
 
@@ -1257,77 +1263,174 @@ def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
             self.layout.label(text=i)
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
-       
-def find_zbrush(self, context):
-    pref = context.preferences.addons[__package__].preferences  
-    #get the highest version of zbrush and use it as default zbrush to send to
+
+
+class GOB_OT_PopupPathInput(Operator, ExportHelper):
+    bl_label = "search_zbrush"
+    bl_description ="look for zbrush in specified path or in default intstallation"\
+                    "directories and if its not found promt the user to inptu the path manualy"
+    bl_idname = "gob.search_zbrush"
+           
+    zbrush_path:  bpy.props.StringProperty(
+        name="ZBrush", 
+        description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
+                    "\nIf not specified the system default for Zscript (.zsc) files will be used", 
+        subtype='FILE_PATH',
+        default="") 
     
-    self.is_found = False 
-    if pref.zbrush_exec:
+    def draw(self, context):
+        self.layout.label(text = "TEST")
+        self.layout.prop(self,"zbrush_path")
 
-        print("\n\nFOUND pref.zbrush_exec: ", pref.zbrush_exec)
+    
+    """ def find_zbrush(self, context):
+        pref = context.preferences.addons[__package__].preferences  
+        #get the highest version of zbrush and use it as default zbrush to send to
+        self.is_found = False 
+        if pref.zbrush_exec:
+            print("\n\nFOUND pref.zbrush_exec: ", pref.zbrush_exec)
+            if os.path.isfile(pref.zbrush_exec):  #validate if working file here    
+                #check if path contains zbrush, that should identify a zbrush executable
+                print("\n\nFOUND file: ", pref.zbrush_exec)
+                if 'zbrush.exe' in str.lower(pref.zbrush_exec) or \
+                    'zbrush.app' in str.lower(pref.zbrush_exec): 
+                    print("GoB: executable found")  
+                    self.is_found = True
+            elif os.path.isdir(pref.zbrush_exec): #search for zbrush files in this folder and its subfodlers 
+                print("FOUND dir: ", pref.zbrush_exec)   
+                for file in os.listdir(pref.zbrush_exec):     
+                    if "zbrush" in str.lower(file):     #search for content inside folder that contains zbrush
+                        print("FOUND f: ", file)    
+                        #search subfolders for executables
+                        if os.path.isdir(os.path.join(pref.zbrush_exec, file)): 
+                            i,zfolder = max_list_value(os.listdir(os.path.join(pref.zbrush_exec)))
+                            for f in os.listdir(os.path.join(pref.zbrush_exec, zfolder)):
+                                if ('zbrush.exe' in str.lower(f) or 'zbrush.app' in str.lower(f)):            
+                                    print("f: ", f)
+                                    pref.zbrush_exec = os.path.join(pref.zbrush_exec, zfolder, f)           
+                                    self.is_found = True   
+                        #find executable
+                        if os.path.isfile(os.path.join(pref.zbrush_exec,file)) and ('zbrush.exe' in str.lower(file) or 'zbrush.app' in str.lower(file)):            
+                            print("files: ", file)
+                            pref.zbrush_exec = os.path.join(pref.zbrush_exec, file)           
+                            self.is_found = True  
+        else:    # the  applications default pathwe can try if zbrush is installed in its defaut location   
+            print("\n\nNO pref.zbrush_exec: ", pref.zbrush_exec) 
+            print("pref.zbrush_exec run automation")
+            #look for zbrush in default installation path 
+            if isMacOS:
+                folder_List = []                 
+                filepath = f"/Applications/"
+                if os.path.isdir(filepath):
+                    [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
+                    i, zfolder = max_list_value(folder_List)
+                    pref.zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
+                    ShowReport(self, [pref.zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC') 
+                    self.is_found = True            
+            else:  
+                filepath = f"C:/Program Files/Pixologic/" 
+                #find non version paths
+                if os.path.isdir(filepath):
+                    i,zfolder = max_list_value(os.listdir(filepath))
+                    print("find folder: ", zfolder)
+                    pref.zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
+                    ShowReport(self, [pref.zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
+                    self.is_found = True  
+        if not self.is_found:
+            msg = 'Zbrush executable not found'
+            print(msg)
+        return self.is_found """
 
-        if os.path.isfile(pref.zbrush_exec):  #validate if working file here    
-            #check if path contains zbrush, that should identify a zbrush executable
-            print("\n\nFOUND file: ", pref.zbrush_exec)
-            if 'zbrush.exe' in str.lower(pref.zbrush_exec) or \
-                'zbrush.app' in str.lower(pref.zbrush_exec): 
-                print("GoB: executable found")  
-                self.is_found = True
 
-        elif os.path.isdir(pref.zbrush_exec): #search for zbrush files in this folder and its subfodlers  
-               
-            print("FOUND dir: ", pref.zbrush_exec)       
+    def invoke(self, context, event):
+        #Popup a dialog the user can interact with.        
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width = 200)
+        
+        #bpy.context.window_manager.fileselect_add(self)
+        #return {'RUNNING_MODAL'}
 
-            for file in os.listdir(pref.zbrush_exec):     
-                if "zbrush" in str.lower(file):     #search for content inside folder that contains zbrush
-                    print("FOUND f: ", file)    
-                                
-                    #search subfolders for executables
-                    if os.path.isdir(os.path.join(pref.zbrush_exec, file)): 
-                        i,zfolder = max_list_value(os.listdir(os.path.join(pref.zbrush_exec)))
-                        
-                        for f in os.listdir(os.path.join(pref.zbrush_exec, zfolder)):
-                            if ('zbrush.exe' in str.lower(f) or 'zbrush.app' in str.lower(f)):            
-                                print("f: ", f)
-                                pref.zbrush_exec = os.path.join(pref.zbrush_exec, zfolder, f)           
-                                self.is_found = True    
 
-                    #find executable
-                    if os.path.isfile(os.path.join(pref.zbrush_exec,file)) and ('zbrush.exe' in str.lower(file) or 'zbrush.app' in str.lower(file)):            
-                        print("files: ", file)
-                        pref.zbrush_exec = os.path.join(pref.zbrush_exec, file)           
-                        self.is_found = True    
+    def execute(self, context):
+        #pref = bpy.context.preferences.addons[__package__].preferences
+        #self.report({'INFO'}, pref.zbrush_exec)
+        #pref.zbrush_exec = self.zbrush_path
+        print("open_filebrowser")
+        #bpy.ops.gob.file_browser('INVOKE_DEFAULT')
+        bpy.ops.gob.open_filebrowser('INVOKE_DEFAULT')
+        return {'FINISHED'}
 
-                        
-    else:    # the  applications default pathwe can try if zbrush is installed in its defaut location       
 
-        print("\n\nNO pref.zbrush_exec: ", pref.zbrush_exec) 
-        print("pref.zbrush_exec run automation")
-        #look for zbrush in default installation path 
-        if isMacOS:
-            folder_List = []                 
-            filepath = f"/Applications/"
-            if os.path.isdir(filepath):
-                [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
-                i, zfolder = max_list_value(folder_List)
-                pref.zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                ShowReport(self, [pref.zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC') 
-                self.is_found = True            
-        else:  
-            filepath = f"C:/Program Files/Pixologic/" 
-            #find non version paths
-            if os.path.isdir(filepath):
-                i,zfolder = max_list_value(os.listdir(filepath))
-                print("find folder: ", zfolder)
-                pref.zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                ShowReport(self, [pref.zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
-                self.is_found = True               
+class GOB_OpenFilebrowser(Operator, ExportHelper): 
+    bl_idname = "gob.open_filebrowser" 
+    bl_label = "Set Zbrush Path" 
+    bl_description = "opens a filebrowser to select filepath"
+    ext = '*.exe; *.app'
+    filename_ext = ''
+    #check_extension = True
+    
+    filter_glob: StringProperty(
+        default=ext,
+        name = 'Filter')
 
-    if not self.is_found:
-        ShowReport(self, ["promt user input"], "GoB: select zbrush path", 'COLORSET_01_VEC')
+    filepath: StringProperty(
+        name='filepath',
+        subtype='FILE_PATH',
+        description='filepath')
+    
+    """ def invoke(self, context, event):
+        wm = context.window_manager 
+        wm.fileselect_add(self)
+        return {'RUNNING_MODAL'} """
 
-    return self.is_found
+    def execute(self, context): 
+        """Do something with the selected file(s).""" 
+        pref = context.preferences.addons[__package__].preferences
+        
+        print("filepath:", self.filepath)
+        print("pref.zbrush_exec: ", pref.zbrush_exec)
+        if os.path.isfile(self.filepath) and ('ZBrush.exe' or 'ZBrush.app') in self.filepath:
+            pref.zbrush_exec = self.filepath
+            print("IS EXECUTABLE", self.filepath," ## ",  pref.zbrush_exec)
+            pref.zbrush_exec = self.filepath
+            
+        else:
+            print("IS PATH", self.filepath)
+            #TODO: search path for hihges version and executable
+
+            #name = obj.name if EXTENSION in obj.name else obj.name + EXTENSION
+            #return os.path.dirname(self.filepath)
+            print("os.path.dirname(self.filepath)", os.path.dirname(self.filepath))
+       
+        return {'FINISHED'}
+
+        
+
+
+class MessageBox(bpy.types.Operator):
+    bl_idname = "message.messagebox"
+    bl_label = ""
+ 
+    message: bpy.props.StringProperty(
+        name = "message",
+        description = "message",
+        default = ''
+    )
+ 
+    def execute(self, context):
+        self.report({'INFO'}, self.message)
+        print(self.message)
+        return {'FINISHED'}
+ 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width = 200)
+ 
+    def draw(self, context):
+        layout = self.layout
+        pref = context.preferences.addons[__package__].preferences  
+        layout.prop(self, 'pref.zbrush_exec') 
+        
+
 
 def run_import_periodically():
     global gob_import_cache
