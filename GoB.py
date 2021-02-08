@@ -1191,12 +1191,9 @@ class GoB_OT_export(Operator):
                     Popen(['open', '-a', prefs().zbrush_exec, PATH_SCRIPT])   
                 else: #windows   
                     print("win Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
-                    Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)         
-                
-                if context.object:
-                    bpy.ops.object.mode_set(context.copy(), mode=currentContext)  
-                """ else:
-                    print("find_zbrush False") """
+                    Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
+                if context.object: #restore object context
+                    bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
         
         return {'FINISHED'}
 
@@ -1255,7 +1252,7 @@ def find_zbrush(self, context):
         #look for zbrush in default installation path 
         if isMacOS:
             folder_List = []                 
-            filepath = f"/Applications/"
+            filepath = f"/Applications"
             if os.path.isdir(filepath):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = max_list_value(folder_List)
@@ -1263,7 +1260,7 @@ def find_zbrush(self, context):
                 ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
-            filepath = f"C:/Program Files/Pixologic/" 
+            filepath = f"C:/Program Files/Pixologic" 
             #find non version paths
             if os.path.isdir(filepath):
                 i,zfolder = max_list_value(os.listdir(filepath))
@@ -1272,8 +1269,7 @@ def find_zbrush(self, context):
                 ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
                 self.is_found = True  
     if not self.is_found:
-        msg = 'Zbrush executable not found'
-        print(msg)
+        print('Zbrush executable not found')
     return self.is_found
 
 
