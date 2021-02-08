@@ -4,6 +4,10 @@ import addon_utils
 import requests
 from bpy.types import Operator 
 
+def prefs():
+    user_preferences = bpy.context.preferences
+    return user_preferences.addons[__package__].preferences 
+
 
 update_available = None  
 class AU_OT_SearchUpdates(Operator):
@@ -19,10 +23,8 @@ class AU_OT_SearchUpdates(Operator):
         return (i, v)
 
     def find_new_version(self, api_path): 
-        pref = bpy.context.preferences.addons[__package__].preferences 
-
         #EXPERIMENTAL VERSIONS
-        if pref.experimental_versions:
+        if prefs().experimental_versions:
             response  = requests.get(api_path + "/tags")           # https://api.github.com/repos/JoseConseco/GoB/tags
             gitrelease = response.json()
             #print("gitrelease", gitrelease)
@@ -34,7 +36,7 @@ class AU_OT_SearchUpdates(Operator):
 
             return version
         else:            
-            print("experimental_versions: ", pref.experimental_versions) 
+            print("experimental_versions: ", prefs().experimental_versions) 
             print("path: ", api_path + "/releases/latest")
             response  = requests.get(api_path + "/releases/latest")           # https://api.github.com/repos/JoseConseco/GoB/releases/latest
             gitrelease = response.json()
@@ -44,17 +46,15 @@ class AU_OT_SearchUpdates(Operator):
 
 
     def download_new_version(self, api_path, new_version, zip_file, zip_file_url): 
-        #import zipfile
-        pref = bpy.context.preferences.addons[__package__].preferences 
-        
+        #import zipfile        
         # open release page 
         import webbrowser
         
         #EXPERIMENTAL VERSIONS
-        if pref.experimental_versions:        
+        if prefs().experimental_versions:        
             release_page = api_path + "/zipball/" + new_version  # "zipball_url": "https://api.github.com/repos/JoseConseco/GoB/zipball/v3_5_1",
         else:
-            release_page = pref.repository_path + "/releases"   # "https://github.com/JoseConseco/GoB/releases") 
+            release_page = prefs().repository_path + "/releases"   # "https://github.com/JoseConseco/GoB/releases") 
 
         webbrowser.open_new_tab(release_page)
 
@@ -87,10 +87,8 @@ class AU_OT_SearchUpdates(Operator):
 
 
     def execute(self, context): 
-        global update_available 
-        pref = context.preferences.addons[__package__].preferences 
-        
-        api_path = pref.repository_path.replace("https://github.com/", "https://api.github.com/repos/")
+        global update_available         
+        api_path = prefs().repository_path.replace("https://github.com/", "https://api.github.com/repos/")
 
         print("self.button_input: ", self.button_input)
         if self.button_input != -1:
@@ -106,9 +104,9 @@ class AU_OT_SearchUpdates(Operator):
                         print("Addon update available: ", new_version)                     
                         if update_available and self.button_input == 1:
                             temp_path = context.preferences.filepaths.temporary_directory 
-                            zip_file  = (temp_path + pref.zip_filename)
+                            zip_file  = (temp_path + prefs().zip_filename)
                             #print("temp_path ", temp_path, zip_file)               
-                            zip_file_url = pref.repository_path + "/archive/" + new_version + ".zip" #'https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
+                            zip_file_url = prefs().repository_path + "/archive/" + new_version + ".zip" #'https://github.com/JoseConseco/GoB/archive/v3_5_1.zip'
                             self.download_new_version(api_path, new_version, zip_file, zip_file_url)                    
                         update_available = new_version
                     else:

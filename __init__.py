@@ -36,7 +36,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 5, 41),
+    "version": (3, 5, 45),
     "blender": (2, 83, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -49,16 +49,13 @@ classes = (
     GoB.GoB_OT_export,
     GoB.GoB_OT_GoZ_Installer_WIN,
     GoB.GOB_OT_Popup,
-    GoB.GOB_OpenFilebrowser,
-    GoB.MessageBox,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
     )
 
 
 def register():
-    for c in classes:
-        bpy.utils.register_class(c)
+    [bpy.utils.register_class(c) for c in classes]
 
     global icons
     icons = bpy.utils.previews.new()

@@ -64,7 +64,7 @@ class GoB_Preferences(AddonPreferences):
 
     #GLOBAL
     zbrush_exec: StringProperty(
-        name="ZBrush", 
+        name="ZBrush Path", 
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
@@ -304,33 +304,7 @@ class GoB_Preferences(AddonPreferences):
         layout = self.layout
         layout.use_property_split = True
 
-        #advanced & dev options
-        #         
-        ############################################
-        #       ADDON UPDATER
-        ############################################
-        box = layout.box() 
-        box.label(text='Addon Updater', icon='PREFERENCES')  
-        col  = box.column(align=False) 
-        row  = col.row(align=False)         
         
-        row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
-        if addon_updater.update_available == False:
-            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
-        elif addon_updater.update_available == None:
-            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
-        elif addon_updater.update_available == 'TIME':
-            row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
-        else:
-            row.operator("au.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
-        
-        col  = box.column(align=False)              
-        col.prop(self, 'repository_path') 
-        #col.prop(self, 'zip_filename')
-        col.prop(self, 'experimental_versions') 
-        #col.prop(self, 'auto_update_check')
-
-        ############################################
 
 
         layout.use_property_split = True
@@ -348,7 +322,8 @@ class GoB_Preferences(AddonPreferences):
 
             
 
-        col.prop(self, 'zbrush_exec') 
+        col.prop(self, 'zbrush_exec')
+
         col.prop(self, 'project_path') 
         col.prop(self, 'clean_project_path')    
         col.prop(self, 'flip_up_axis')
@@ -408,6 +383,32 @@ class GoB_Preferences(AddonPreferences):
 
 
         
+        #advanced & dev options
+        #         
+        ############################################
+        #       ADDON UPDATER
+        ############################################
+        box = layout.box() 
+        box.label(text='Addon Updater', icon='PREFERENCES')  
+        col  = box.column(align=False) 
+        row  = col.row(align=False)         
+        
+        row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
+        if addon_updater.update_available == False:
+            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
+        elif addon_updater.update_available == None:
+            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
+        elif addon_updater.update_available == 'TIME':
+            row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+        else:
+            row.operator("au.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
+        
+        col  = box.column(align=False)              
+        col.prop(self, 'repository_path') 
+        #col.prop(self, 'zip_filename')
+        col.prop(self, 'experimental_versions') 
+        #col.prop(self, 'auto_update_check')
 
+        ############################################
 
  
