@@ -29,8 +29,6 @@ import time
 from struct import pack, unpack
 import string
 import numpy
-from bpy_extras.io_utils import ExportHelper 
-from bpy.props import StringProperty
 from bpy.types import Operator 
 
 def prefs():
@@ -1177,7 +1175,10 @@ class GoB_OT_export(Operator):
             wm.progress_end()
             
         global cached_last_edition_time
-        cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
+        try:
+            cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
+        except:
+            return
         PATH_SCRIPT = (f"{PATH_GOB}/ZScripts/GoB_Import.zsc").replace("\\", "/")
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
