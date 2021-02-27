@@ -399,8 +399,11 @@ class GoB_OT_import(Operator):
                                 groupsData.append(group)
                             else:
                                 vg = obj.vertex_groups[str(group)]
-                            vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
-                        
+                            
+                            try:    #if vg assignment failes the mesh has some bad elements
+                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
+                            except:
+                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
 
                         # Face maps import
                         if prefs().import_polygroups_to_facemaps:
@@ -1188,10 +1191,10 @@ class GoB_OT_export(Operator):
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
             else:
                 if isMacOS:   
-                    print("mac Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
+                    print("OSX Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
                     Popen(['open', '-a', prefs().zbrush_exec, PATH_SCRIPT])   
                 else: #windows   
-                    print("win Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
+                    print("Windows Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
                     Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
                     bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
