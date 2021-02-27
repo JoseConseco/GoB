@@ -19,8 +19,10 @@
 if "bpy" in locals():
     import importlib
     importlib.reload(GoB)
+    importlib.reload(addon_updater)
 else:
     from . import GoB
+    from . import addon_updater
     
 """Addon preferences"""
 import bpy
@@ -31,12 +33,38 @@ from bpy.props import ( StringProperty,
                         EnumProperty)
 
 
-class GoBPreferences(AddonPreferences):
+class GoB_Preferences(AddonPreferences):
     bl_idname = __package__
+
+    ############################################
+    #       ADDON UPDATER    
+    ############################################
+    repository_path: StringProperty(
+        name="Project", 
+        description="Github Project url example: https://github.com/JoseConseco/GoB", 
+        subtype='DIR_PATH',
+        default="https://github.com/JoseConseco/GoB") 
+    
+    zip_filename: StringProperty(
+        name="zip_filename", 
+        description="zip_filename", 
+        subtype='FILE_PATH',
+        default="blender_addon_updater.zip") 
+
+    auto_update_check: BoolProperty(
+        name="Check for updates automaticaly",
+        description="auto_update_check",
+        default=False)
+
+    experimental_versions: BoolProperty(
+        name="Experimental Verions",
+        description="Check for experimental verions",
+        default=False)
+    ############################################
 
     #GLOBAL
     zbrush_exec: StringProperty(
-        name="ZBrush", 
+        name="ZBrush Path", 
         description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
@@ -45,7 +73,7 @@ class GoBPreferences(AddonPreferences):
     project_path: StringProperty(
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
-        subtype='FILE_PATH',
+        subtype='DIR_PATH',
         default=f"{GoB.PATH_GOZ}/GoZProjects/Default/") 
     
     clean_project_path: BoolProperty(
@@ -141,6 +169,22 @@ class GoBPreferences(AddonPreferences):
         name="Clear Mask",
         description="When enabled Masks will not be exported an cleared in ZBrush",
         default=False)
+        
+    export_remove_internal_faces: BoolProperty(
+        name="Delete non manifold faces",
+        description="Delete non manifold faces",
+        default=True)
+    
+    export_merge_distance: FloatProperty(
+        name="Vertex Merge Threshold",
+        description="Vertex Merge Threshold",
+        default=0.0001,
+        soft_min=0.0001,
+        soft_max=0.01,
+        step=0.0001,
+        precision=4,
+        subtype='DISTANCE') 
+
 
 
     # IMPORT
@@ -260,6 +304,10 @@ class GoBPreferences(AddonPreferences):
         layout = self.layout
         layout.use_property_split = True
 
+        
+
+
+        layout.use_property_split = True
         box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
@@ -271,7 +319,11 @@ class GoBPreferences(AddonPreferences):
         box = layout.box()
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=True) 
-        col.prop(self, 'zbrush_exec') 
+
+            
+
+        col.prop(self, 'zbrush_exec')
+
         col.prop(self, 'project_path') 
         col.prop(self, 'clean_project_path')    
         col.prop(self, 'flip_up_axis')
@@ -295,6 +347,10 @@ class GoBPreferences(AddonPreferences):
         if self.export_polygroups == 'VERTEX_GROUPS':  
             col.prop(self, 'export_weight_threshold')
         col.prop(self, 'export_clear_mask') 
+        col.prop(self, 'export_merge_distance') 
+        col.prop(self, 'export_remove_internal_faces')
+        
+        
         
         # GoB Import Options
         box = layout.box() 
@@ -325,5 +381,34 @@ class GoBPreferences(AddonPreferences):
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
 
+
+        
+        #advanced & dev options
+        #         
+        ############################################
+        #       ADDON UPDATER
+        ############################################
+        box = layout.box() 
+        box.label(text='Addon Updater', icon='PREFERENCES')  
+        col  = box.column(align=False) 
+        row  = col.row(align=False)         
+        
+        row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
+        if addon_updater.update_available == False:
+            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
+        elif addon_updater.update_available == None:
+            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
+        elif addon_updater.update_available == 'TIME':
+            row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+        else:
+            row.operator("au.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
+        
+        col  = box.column(align=False)              
+        col.prop(self, 'repository_path') 
+        #col.prop(self, 'zip_filename')
+        col.prop(self, 'experimental_versions') 
+        #col.prop(self, 'auto_update_check')
+
+        ############################################
 
  
