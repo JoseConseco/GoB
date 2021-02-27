@@ -1229,10 +1229,20 @@ def find_zbrush(self, context):
                 'zbrush.app' in str.lower(prefs().zbrush_exec): 
                 print("GoB: executable found")  
                 self.is_found = True
+
         elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfodlers 
             print("FOUND dir: ", prefs().zbrush_exec)   
-            for file in os.listdir(prefs().zbrush_exec):     
+
+            for file in os.listdir(prefs().zbrush_exec):   
                 if "zbrush" in str.lower(file):     #search for content inside folder that contains zbrush
+                    
+                    #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
+                    #'zbrush.app'
+                    if 'zbrush.app' in str.lower(file):
+                        prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, file)                          
+                        print('osx special case: ', prefs().zbrush_exec)
+                        self.is_found = True   
+
                     print("FOUND f: ", file)    
                     #search subfolders for executables
                     if os.path.isdir(os.path.join(prefs().zbrush_exec, file)): 
@@ -1242,11 +1252,13 @@ def find_zbrush(self, context):
                                 print("f: ", f)
                                 prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, f)           
                                 self.is_found = True   
+
                     #find executable
                     if os.path.isfile(os.path.join(prefs().zbrush_exec,file)) and ('zbrush.exe' in str.lower(file) or 'zbrush.app' in str.lower(file)):            
                         print("files: ", file)
                         prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, file)           
                         self.is_found = True  
+
     else:    # the  applications default pathwe can try if zbrush is installed in its defaut location   
         print("\n\nNO prefs().zbrush_exec: ", prefs().zbrush_exec) 
         print("prefs().zbrush_exec run automation")
