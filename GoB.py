@@ -1620,12 +1620,12 @@ def clone_as_object(obj, link=True):
 
 def apply_modifiers(obj):      
     depsgraph = bpy.context.evaluated_depsgraph_get()  
-    if prefs().export_modifiers == 'APPLY_EXPORT':
-        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
-        obj.data = mesh_tmp
-        obj.modifiers.clear()     
+    object_eval = obj.evaluated_get(depsgraph)
+    if prefs().export_modifiers == 'APPLY_EXPORT':   
+        bpy.ops.object.apply_all_modifiers()  
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
     elif prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
     else:
         mesh_tmp = obj.data
 
@@ -1636,10 +1636,11 @@ def apply_modifiers(obj):
     for f in bm.faces:
         if len(f.edges) > 4:
             result = bmesh.ops.triangulate(bm, faces=[f])
-            bmesh.ops.join_triangles(bm, faces= result['faces'], 
-                                    cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-                                    cmp_vcols=False,cmp_materials=False, 
-                                    angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
+            bmesh.ops.join_triangles(
+                bm, faces= result['faces'], 
+                cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
+                cmp_vcols=False,cmp_materials=False, 
+                angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
     
     export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
     bm.to_mesh(export_mesh)
