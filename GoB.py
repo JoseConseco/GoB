@@ -672,13 +672,31 @@ class GoB_OT_export(Operator):
     def poll(cls, context):
         selected_objects = context.selected_objects
         if selected_objects:
-            if selected_objects[0].visible_get and selected_objects[0].type == 'MESH':
-                numFaces = len(selected_objects[0].data.polygons)
-                if len(selected_objects) <= 1:
+            depsgraph = bpy.context.evaluated_depsgraph_get() 
+            # if one or less objects check amount of faces, 0 faces will crash zbrush
+            if len(selected_objects) <= 1: 
+                active_object = context.active_object 
+                if active_object.type == 'MESH':
+                    if not prefs().export_modifiers == 'IGNORE':
+                            object_eval = active_object.evaluated_get(depsgraph)
+                            numFaces = len(object_eval.data.polygons)
+                    else: 
+                        numFaces = len(active_object.data.polygons)
                     return numFaces
-            #elif selected_objects[0].type == 'MESH':
-            return selected_objects
 
+            else: #poll for faces in multiple objects, only if any face in object is found
+                for obj in selected_objects:                    
+                    if obj.type == 'MESH':
+                        if not prefs().export_modifiers == 'IGNORE': 
+                            object_eval = obj.evaluated_get(depsgraph)
+                            if len(object_eval.data.polygons):
+                                return True
+                        else: 
+                            if len(obj.data.polygons):
+                                return True
+                return False
+                
+            return selected_objects 
        
     
     def exportGoZ(self, path, scn, obj, pathImport):      
@@ -1158,19 +1176,30 @@ class GoB_OT_export(Operator):
                         bpy.data.meshes.remove(mesh_tmp)
 
                 elif  obj.type == 'MESH':
-                    process_linked_objects(obj) 
-                    remove_internal_faces(obj)
-                    #print("obj.type: ", obj.type, obj.name)
-                    if len(obj.data.polygons):
+                    depsgraph = bpy.context.evaluated_depsgraph_get() 
+                    # if one or less objects check amount of faces, 0 faces will crash zbrush
+                    
+                    if not prefs().export_modifiers == 'IGNORE':
+                        object_eval = obj.evaluated_get(depsgraph)
+                        numFaces = len(object_eval.data.polygons)                      
+                    else: 
+                        numFaces = len(obj.data.polygons)
+
+                    if numFaces > 0: 
+                        process_linked_objects(obj) 
+                        remove_internal_faces(obj)
                         self.escape_object_name(obj)
                         self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
-                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+                        ShowReport(self, [obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
+                    
                 else:
-                    print("GoB: unsupported obj.type found:", obj.type, obj.name)
+                    ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
+                    #print("GoB: unsupported obj.type found:", obj.type, obj.name)
+
                 wm.progress_update(step * i)                
             wm.progress_end()
             
@@ -1293,7 +1322,7 @@ def find_zbrush(self, context):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = max_list_value(folder_List)
                 prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC') 
+                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
             filepath = f"C:/Program Files/Pixologic" 
@@ -1302,7 +1331,7 @@ def find_zbrush(self, context):
                 i,zfolder = max_list_value(os.listdir(filepath))
                 print("find folder: ", zfolder)
                 prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
+                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
     if not self.is_found:
         print('Zbrush executable not found')
