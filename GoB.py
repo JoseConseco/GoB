@@ -76,13 +76,13 @@ def draw_goz_buttons(self, context):
         row = layout.row(align=True)
 
         if prefs().show_button_text:
-            row.operator(operator="scene.gob_export", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
+            row.operator(operator="scene.gob_export_button", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
                 row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
         else:
-            row.operator(operator="scene.gob_export", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)            
+            row.operator(operator="scene.gob_export_button", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
                 row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
             else:
@@ -660,9 +660,13 @@ class GoB_OT_import(Operator):
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
-    bl_description = "Export selected Objects to ZBrush\n"\
-                        "LeftMouse: as Subtool\n"\
-                        "SHIFT/CTRL/ALT + LeftMouse: as Tool"
+    bl_description = "Export selected Objects to ZBrush"
+
+    as_tool: bpy.props.BoolProperty(
+        name="Export As Tool",
+        description="Export as a tool instead of a subtool",
+        default=False,
+    )
 
     @classmethod
     def poll(cls, context):
@@ -1040,13 +1044,6 @@ class GoB_OT_export(Operator):
         bpy.data.meshes.remove(me)
         return
 
-    ## alternate button input
-    def invoke(self, context, event):
-        self.modifier_shift = event.shift
-        self.modifier_ctrl = event.ctrl
-        self.modifier_alt = event.alt
-        return self.execute(context)
-
     def execute(self, context):               
         PATH_PROJECT = prefs().project_path.replace("\\", "/") 
         #setup GoZ configuration
@@ -1097,7 +1094,7 @@ class GoB_OT_export(Operator):
         with open(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") as r:
             # IMPORT AS SUBTOOL
             r = r.read().replace('\t', ' ') #fix indentations in source data
-            if self.modifier_shift or self.modifier_ctrl or self.modifier_alt:  ## see invoke function for modifier states
+            if self.as_tool:
                 new_config = r.replace(import_as_subtool, import_as_tool)
             # IMPORT AS TOOL
             else:
@@ -1219,6 +1216,29 @@ class GoB_OT_export(Operator):
             i += 1
         obj.name = new_name
 
+class GoB_OT_export_button(Operator):
+    bl_idname = "scene.gob_export_button"
+    bl_label = "Export to ZBrush"
+    bl_description = "Export selected Objects to ZBrush\n"\
+                        "LeftMouse: as Subtool\n"\
+                        "SHIFT/CTRL/ALT + LeftMouse: as Tool"
+    bl_options = {'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        selected_objects = context.selected_objects
+        if selected_objects:
+            if selected_objects[0].visible_get and selected_objects[0].type == 'MESH':
+                numFaces = len(selected_objects[0].data.polygons)
+                if len(selected_objects) <= 1:
+                    return numFaces
+            #elif selected_objects[0].type == 'MESH':
+            return selected_objects
+
+    def invoke(self, context, event):
+        as_tool = event.shift or event.ctrl or event.alt
+        bpy.ops.scene.gob_export(as_tool=as_tool)
+        return {'FINISHED'}
 
 def find_zbrush(self, context):
     #get the highest version of zbrush and use it as default zbrush to send to
