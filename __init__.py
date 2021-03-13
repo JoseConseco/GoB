@@ -47,6 +47,7 @@ bl_info = {
 classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
+    GoB.GoB_OT_export_button,
     GoB.GoB_OT_GoZ_Installer_WIN,
     GoB.GOB_OT_Popup,
     preferences.GoB_Preferences,
