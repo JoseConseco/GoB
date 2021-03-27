@@ -670,15 +670,8 @@ class GoB_OT_export(Operator):
 
     @classmethod
     def poll(cls, context):
-        selected_objects = context.selected_objects
-        if selected_objects:
-            if selected_objects[0].visible_get and selected_objects[0].type == 'MESH':
-                numFaces = len(selected_objects[0].data.polygons)
-                if len(selected_objects) <= 1:
-                    return numFaces
-            #elif selected_objects[0].type == 'MESH':
-            return selected_objects
-
+        selected_objects = export_poll(cls, context)                
+        return selected_objects 
        
     
     def exportGoZ(self, path, scn, obj, pathImport):      
@@ -1158,19 +1151,30 @@ class GoB_OT_export(Operator):
                         bpy.data.meshes.remove(mesh_tmp)
 
                 elif  obj.type == 'MESH':
-                    process_linked_objects(obj) 
-                    remove_internal_faces(obj)
-                    #print("obj.type: ", obj.type, obj.name)
-                    if len(obj.data.polygons):
+                    depsgraph = bpy.context.evaluated_depsgraph_get() 
+                    # if one or less objects check amount of faces, 0 faces will crash zbrush
+                    
+                    if not prefs().export_modifiers == 'IGNORE':
+                        object_eval = obj.evaluated_get(depsgraph)
+                        numFaces = len(object_eval.data.polygons)                      
+                    else: 
+                        numFaces = len(obj.data.polygons)
+
+                    if numFaces > 0: 
+                        process_linked_objects(obj) 
+                        remove_internal_faces(obj)
                         self.escape_object_name(obj)
                         self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
-                        print("\n", obj.name, "has no faces and will not be exported. ZBrush can not import objects without faces")
+                        ShowReport(self, [obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
+                    
                 else:
-                    print("GoB: unsupported obj.type found:", obj.type, obj.name)
+                    ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
+                    #print("GoB: unsupported obj.type found:", obj.type, obj.name)
+
                 wm.progress_update(step * i)                
             wm.progress_end()
             
@@ -1216,6 +1220,7 @@ class GoB_OT_export(Operator):
             i += 1
         obj.name = new_name
 
+       
 class GoB_OT_export_button(Operator):
     bl_idname = "scene.gob_export_button"
     bl_label = "Export to ZBrush"
@@ -1224,16 +1229,10 @@ class GoB_OT_export_button(Operator):
                         "SHIFT/CTRL/ALT + LeftMouse: as Tool"
     bl_options = {'INTERNAL'}
 
-    @classmethod
+    @classmethod    
     def poll(cls, context):
-        selected_objects = context.selected_objects
-        if selected_objects:
-            if selected_objects[0].visible_get and selected_objects[0].type == 'MESH':
-                numFaces = len(selected_objects[0].data.polygons)
-                if len(selected_objects) <= 1:
-                    return numFaces
-            #elif selected_objects[0].type == 'MESH':
-            return selected_objects
+        selected_objects = export_poll(cls, context)                
+        return selected_objects 
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
@@ -1293,7 +1292,7 @@ def find_zbrush(self, context):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = max_list_value(folder_List)
                 prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC') 
+                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
             filepath = f"C:/Program Files/Pixologic" 
@@ -1302,7 +1301,7 @@ def find_zbrush(self, context):
                 i,zfolder = max_list_value(os.listdir(filepath))
                 print("find folder: ", zfolder)
                 prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default isntallation found", 'COLORSET_03_VEC')
+                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
     if not self.is_found:
         print('Zbrush executable not found')
@@ -1618,14 +1617,44 @@ def clone_as_object(obj, link=True):
     return obj_clone
 
 
+def export_poll(cls, context):
+    selected_objects = context.selected_objects
+    if selected_objects:
+        depsgraph = bpy.context.evaluated_depsgraph_get() 
+        # if one or less objects check amount of faces, 0 faces will crash zbrush
+        if len(selected_objects) <= 1: 
+            active_object = context.active_object 
+            if active_object.type == 'MESH':
+                if not prefs().export_modifiers == 'IGNORE':
+                        object_eval = active_object.evaluated_get(depsgraph)
+                        numFaces = len(object_eval.data.polygons)
+                else: 
+                    numFaces = len(active_object.data.polygons)
+                return numFaces
+
+        else: #poll for faces in multiple objects, only if any face in object is found
+            for obj in selected_objects:                    
+                if obj.type == 'MESH':
+                    if not prefs().export_modifiers == 'IGNORE': 
+                        object_eval = obj.evaluated_get(depsgraph)
+                        if len(object_eval.data.polygons):
+                            return True
+                    else: 
+                        if len(obj.data.polygons):
+                            return True
+            return False
+            
+        return selected_objects 
+
+
 def apply_modifiers(obj):      
     depsgraph = bpy.context.evaluated_depsgraph_get()  
-    if prefs().export_modifiers == 'APPLY_EXPORT':
-        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
-        obj.data = mesh_tmp
-        obj.modifiers.clear()     
+    object_eval = obj.evaluated_get(depsgraph)
+    if prefs().export_modifiers == 'APPLY_EXPORT':   
+        bpy.ops.object.apply_all_modifiers()  
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
     elif prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
     else:
         mesh_tmp = obj.data
 
@@ -1636,10 +1665,11 @@ def apply_modifiers(obj):
     for f in bm.faces:
         if len(f.edges) > 4:
             result = bmesh.ops.triangulate(bm, faces=[f])
-            bmesh.ops.join_triangles(bm, faces= result['faces'], 
-                                    cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-                                    cmp_vcols=False,cmp_materials=False, 
-                                    angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
+            bmesh.ops.join_triangles(
+                bm, faces= result['faces'], 
+                cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
+                cmp_vcols=False,cmp_materials=False, 
+                angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
     
     export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
     bm.to_mesh(export_mesh)
