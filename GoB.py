@@ -1244,44 +1244,52 @@ def find_zbrush(self, context):
     self.is_found = False 
     if prefs().zbrush_exec:
         print("\n\nFOUND prefs().zbrush_exec: ", prefs().zbrush_exec)
-        if os.path.isfile(prefs().zbrush_exec):  #validate if working file here    
-            #check if path contains zbrush, that should identify a zbrush executable
-            print("\n\nFOUND file: ", prefs().zbrush_exec)
-            if 'zbrush.exe' in str.lower(prefs().zbrush_exec) or \
-                'zbrush.app' in str.lower(prefs().zbrush_exec): 
-                print("GoB: executable found")  
-                self.is_found = True
+        
+        #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
+        if isMacOS:
+            print("using OSX", isMacOS)
+            if os.path.isdir(prefs().zbrush_exec): #search for zbrush package in this string 
+                print("FOUND dir: ", prefs().zbrush_exec)   
+                print('listdir: ', os.listdir(prefs().zbrush_exec))
+                
+                #'zbrush.app'
+                if 'zbrush.app' in str.lower(prefs().zbrush_exec):                         
+                    print('osx special case: ', prefs().zbrush_exec)
+                    self.is_found = True   
 
-        elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfodlers 
-            print("FOUND dir: ", prefs().zbrush_exec)   
 
-            for file in os.listdir(prefs().zbrush_exec):   
-                if "zbrush" in str.lower(file):     #search for content inside folder that contains zbrush
-                    
-                    #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
-                    #'zbrush.app'
-                    if 'zbrush.app' in str.lower(file):
-                        prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, file)                          
-                        print('osx special case: ', prefs().zbrush_exec)
-                        self.is_found = True   
+        else: #is PC
+            if os.path.isfile(prefs().zbrush_exec):  #validate if working file here    
+                #check if path contains zbrush, that should identify a zbrush executable
+                print("\n\nFOUND file: ", prefs().zbrush_exec)
+                if 'zbrush.exe' in str.lower(prefs().zbrush_exec): 
+                    print("GoB: executable found")  
+                    self.is_found = True
 
-                    print("FOUND f: ", file)    
-                    #search subfolders for executables
-                    if os.path.isdir(os.path.join(prefs().zbrush_exec, file)): 
-                        i,zfolder = max_list_value(os.listdir(os.path.join(prefs().zbrush_exec)))
-                        for f in os.listdir(os.path.join(prefs().zbrush_exec, zfolder)):
-                            if ('zbrush.exe' in str.lower(f) or 'zbrush.app' in str.lower(f)):            
-                                print("f: ", f)
-                                prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, f)           
-                                self.is_found = True   
+            elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfodlers 
+                print("FOUND dir: ", prefs().zbrush_exec)   
+                print('listdir: ', os.listdir(prefs().zbrush_exec))
+                
+                for file in os.listdir(prefs().zbrush_exec): 
+                    print('file: ', file)  
+                    if "zbrush" in str.lower(file):     #search for content inside folder that contains zbrush
+                        print("FOUND f: ", file)    
+                        #search subfolders for executables
+                        if os.path.isdir(os.path.join(prefs().zbrush_exec, file)): 
+                            i,zfolder = max_list_value(os.listdir(os.path.join(prefs().zbrush_exec)))
+                            for f in os.listdir(os.path.join(prefs().zbrush_exec, zfolder)):
+                                if ('zbrush.exe' in str.lower(f) in str.lower(f)):            
+                                    print("f: ", f)
+                                    prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, f)           
+                                    self.is_found = True   
 
-                    #find executable
-                    if os.path.isfile(os.path.join(prefs().zbrush_exec,file)) and ('zbrush.exe' in str.lower(file) or 'zbrush.app' in str.lower(file)):            
-                        print("files: ", file)
-                        prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, file)           
-                        self.is_found = True  
+                        #find executable
+                        if os.path.isfile(os.path.join(prefs().zbrush_exec,file)) and ('zbrush.exe' in str.lower(file) in str.lower(file)):            
+                            print("files: ", file)
+                            prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, file)           
+                            self.is_found = True  
 
-    else:    # the  applications default pathwe can try if zbrush is installed in its defaut location   
+    else:    # the  applications default path can try if zbrush is installed in its defaut location   
         print("\n\nNO prefs().zbrush_exec: ", prefs().zbrush_exec) 
         print("prefs().zbrush_exec run automation")
         #look for zbrush in default installation path 
@@ -1303,8 +1311,10 @@ def find_zbrush(self, context):
                 prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
                 ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
+
     if not self.is_found:
         print('Zbrush executable not found')
+
     return self.is_found
 
 
