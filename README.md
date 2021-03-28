@@ -16,11 +16,12 @@ You can transfer:
 
 ## Clean Installation of GoB
 1. Remove your old GoB addon from your Blender Addons Folder
-2. Copy the extracted GoB addon into your Blender Addon Folder
-3. Start Blender and enable the GoB addon in the Preferences > Addons menu and safe your preferences
-4. Select a object you want to send to Zbrush and press the Export Button in the Header. 
+2. Copy the zipped GoB addon into your Blender Addon Folder
+3. Start Blender and firstly install the addon on Preferences > Addons. To do so, you have to click the "Install" and locate the zipped archive.
+4. Enable the GoB addon in the Addons menu and save your preferences
+5. Select a object you want to send to Zbrush and press the Export Button in the Header. 
    This will configure Zbrush to know that it is communicating with Blender, Run Zbrush and load in your Object.
-5. Restart Zbrush and that is it.
+6. Restart Zbrush and that is it.
 
 ## Update GoB
 1. Remove your old GoB addon from your Blender Addons Folder
