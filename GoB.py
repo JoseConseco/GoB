@@ -1192,10 +1192,10 @@ class GoB_OT_export(Operator):
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
             else:
                 if isMacOS:   
-                    print("OSX Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
+                    print("OSX Popen: ", prefs().zbrush_exec)
                     Popen(['open', '-a', prefs().zbrush_exec, PATH_SCRIPT])   
                 else: #windows   
-                    print("Windows Popen : prefs().zbrush_exec:  ", prefs().zbrush_exec)
+                    print("Windows Popen: ", prefs().zbrush_exec)
                     Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
                     bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
@@ -1292,7 +1292,7 @@ def find_zbrush(self, context):
                 self.is_found = True  
 
     if not self.is_found:
-        print('Zbrush executable not found')
+        print('GoB: Zbrush executable not found')
 
     return self.is_found
 
