@@ -1468,10 +1468,10 @@ def apply_transformation(me, is_import=True):
     scale = 1.0
     
     if prefs().use_scale == 'BUNITS':
-        scale = bpy.context.scene.unit_settings.scale_length
+        scale = 1 / bpy.context.scene.unit_settings.scale_length
 
     if prefs().use_scale == 'MANUAL':        
-        scale =  1/prefs().manual_scale
+        scale =  1 / prefs().manual_scale
 
     if prefs().use_scale == 'ZUNITS':
         if bpy.context.active_object:
