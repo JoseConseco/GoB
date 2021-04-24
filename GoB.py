@@ -1104,12 +1104,10 @@ class GoB_OT_export(Operator):
         wm = context.window_manager
         wm.progress_begin(0,100)
         step =  100  / len(context.selected_objects)
+        surface_types = ['SURFACE', 'CURVE', 'FONT', 'META']
         with open(PATH_OBJLIST, 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
-                if  (obj.type == 'SURFACE' or
-                        obj.type == 'CURVE' or
-                        obj.type == 'FONT' or                                           
-                        obj.type == 'META'): 
+                if obj.type in surface_types:
 
                     """ 
                     # Avoid annoying None checks later on.
