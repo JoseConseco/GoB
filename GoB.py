@@ -1152,8 +1152,8 @@ class GoB_OT_export(Operator):
 
                 elif  obj.type == 'MESH':
                     depsgraph = bpy.context.evaluated_depsgraph_get() 
+
                     # if one or less objects check amount of faces, 0 faces will crash zbrush
-                    
                     if not prefs().export_modifiers == 'IGNORE':
                         object_eval = obj.evaluated_get(depsgraph)
                         numFaces = len(object_eval.data.polygons)                      
@@ -1638,12 +1638,13 @@ def export_poll(cls, context):
 
 def apply_modifiers(obj):      
     depsgraph = bpy.context.evaluated_depsgraph_get()  
-    object_eval = obj.evaluated_get(depsgraph)
-    if prefs().export_modifiers == 'APPLY_EXPORT':   
-        bpy.ops.object.apply_all_modifiers()  
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+    object_eval = obj.evaluated_get(depsgraph)   
+    if prefs().export_modifiers == 'APPLY_EXPORT':      
+        mesh_tmp = bpy.data.meshes.new_from_object(object_eval) 
+        obj.data = mesh_tmp
+        obj.modifiers.clear() 
     elif prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)     
     else:
         mesh_tmp = obj.data
 
