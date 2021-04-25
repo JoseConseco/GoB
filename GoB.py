@@ -1611,13 +1611,14 @@ def export_poll(cls, context):
         # if one or less objects check amount of faces, 0 faces will crash zbrush
         if len(selected_objects) <= 1: 
             active_object = context.active_object 
-            if active_object.type == 'MESH':
-                if not prefs().export_modifiers == 'IGNORE':
-                        object_eval = active_object.evaluated_get(depsgraph)
-                        numFaces = len(object_eval.data.polygons)
-                else: 
-                    numFaces = len(active_object.data.polygons)
-                return numFaces
+            if active_object.type: 
+                if active_object.type == 'MESH':
+                    if not prefs().export_modifiers == 'IGNORE':
+                            object_eval = active_object.evaluated_get(depsgraph)
+                            numFaces = len(object_eval.data.polygons)
+                    else: 
+                        numFaces = len(active_object.data.polygons)
+                    return numFaces
 
         else: #poll for faces in multiple objects, only if any face in object is found
             for obj in selected_objects:                    
