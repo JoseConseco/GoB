@@ -1104,12 +1104,10 @@ class GoB_OT_export(Operator):
         wm = context.window_manager
         wm.progress_begin(0,100)
         step =  100  / len(context.selected_objects)
+        surface_types = ['SURFACE', 'CURVE', 'FONT', 'META']
         with open(PATH_OBJLIST, 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
-                if  (obj.type == 'SURFACE' or
-                        obj.type == 'CURVE' or
-                        obj.type == 'FONT' or                                           
-                        obj.type == 'META'): 
+                if obj.type in surface_types:
 
                     """ 
                     # Avoid annoying None checks later on.
@@ -1152,8 +1150,8 @@ class GoB_OT_export(Operator):
 
                 elif  obj.type == 'MESH':
                     depsgraph = bpy.context.evaluated_depsgraph_get() 
+
                     # if one or less objects check amount of faces, 0 faces will crash zbrush
-                    
                     if not prefs().export_modifiers == 'IGNORE':
                         object_eval = obj.evaluated_get(depsgraph)
                         numFaces = len(object_eval.data.polygons)                      
@@ -1613,14 +1611,16 @@ def export_poll(cls, context):
         # if one or less objects check amount of faces, 0 faces will crash zbrush
         if len(selected_objects) <= 1: 
             active_object = context.active_object 
-            if active_object.type == 'MESH':
-                if not prefs().export_modifiers == 'IGNORE':
-                        object_eval = active_object.evaluated_get(depsgraph)
-                        numFaces = len(object_eval.data.polygons)
-                else: 
-                    numFaces = len(active_object.data.polygons)
-                return numFaces
-
+            try:
+                if active_object.type == 'MESH':
+                    if not prefs().export_modifiers == 'IGNORE':
+                            object_eval = active_object.evaluated_get(depsgraph)
+                            numFaces = len(object_eval.data.polygons)
+                    else: 
+                        numFaces = len(active_object.data.polygons)
+                    return numFaces
+            except:
+                pass
         else: #poll for faces in multiple objects, only if any face in object is found
             for obj in selected_objects:                    
                 if obj.type == 'MESH':
@@ -1638,12 +1638,13 @@ def export_poll(cls, context):
 
 def apply_modifiers(obj):      
     depsgraph = bpy.context.evaluated_depsgraph_get()  
-    object_eval = obj.evaluated_get(depsgraph)
-    if prefs().export_modifiers == 'APPLY_EXPORT':   
-        bpy.ops.object.apply_all_modifiers()  
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+    object_eval = obj.evaluated_get(depsgraph)   
+    if prefs().export_modifiers == 'APPLY_EXPORT':      
+        mesh_tmp = bpy.data.meshes.new_from_object(object_eval) 
+        obj.data = mesh_tmp
+        obj.modifiers.clear() 
     elif prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)     
     else:
         mesh_tmp = obj.data
 
