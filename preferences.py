@@ -174,7 +174,12 @@ class GoB_Preferences(AddonPreferences):
         name="Delete non manifold faces",
         description="Delete non manifold faces",
         default=True)
-    
+
+    export_merge: BoolProperty(
+        name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
+        description="Merges vertices of mesh type 'SURFACE', 'CURVE', 'FONT', 'META' that are in a given distance to each other",
+        default=True)
+
     export_merge_distance: FloatProperty(
         name="Vertex Merge Threshold",
         description="Vertex Merge Threshold",
@@ -347,7 +352,10 @@ class GoB_Preferences(AddonPreferences):
         if self.export_polygroups == 'VERTEX_GROUPS':  
             col.prop(self, 'export_weight_threshold')
         col.prop(self, 'export_clear_mask') 
-        col.prop(self, 'export_merge_distance') 
+        
+        col.prop(self, 'export_merge') 
+        if self.export_merge:
+            col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces')
         
         
