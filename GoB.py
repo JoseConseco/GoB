@@ -1136,7 +1136,8 @@ class GoB_OT_export(Operator):
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
                     obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
-                    mesh_welder(obj_tmp)
+                    if prefs().export_merge:
+                        mesh_welder(obj_tmp)
                     
                     if len(mesh_tmp.polygons):
                         print("GoB: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
@@ -1673,7 +1674,7 @@ def mesh_welder(obj, d = 0.0001):
     d = prefs().export_merge_distance
     bm = bmesh.new()
     bm.from_mesh(obj.data)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts[:],dist=d)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=d)
     bm.to_mesh(obj.data)  
     bm.free()
     
