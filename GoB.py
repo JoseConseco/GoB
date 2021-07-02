@@ -671,7 +671,7 @@ class GoB_OT_export(Operator):
     @classmethod
     def poll(cls, context):
         selected_objects = export_poll(cls, context)                
-        return selected_objects 
+        return selected_objects
        
     
     def exportGoZ(self, path, scn, obj, pathImport):      
@@ -1227,11 +1227,6 @@ class GoB_OT_export_button(Operator):
                         "LeftMouse: as Subtool\n"\
                         "SHIFT/CTRL/ALT + LeftMouse: as Tool"
     bl_options = {'INTERNAL'}
-
-    @classmethod    
-    def poll(cls, context):
-        selected_objects = export_poll(cls, context)                
-        return selected_objects 
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
