@@ -13,14 +13,13 @@ author: Daniel Grauer
 
 [VarDef,GoBList(7),""]          // NOTE: if list size changes gob export list size needs to be updated as well
     /* File: Gob_variables.zvr
-    0: object name, 
-    1: fileExtension, 
-    2: textureFormat,
-    3: diffTexture, 
-    4: normTexture, 
-    5: dispTexture 
-    6: GoB version
-    6: Project Path
+        0: fileExtension, 
+        1: textureFormat, 
+        2: diffSuffix,
+        3: normSuffix, 
+        4: dispSuffix, 
+        5: gobVersion,
+        6: gozProjectPath,
     */
 
 
@@ -84,8 +83,13 @@ author: Daniel Grauer
     [VarDef,variablesFile,[StrMerge,GoZProjectsPath,"GoB_variables.zvr"]]  
     // load variables from GoB export
         /* File: Gob_variables.zvr
-        0: object name, 1: fileExtension, 2: textureFormat,
-        3: diffSuffix, 4: normSuffix, 5: dispSuffix 
+        0: fileExtension, 
+        1: textureFormat, 
+        2: diffSuffix,
+        3: normSuffix, 
+        4: dispSuffix, 
+        5: gobVersion,
+        6: gozProjectPath, 
         */
 
 	[If,[FileExists,variablesFile],    
