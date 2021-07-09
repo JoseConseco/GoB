@@ -63,7 +63,7 @@ isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST = gob_init_os_paths()
 
 run_background_update = False
 icons = None
-cached_last_edition_time = time.time()
+cached_last_edition_time = time.perf_counter()
 last_cache = 0
 preview_collections = {}
 gob_import_cache = []
@@ -98,8 +98,8 @@ class GoB_OT_import(Operator):
     def GoZit(self, pathFile): 
         if prefs().performance_profiling: 
             print("\n")
-            start_time = profiler(time.time(), "Start Object Profiling")
-            start_total_time = profiler(time.time(), "...")
+            start_time = profiler(time.perf_counter(), "Start Object Profiling")
+            start_total_time = profiler(time.perf_counter(), "...")
 
         utag = 0
         vertsData = []
@@ -614,7 +614,7 @@ class GoB_OT_import(Operator):
 
         if prefs().performance_profiling: 
             print("\n", 100*"=")
-            start_time = profiler(time.time(), "GoB: Start Import Profiling")             
+            start_time = profiler(time.perf_counter(), "GoB: Start Import Profiling")             
             print(100*"-") 
 
         wm = context.window_manager
@@ -678,8 +678,8 @@ class GoB_OT_export(Operator):
         PATH_PROJECT = prefs().project_path.replace("\\", "/")   
         if prefs().performance_profiling: 
             print("\n", 100*"=")
-            start_time = profiler(time.time(), "Export Profiling: " + obj.name)
-            start_total_time = profiler(time.time(), "-------------")
+            start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
+            start_total_time = profiler(time.perf_counter(), "-------------")
 
 
 
@@ -1546,9 +1546,9 @@ def apply_transformation(me, is_import=True):
 
 
 def profiler(start_time=0, string=None): 
-    elapsed = time.time()
+    elapsed = time.perf_counter()
     print("{:.4f}".format(elapsed-start_time), "<< ", string)  
-    start_time = time.time()
+    start_time = time.perf_counter()
     return start_time  
 
 
