@@ -1545,9 +1545,14 @@ def apply_transformation(me, is_import=True):
     return me, mat_transform
 
 
-def profiler(start_time=0, string=None): 
+def profiler(start_time=False, string=None): 
     elapsed = time.perf_counter()
-    print("{:.4f}".format(elapsed-start_time), "<< ", string)  
+    measured_time = elapsed-start_time
+    if start_time:
+        print("{:.10f}".format(measured_time*1000), "ms << ", string)  
+    else:
+        print("debug_profiling: ", string)  
+        
     start_time = time.perf_counter()
     return start_time  
 
