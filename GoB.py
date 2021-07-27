@@ -29,7 +29,8 @@ import time
 from struct import pack, unpack
 import string
 import numpy
-from bpy.types import Operator 
+from bpy.types import Operator
+from bpy.props import EnumProperty
 
 def prefs():
     user_preferences = bpy.context.preferences
@@ -78,23 +79,32 @@ def draw_goz_buttons(self, context):
         if prefs().show_button_text:
             row.operator(operator="scene.gob_export_button", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
-                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id).action = 'AUTO'
             else:
-                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id).action = 'AUTO'
+            row.operator(operator="scene.gob_import", text="Manual", emboss=True, depress=False, icon='IMPORT').action = 'MANUAL'
         else:
             row.operator(operator="scene.gob_export_button", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
-                row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id)
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id).action = 'AUTO'
             else:
-                row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id)
+                row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id).action = 'AUTO'
+            row.operator(operator="scene.gob_import", text="", emboss=True, depress=False, icon='IMPORT').action = 'MANUAL'
 
 start_time = None
 class GoB_OT_import(Operator):
     bl_idname = "scene.gob_import"
     bl_label = "GOZ import"
-    bl_description = "GoZ Import. Activate to enable Import from GoZ"
+    bl_description = "GoZ Import. Activate to enable Import from GoZ"    
     
-    
+    action: EnumProperty(
+        items=[
+            ('MANUAL', 'manual import', 'manual import'),
+            ('AUTO', 'toggle automatic import', 'toggle automatic import')
+        ]
+    )
+
+
     def GoZit(self, pathFile): 
         if prefs().performance_profiling: 
             print("\n")
@@ -635,27 +645,34 @@ class GoB_OT_import(Operator):
         return{'FINISHED'}
 
     
-    def invoke(self, context, event):        
-        if prefs().import_method == 'AUTOMATIC':
-            global run_background_update
-            if run_background_update:
-                if bpy.app.timers.is_registered(run_import_periodically):
-                    bpy.app.timers.unregister(run_import_periodically)
-                    print('Disabling GOZ background listener')
-                run_background_update = False
-            else:
-                if not bpy.app.timers.is_registered(run_import_periodically):
-                    bpy.app.timers.register(run_import_periodically, persistent=True)
-                    print('Enabling GOZ background listener')
-                run_background_update = True
+    def invoke(self, context, event):  
+        print("ACTION: ", self.action) 
+        if self.action == 'MANUAL':
+            run_import_manually()
             return{'FINISHED'}
         else:
-            if run_background_update:
-                if bpy.app.timers.is_registered(run_import_periodically):
-                    bpy.app.timers.unregister(run_import_periodically)
-                    print('Disabling GOZ background listener')
-                run_background_update = False
-            return{'FINISHED'}
+        
+            if prefs().import_method == 'AUTOMATIC':
+                global run_background_update
+                if run_background_update:
+                    if bpy.app.timers.is_registered(run_import_periodically):
+                        bpy.app.timers.unregister(run_import_periodically)
+                        print('Disabling GOZ background listener')
+                    run_background_update = False
+                else:
+                    if not bpy.app.timers.is_registered(run_import_periodically):
+                        bpy.app.timers.register(run_import_periodically, persistent=True)
+                        print('Enabling GOZ background listener')
+                    run_background_update = True
+                return{'FINISHED'}
+            else:
+                if run_background_update:
+                    if bpy.app.timers.is_registered(run_import_periodically):
+                        bpy.app.timers.unregister(run_import_periodically)
+                        print('Disabling GOZ background listener')
+                    run_background_update = False
+                return{'FINISHED'}
+
 
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
@@ -1340,6 +1357,13 @@ class GOB_OT_Popup(Operator):
         return {'FINISHED'}
 
 
+def run_import_manually():
+    global gob_import_cache
+    window = bpy.context.window_manager.windows[0]
+    context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
+    
+
 def run_import_periodically():
     global gob_import_cache
     # print("Runing timers update check")
@@ -1361,8 +1385,8 @@ def run_import_periodically():
         # ! cant get proper context from timers for now. 
         # Override context: https://developer.blender.org/T62074     
         window = bpy.context.window_manager.windows[0]
-        ctx = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-        bpy.ops.scene.gob_import(ctx) #only call operator update is found (executing operatros is slow)
+        context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
     else:         
         if gob_import_cache:  
             if prefs().debug_output:   
