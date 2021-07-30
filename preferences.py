@@ -176,9 +176,9 @@ class GoB_Preferences(AddonPreferences):
         default=True)
     
     export_raw_object_names: BoolProperty(
-        name="export_raw_object_names",
-        description="export_raw_object_names",
-        default=True)
+        name="[Experimental] Export Raw Object Names",
+        description="Object names will not be changed when exporting, this might cause some name changes in zbrush",
+        default=False)
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
@@ -362,6 +362,7 @@ class GoB_Preferences(AddonPreferences):
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces')
+        col.prop(self, 'export_raw_object_names')
         
         
         
