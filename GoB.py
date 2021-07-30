@@ -1225,16 +1225,18 @@ class GoB_OT_export(Operator):
         Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
         Multiple consecutive invalid characters will be replaced with just a single underscore character.
         """
-        import re
-        new_name = re.sub('[^\w\_\-]+', '_', obj.name)
-        if new_name == obj.name:
-            return
-        i = 0
-        while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
-            name_cut = None if i == 0 else -2  #in first loop, do not slice name.
-            new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
-            i += 1
-        obj.name = new_name
+        if prefs().export_raw_object_names:
+            import re
+            new_name = re.sub('[^\w\_\-]+', '_', obj.name)
+            if obj.name == obj.name:
+                return
+            i = 0
+            
+            while obj.name in bpy.data.objects.keys(): #while name collision with other scene objs,
+                name_cut = None if i == 0 else -2  #in first loop, do not slice name.
+                new_name = obj.name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
+                i += 1
+            obj.name = new_name
 
        
 class GoB_OT_export_button(Operator):

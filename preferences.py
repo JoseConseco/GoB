@@ -174,6 +174,11 @@ class GoB_Preferences(AddonPreferences):
         name="Delete non manifold faces",
         description="Delete non manifold faces",
         default=True)
+    
+    export_raw_object_names: BoolProperty(
+        name="export_raw_object_names",
+        description="export_raw_object_names",
+        default=True)
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
