@@ -889,10 +889,11 @@ class GoB_OT_export(Operator):
 
                         if me.face_maps: 
                             for index, map in enumerate(me.face_maps[0].data):
-                                if map.value >= 0:
-                                    goz_file.write(pack('<H', groupColor[map.value]))  
-                                else: #face without facemaps (value = -1)
-                                    goz_file.write(pack('<H', 65504))
+                                if map.value == -1: #write default polygroup color
+                                    goz_file.write(pack('<H', 65504))                                                                     
+                                else:
+                                    goz_file.write(pack('<H', groupColor[map.value]))
+
                         else:   #assign empty when no face maps are found                 
                             for face in me.polygons:         
                                 goz_file.write(pack('<H', 65504))
