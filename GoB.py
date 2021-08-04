@@ -1225,16 +1225,18 @@ class GoB_OT_export(Operator):
         Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
         Multiple consecutive invalid characters will be replaced with just a single underscore character.
         """
-        import re
-        new_name = re.sub('[^\w\_\-]+', '_', obj.name)
-        if new_name == obj.name:
-            return
-        i = 0
-        while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
-            name_cut = None if i == 0 else -2  #in first loop, do not slice name.
-            new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
-            i += 1
-        obj.name = new_name
+        if prefs().export_raw_object_names:
+            import re
+            new_name = re.sub('[^\w\_\-]+', '_', obj.name)
+            if obj.name == obj.name:
+                return
+            i = 0
+            
+            while obj.name in bpy.data.objects.keys(): #while name collision with other scene objs,
+                name_cut = None if i == 0 else -2  #in first loop, do not slice name.
+                new_name = obj.name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
+                i += 1
+            obj.name = new_name
 
        
 class GoB_OT_export_button(Operator):
@@ -1266,7 +1268,7 @@ def find_zbrush(self, context):
                 if 'zbrush.exe' in str.lower(prefs().zbrush_exec): 
                     self.is_found = True
 
-            elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfodlers 
+            elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfolders 
                 for folder in os.listdir(prefs().zbrush_exec): 
                     if "zbrush" in str.lower(folder):     #search for content inside folder that contains zbrush
                         #search subfolders for executables
@@ -1274,7 +1276,7 @@ def find_zbrush(self, context):
                             i,zfolder = max_list_value(os.listdir(os.path.join(prefs().zbrush_exec)))
                             for file in os.listdir(os.path.join(prefs().zbrush_exec, zfolder)):
                                 if ('zbrush.exe' in str.lower(file) in str.lower(file)):            
-                                    prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, f)           
+                                    prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, file)           
                                     self.is_found = True   
 
                         #find executable
