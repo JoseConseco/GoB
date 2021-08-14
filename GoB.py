@@ -883,20 +883,23 @@ class GoB_OT_export(Operator):
                         groupColor=[]                        
                         #create a color for each facemap (0xffff)
                         for faceMap in obj.face_maps:
-                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                            color = int(randcolor, 16)
-                            groupColor.append(color)
+                            if faceMap:
+                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                                color = int(randcolor, 16)
+                                groupColor.append(color)
+                            else:
+                                groupColor.append(65504)
 
-                        if me.face_maps: 
+                        if me.face_maps and len(obj.face_maps) > 0: 
                             for index, map in enumerate(me.face_maps[0].data):
-                                if map.value >= 0:
-                                    goz_file.write(pack('<H', groupColor[map.value]))  
-                                else: #face without facemaps (value = -1)
-                                    goz_file.write(pack('<H', 65504))
-                        else:   #assign empty when no face maps are found                 
+                                if map.value < 0: #write default polygroup color
+                                    goz_file.write(pack('<H', 65504))                                                                     
+                                else:
+                                    goz_file.write(pack('<H', groupColor[map.value]))
+
+                        else:   #assign empty when no face maps are found        
                             for face in me.polygons:         
                                 goz_file.write(pack('<H', 65504))
-                                 
 
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Write FaceMaps") 
