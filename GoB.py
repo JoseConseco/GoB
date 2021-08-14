@@ -247,9 +247,9 @@ class GoB_OT_import(Operator):
             # update mesh data after transformations to fix normals 
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
-
+            
             # make object active
-            obj.select_set(True) 
+            obj.select_set(state=True) 
             bpy.context.view_layer.objects.active = obj
 
             vertsData.clear()
@@ -1708,11 +1708,23 @@ def mesh_welder(obj, d = 0.0001):
     bm.free()
     
 
+def restore_selection(selected, active):
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in selected:
+        bpy.data.objects[ob.name].select_set(state=True)
+    bpy.context.view_layer.objects.active = active
+
+
+
 def remove_internal_faces(obj): 
     "remove nonmanifold faces that are inside a mesh"  
-    if prefs().export_remove_internal_faces:         
+    if prefs().export_remove_internal_faces:     
+        #remember whats selected
+        selected = bpy.context.selected_objects
+        active = bpy.context.active_object
+        
         bpy.ops.object.select_all(action='DESELECT')
-        obj.select_set(True) 
+        obj.select_set(state=True) 
         bpy.context.view_layer.objects.active = obj
         last_context = obj.mode
         #print("last_context: ", last_context)
@@ -1735,3 +1747,4 @@ def remove_internal_faces(obj):
                                         
         bpy.ops.mesh.delete(type='FACE')
         bpy.ops.object.mode_set(bpy.context.copy(), mode=last_context)
+        restore_selection(selected, active)
