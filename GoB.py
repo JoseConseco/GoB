@@ -42,20 +42,20 @@ def gob_init_os_paths():
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        #if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] + "/Pixologic")
+        #if os.path.isfile(os.environ['PUBLIC'] + "\\Pixologic\\GoZBrush\\GoZBrushFromApp.exe"):
+        PATH_GOZ = os.path.join(os.environ['PUBLIC'] + "\\Pixologic")
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
         isMacOS = True
-        #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
+        #print(os.path.isfile("\\Users\\Shared\\Pixologic\\GoZBrush\\GoZBrushFromApp.app\\Contents\\MacOS\\GoZBrushFromApp"))
+        PATH_GOZ = os.path.join("\\Users\\Shared\\Pixologic")
     else:
         print("GoB Unkonwn System: ", platform.system())
         PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = os.path.join(bpy.app.binary_path)
-    PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+    PATH_OBJLIST = os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_ObjectList.txt")
     return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST
 
 
@@ -597,7 +597,7 @@ class GoB_OT_import(Operator):
         global gob_import_cache
         goz_obj_paths = []             
         try:
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
+            with open(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
         except PermissionError:
@@ -711,7 +711,7 @@ class GoB_OT_export(Operator):
         fileExt = '.bmp'
         
         # write GoB ZScript variables
-        variablesFile = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")      
+        variablesFile = os.path.join(f"{PATH_GOZ}\\GoZProjects\\Default\\GoB_variables.zvr")      
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
@@ -752,7 +752,7 @@ class GoB_OT_export(Operator):
                  
 
 
-        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
+        with open(os.path.join(pathImport + '\\{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
             
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
@@ -1060,28 +1060,28 @@ class GoB_OT_export(Operator):
     def execute(self, context):               
         PATH_PROJECT = os.path.join(prefs().project_path)
         #setup GoZ configuration
-        #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
+        #if not os.path.isfile(f"{PATH_GOZ}\\GoZApps\\Blender\\GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
-            source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/")
-            target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/")
+            source_GoZ_Info = os.path.join(f"{PATH_GOB}\\Blender\\")
+            target_GoZ_Info = os.path.join(f"{PATH_GOZ}\\GoZApps\\Blender\\")
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
-            source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/GoZ_Info.txt")
-            target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt")
+            source_GoZ_Info = os.path.join(f"{PATH_GOB}\\Blender\\GoZ_Info.txt")
+            target_GoZ_Info = os.path.join(f"{PATH_GOZ}\\GoZApps\\Blender\\GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
 
             #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
-                GoB_Config.write(f"PATH = \"{PATH_BLENDER}\"")
+            #if not os.path.isfile(f"{PATH_GOZ}\\GoZApps\\Blender\\GoZ_Config.txt"): 
+            with open(os.path.join(f"{PATH_GOZ}\\GoZApps\\Blender\\GoZ_Config.txt"), 'wt') as GoB_Config:
+                GoB_Config.write(f"PATH = \'{PATH_BLENDER}\'")
             #specify GoZ application
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
+            with open(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")            
 
 
         #update project path
-        #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
+        #print("Project file path: ", f"{PATH_GOZ}\\GoZBrush\\GoZ_ProjectPath.txt")
+        with open(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
@@ -1094,17 +1094,17 @@ class GoB_OT_export(Operator):
         
         """
         # a object can either be imported as tool or as subtool in zbrush
-        # the IMPORT_AS_SUBTOOL needs to be changed in ..\Pixologic\GoZBrush\GoZ_Config.txt 
+        # the IMPORT_AS_SUBTOOL needs to be changed in ..\\Pixologic\\GoZBrush\\GoZ_Config.txt 
         # for zbrush to recognize the import mode   
             GoZ_Config.txt
-                PATH = "C:\PROGRAM FILES\PIXOLOGIC\ZBRUSH 2021/ZBrush.exe"
+                PATH = "C:\\PROGRAM FILES\\PIXOLOGIC\\ZBRUSH 2021\\ZBrush.exe"
                 IMPORT_AS_SUBTOOL = TRUE
                 SHOW_HELP_WINDOW = TRUE 
         """         
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
         import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
 
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
+        with open(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_Config.txt")) as r:
             # IMPORT AS SUBTOOL
             r = r.read().replace('\t', ' ') #fix indentations in source data
             if self.as_tool:
@@ -1113,7 +1113,7 @@ class GoB_OT_export(Operator):
             else:
                 new_config = r.replace(import_as_tool, import_as_subtool)
 
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
+        with open(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_Config.txt"), "w") as w:
             w.write(new_config)
             
         currentContext = 'OBJECT'
@@ -1202,7 +1202,7 @@ class GoB_OT_export(Operator):
             cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
         except:
             return
-        PATH_SCRIPT = os.path.join(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
+        PATH_SCRIPT = os.path.join(f"{PATH_GOB}\\ZScripts\\GoB_Import.zsc")
 
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
@@ -1292,7 +1292,7 @@ def find_zbrush(self, context):
         #look for zbrush in default installation path 
         if isMacOS:
             folder_List = []                 
-            filepath = os.path.join(f"/Applications")
+            filepath = os.path.join(f"\\Applications")
             if os.path.isdir(filepath):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = max_list_value(folder_List)
@@ -1300,7 +1300,7 @@ def find_zbrush(self, context):
                 ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
-            filepath = os.path.join(f"C:/Program Files/Pixologic")
+            filepath = os.path.join(f"C:\\Program Files\\Pixologic")
             #find non version paths
             if os.path.isdir(filepath):
                 i,zfolder = max_list_value(os.listdir(filepath))
@@ -1316,7 +1316,7 @@ def find_zbrush(self, context):
 
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
-        //Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
+        \\Troubleshoot Help\\GoZ_for_ZBrush_Installer_WIN.exe'''
     bl_idname = "gob.install_goz" 
     bl_label = "Run GoZ Installer"
 
@@ -1327,7 +1327,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
             bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
         else: 
             path = prefs().zbrush_exec.strip("ZBrush.exe")            
-            GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
+            GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help\\GoZ_for_ZBrush_Installer_WIN.exe")
             Popen([GOZ_INSTALLER], shell=True)     
         return {'FINISHED'}
 
@@ -1376,7 +1376,7 @@ def run_import_periodically():
     global cached_last_edition_time, run_background_update
 
     try:
-        file_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
+        file_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}\\GoZBrush\\GoZ_ObjectList.txt"))
         #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)

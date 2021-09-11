@@ -75,7 +75,7 @@ class GoB_Preferences(AddonPreferences):
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{GoB.PATH_GOZ}/GoZProjects/Default/"))
+        default=os.path.join(f"{GoB.PATH_GOZ}\\GoZProjects\\Default\\"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
