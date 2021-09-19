@@ -689,8 +689,8 @@ class GoB_OT_export(Operator):
     def poll(cls, context):
         selected_objects = export_poll(cls, context)                
         return selected_objects
-       
     
+
     def exportGoZ(self, path, scn, obj, pathImport):      
         PATH_PROJECT = os.path.join(prefs().project_path)  
         if prefs().performance_profiling: 
@@ -698,15 +698,12 @@ class GoB_OT_export(Operator):
             start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
             start_total_time = profiler(time.perf_counter(), "-------------")
 
-
-
         me = apply_modifiers(obj)
         me.calc_loop_triangles()
         me, mat_transform = apply_transformation(me, is_import=False)
 
         if prefs().performance_profiling: 
             start_time = profiler(start_time, "Make Mesh")
-
 
         fileExt = '.bmp'
         
@@ -1250,6 +1247,10 @@ class GoB_OT_export_button(Operator):
                         "LeftMouse: as Subtool\n"\
                         "SHIFT/CTRL/ALT + LeftMouse: as Tool"
     bl_options = {'INTERNAL'}
+    
+    @classmethod
+    def poll(cls, context):
+        return bpy.context.selected_objects
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
