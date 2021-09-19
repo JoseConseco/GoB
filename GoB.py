@@ -617,9 +617,9 @@ class GoB_OT_import(Operator):
                 #print("currentContext: ", currentContext)
                 # ! cant get proper context from timers for now to change mode: 
                 # https://developer.blender.org/T62074
-                bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
+                bpy.ops.object.mode_set(mode=currentContext) 
             else:
-                bpy.ops.object.mode_set(context.copy(), mode='OBJECT')
+                bpy.ops.object.mode_set(mode='OBJECT')
         
 
         if prefs().performance_profiling: 
@@ -1385,7 +1385,6 @@ def run_import_periodically():
         if bpy.app.timers.is_registered(run_import_periodically):
             bpy.app.timers.unregister(run_import_periodically)
         return prefs().import_timer
-    
     
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time           
