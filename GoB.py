@@ -1230,7 +1230,26 @@ class GoB_OT_export(Operator):
         if not prefs().export_raw_object_names:  
             new_name = re.sub('[^\w\_\-]+', '_', obj.name)
         else:            
-            new_name = obj.name.replace('.0', '.C0_0')
+            #new_name = obj.name.replace('\.[0-9]', '.C0_0')
+            suffix_pattern = '\.(.*)'
+            found_string = re.search(suffix_pattern, obj.name)            
+            pattern = '.C0_'
+            if found_string:
+                #if no numbers in suffix do this
+                found_numbers = re.search('[0-9]', found_string.group())
+                if found_numbers:
+                    #print("found numbers", found_numbers.group())                    
+                    if not pattern in found_string.group():
+                        print(found_string.group())
+                        found_string = found_string.group().strip('.')
+                        new_name = re.sub(suffix_pattern, pattern + found_string, obj.name)
+                    else:
+                        return
+                else:
+                    #print("no numbers found", found_numbers)
+                    return                
+            else:
+                return
         
         if new_name == obj.name:
             return            
