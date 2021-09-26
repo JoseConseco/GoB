@@ -1225,19 +1225,22 @@ class GoB_OT_export(Operator):
         Escape object name so it can be used as a valid file name.
         Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
         Multiple consecutive invalid characters will be replaced with just a single underscore character.
-        """
-        if prefs().export_raw_object_names:
-            import re
+        """        
+        import re        
+        if not prefs().export_raw_object_names:  
             new_name = re.sub('[^\w\_\-]+', '_', obj.name)
-            if obj.name == obj.name:
-                return
-            i = 0
-            
-            while obj.name in bpy.data.objects.keys(): #while name collision with other scene objs,
-                name_cut = None if i == 0 else -2  #in first loop, do not slice name.
-                new_name = obj.name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
-                i += 1
-            obj.name = new_name
+        else:            
+            pattern = ('.' + prefs().export_rename_pattern + '0')
+            new_name = obj.name.replace('.0', pattern)
+        
+        if new_name == obj.name:
+            return            
+        i = 0
+        while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
+            name_cut = None if i == 0 else -2  #in first loop, do not slice name.
+            new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
+            i += 1          
+        obj.name = new_name
 
        
 class GoB_OT_export_button(Operator):

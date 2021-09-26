@@ -177,9 +177,14 @@ class GoB_Preferences(AddonPreferences):
         default=True)
     
     export_raw_object_names: BoolProperty(
-        name="[Experimental] Export Raw Object Names",
-        description="Object names will not be changed when exporting, this might cause some name changes in zbrush",
-        default=False)
+        name="Export Raw Object Names",
+        description="Object names will not be changed when exporting if possible, this might cause some name changes in zbrush",
+        default=True)
+
+    export_rename_pattern: StringProperty(
+        name = "Fix Suffix",
+        description = 'Zbrush has a limitation to use a .0 in Tool names. To work around this a String needs to be added between the dot and the 0 (example: .0 -> .T0)',
+        default = 'T')
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
@@ -363,8 +368,9 @@ class GoB_Preferences(AddonPreferences):
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces')
-        col.prop(self, 'export_raw_object_names')
-        
+        col.prop(self, 'export_raw_object_names')        
+        if self.export_raw_object_names:
+            col.prop(self, 'export_rename_pattern')        
         
         
         # GoB Import Options
