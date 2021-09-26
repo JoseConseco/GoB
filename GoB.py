@@ -1230,8 +1230,7 @@ class GoB_OT_export(Operator):
         if not prefs().export_raw_object_names:  
             new_name = re.sub('[^\w\_\-]+', '_', obj.name)
         else:            
-            pattern = ('.' + prefs().export_rename_pattern + '0')
-            new_name = obj.name.replace('.0', pattern)
+            new_name = obj.name.replace('.0', '.C0_0')
         
         if new_name == obj.name:
             return            

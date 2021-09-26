@@ -184,7 +184,7 @@ class GoB_Preferences(AddonPreferences):
     export_rename_pattern: StringProperty(
         name = "Fix Suffix",
         description = 'Zbrush has a limitation to use a .0 in Tool names. To work around this a String needs to be added between the dot and the 0 (example: .0 -> .T0)',
-        default = 'T')
+        default = 'C0_')
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
@@ -319,11 +319,6 @@ class GoB_Preferences(AddonPreferences):
         # GoB Troubleshooting
         layout = self.layout
         layout.use_property_split = True
-
-        
-
-
-        layout.use_property_split = True
         box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
@@ -335,8 +330,6 @@ class GoB_Preferences(AddonPreferences):
         box = layout.box()
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=True) 
-
-            
 
         col.prop(self, 'zbrush_exec')
 
@@ -369,8 +362,8 @@ class GoB_Preferences(AddonPreferences):
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces')
         col.prop(self, 'export_raw_object_names')        
-        if self.export_raw_object_names:
-            col.prop(self, 'export_rename_pattern')        
+        """ if self.export_raw_object_names:
+            col.prop(self, 'export_rename_pattern') """        
         
         
         # GoB Import Options
