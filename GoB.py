@@ -1226,28 +1226,19 @@ class GoB_OT_export(Operator):
         Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
         Multiple consecutive invalid characters will be replaced with just a single underscore character.
         """        
-        import re        
-        if not prefs().export_raw_object_names:  
-            new_name = re.sub('[^\w\_\-]+', '_', obj.name)
-        else:            
-            #new_name = obj.name.replace('\.[0-9]', '.C0_0')
-            suffix_pattern = '\.(.*)'
-            found_string = re.search(suffix_pattern, obj.name)       
-            if found_string:
-                if len(found_string.group()) > 2:
-                    #print("found numbers", found_numbers.group())       
-                    pattern = '.C0_'
-                    if not pattern in found_string.group():
-                        print(found_string.group())
-                        found_string = found_string.group().strip('.')
-                        new_name = re.sub(suffix_pattern, pattern + found_string, obj.name)
-                    else:
-                        return
-                else:
-                    #print("no numbers found", found_numbers)
-                    return                
+        import re
+        suffix_pattern = '\.(.*)'
+        found_string = re.search(suffix_pattern, obj.name)   
+        new_name = obj.name
+        if found_string:
+            # suffixes in zbrush longer than 1 symbol after a . (dot) require a specal addition 
+            # of symbol+underline to be exported from zbrush, otherwise the whole suffix gets removed.
+            # Due to the complicated name that this would create, only the . (dot) for one symbol suffix are kept, 
+            # the others are going to be replaced by a _ (underline) resulting from .001 to _001
+            if len(found_string.group()) > 2:              
+                new_name = re.sub('[^\w\_\-]+', '_', obj.name)
             else:
-                return
+                return       
         
         if new_name == obj.name:
             return            
