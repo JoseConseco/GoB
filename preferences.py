@@ -75,7 +75,7 @@ class GoB_Preferences(AddonPreferences):
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{GoB.PATH_GOZ}\\GoZProjects\\Default\\"))
+        default=os.path.join(f"{GoB.PATH_GOZ}/GoZProjects/Default/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
@@ -175,11 +175,6 @@ class GoB_Preferences(AddonPreferences):
         name="Delete non manifold faces",
         description="Delete non manifold faces",
         default=True)
-    
-    export_raw_object_names: BoolProperty(
-        name="[Experimental] Export Raw Object Names",
-        description="Object names will not be changed when exporting, this might cause some name changes in zbrush",
-        default=False)
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
@@ -314,11 +309,6 @@ class GoB_Preferences(AddonPreferences):
         # GoB Troubleshooting
         layout = self.layout
         layout.use_property_split = True
-
-        
-
-
-        layout.use_property_split = True
         box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
@@ -330,8 +320,6 @@ class GoB_Preferences(AddonPreferences):
         box = layout.box()
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=True) 
-
-            
 
         col.prop(self, 'zbrush_exec')
 
@@ -362,10 +350,7 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'export_merge') 
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
-        col.prop(self, 'export_remove_internal_faces')
-        col.prop(self, 'export_raw_object_names')
-        
-        
+        col.prop(self, 'export_remove_internal_faces')         
         
         # GoB Import Options
         box = layout.box() 
