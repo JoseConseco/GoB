@@ -34,12 +34,21 @@ from bpy.props import ( StringProperty,
                         EnumProperty)
 
 
+preferences_tabs = [
+                    ("OPTIONS", "Options", ""),
+                    ("IMPORT", "Import", ""),
+                    ("EXPORT", "Export", ""),
+                    ("UPDATE", "Update", ""),
+                    ("HELP", "Troubleshooting", "")
+                    ]
+
 class GoB_Preferences(AddonPreferences):
     bl_idname = __package__
 
-    ############################################
+    
+    tabs: EnumProperty(name="Tabs", items=preferences_tabs, default="OPTIONS")  
+
     #       ADDON UPDATER    
-    ############################################
     repository_path: StringProperty(
         name="Project", 
         description="Github Project url example: https://github.com/JoseConseco/GoB", 
@@ -304,25 +313,13 @@ class GoB_Preferences(AddonPreferences):
                 ],
         default='Non-Color')   
     
-  
-    def draw(self, context):
-        # GoB Troubleshooting
-        layout = self.layout
-        layout.use_property_split = True
-        box = layout.box() 
-        box.label(text='GoB Troubleshooting', icon='QUESTION')   
-        import platform
-        if platform.system() == 'Windows':
-            icons = GoB.preview_collections["main"]  
-            box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
-            
+
+    def draw_options(self, box):
         # GoB General Options 
-        box = layout.box()
+        box.use_property_split = True
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=True) 
-
         col.prop(self, 'zbrush_exec')
-
         col.prop(self, 'project_path') 
         col.prop(self, 'clean_project_path')    
         col.prop(self, 'flip_up_axis')
@@ -336,24 +333,12 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'performance_profiling')
         col.prop(self, 'debug_output')
         #col.prop(self, 'texture_format')
+        
 
-        # GoB Export Options
-        box = layout.box()
-        box.label(text='GoB Export Options', icon='EXPORT')   
-        col = box.column(align=True) 
-        col.prop(self, 'export_modifiers')
-        col.prop(self, 'export_polygroups')    
-        if self.export_polygroups == 'VERTEX_GROUPS':  
-            col.prop(self, 'export_weight_threshold')
-        col.prop(self, 'export_clear_mask') 
-        
-        col.prop(self, 'export_merge') 
-        if self.export_merge:
-            col.prop(self, 'export_merge_distance') 
-        col.prop(self, 'export_remove_internal_faces')         
-        
+    def draw_import(self, box):
         # GoB Import Options
-        box = layout.box() 
+        box.use_property_split = True
+        #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')  
         col = box.column(align=True) 
         #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
@@ -381,14 +366,43 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'import_uv_name') 
         col.prop(self, 'import_polypaint_name') 
 
+        
+
+    def draw_export(self, box):
+        # GoB Export Options
+        box.use_property_split = True
+        box.label(text='GoB Export Options', icon='EXPORT')   
+        col = box.column(align=True) 
+        col.prop(self, 'export_modifiers')
+        col.prop(self, 'export_polygroups')    
+        if self.export_polygroups == 'VERTEX_GROUPS':  
+            col.prop(self, 'export_weight_threshold')
+        col.prop(self, 'export_clear_mask') 
+        
+        col.prop(self, 'export_merge') 
+        if self.export_merge:
+            col.prop(self, 'export_merge_distance') 
+        col.prop(self, 'export_remove_internal_faces')         
+        
+        
+        
+
+    def draw_help(self, box):
+        # GoB Troubleshooting
+        box.use_property_split = True
+        #box = layout.box() 
+        box.label(text='GoB Troubleshooting', icon='QUESTION')   
+        import platform
+        if platform.system() == 'Windows':
+            icons = GoB.preview_collections["main"]  
+            box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
+            
+        
 
         
-        #advanced & dev options
-        #         
-        ############################################
-        #       ADDON UPDATER
-        ############################################
-        box = layout.box() 
+
+    def draw_update(self, box):
+        box.use_property_split = True
         box.label(text='Addon Updater', icon='PREFERENCES')  
         col  = box.column(align=False) 
         row  = col.row(align=False)         
@@ -409,6 +423,28 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'experimental_versions') 
         #col.prop(self, 'auto_update_check')
 
-        ############################################
+
+    def draw(self, context):
+        
+        layout = self.layout
+        # TAB BAR
+        layout.use_property_split = False
+        column = layout.column(align=True)
+        row = column.row()
+        row.prop(self, "tabs", expand=True)
+        box = column.box()
+        if self.tabs == "OPTIONS":
+            self.draw_options(box)
+        elif self.tabs == "EXPORT":
+            self.draw_export(box)
+        elif self.tabs == "IMPORT":
+            self.draw_import(box)
+        elif self.tabs == "HELP":
+            self.draw_help(box)
+        elif self.tabs == "UPDATE":
+            self.draw_update(box)
+
+        
+
 
  
