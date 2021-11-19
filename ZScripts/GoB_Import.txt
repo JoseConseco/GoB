@@ -330,7 +330,8 @@ author: Daniel Grauer
 
             // import as Tool
             [If, importAsSubtool == 0,                                   
-                [RoutineCall, AddTool, objectName, objectPath]     
+                [RoutineCall, AddTool, objectName, objectPath]  
+                [RoutineCall, setOrigin]   
             , 
             // Import as Subtools  
                 [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
@@ -345,8 +346,8 @@ author: Daniel Grauer
                     ]
                 ]                                      
             ]
+            //[RoutineCall, setOrigin] 
     
-            [RoutineCall, setOrigin] 
             //next loop or exit if end of file
             [VarSet, subtoolCount, subtoolCount + 1]
             [VarSet, objectMemIndex, objectMemIndex + lineBytes]
