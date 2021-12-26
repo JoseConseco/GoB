@@ -31,6 +31,7 @@ import string
 import numpy
 from bpy.types import Operator
 from bpy.props import EnumProperty
+from bpy.app.translations import pgettext_iface as iface_
 
 def prefs():
     user_preferences = bpy.context.preferences
@@ -79,9 +80,9 @@ def draw_goz_buttons(self, context):
         if prefs().show_button_text:
             row.operator(operator="scene.gob_export_button", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
             if run_background_update:
-                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id).action = 'AUTO'
+                row.operator(operator="scene.gob_import", text=iface_("Import", None), emboss=True, depress=True, icon_value=icons["GOZ_SYNC_ENABLED"].icon_id).action = 'AUTO'
             else:
-                row.operator(operator="scene.gob_import", text="Import", emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id).action = 'AUTO'
+                row.operator(operator="scene.gob_import", text=iface_("Import", None), emboss=True, depress=False, icon_value=icons["GOZ_SYNC_DISABLED"].icon_id).action = 'AUTO'
             row.operator(operator="scene.gob_import", text="Manual", emboss=True, depress=False, icon='IMPORT').action = 'MANUAL'
         else:
             row.operator(operator="scene.gob_export_button", text="", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
@@ -94,7 +95,7 @@ def draw_goz_buttons(self, context):
 start_time = None
 class GoB_OT_import(Operator):
     bl_idname = "scene.gob_import"
-    bl_label = "GOZ import"
+    bl_label = "Import from GOZ"
     bl_description = "GoZ Import. Activate to enable Import from GoZ"    
     
     action: EnumProperty(
