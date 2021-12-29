@@ -39,6 +39,7 @@ def prefs():
 
 def gob_init_os_paths():   
     isMacOS = False
+    useZSH = False
     import platform
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
@@ -54,7 +55,6 @@ def gob_init_os_paths():
         else: 
             print("use zsh")
             useZSH = True
-
         isMacOS = True
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
         PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
@@ -748,7 +748,7 @@ class GoB_OT_export(Operator):
     
 
     def exportGoZ(self, path, scn, obj, pathImport):      
-        PATH_PROJECT = os.path.join(prefs().project_path)  
+        PATH_PROJECT = os.path.join(prefs().project_path).replace("\\", "/")
         if prefs().performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
@@ -1129,6 +1129,7 @@ class GoB_OT_export(Operator):
         try:    #install in GoZApps if missing     
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/")
             target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/")
+            print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/GoZ_Info.txt")
