@@ -1143,8 +1143,7 @@ class GoB_OT_export(Operator):
                 GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
-                GoZ_Application.write("Blender")            
-
+                GoZ_Application.write("Blender")   
 
         #update project path
         #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
@@ -1170,18 +1169,24 @@ class GoB_OT_export(Operator):
         """         
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
         import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
+        try:
+            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
+                # IMPORT AS SUBTOOL
+                r = r.read().replace('\t', ' ') #fix indentations in source data
+                if self.as_tool:
+                    new_config = r.replace(import_as_subtool, import_as_tool)
+                # IMPORT AS TOOL
+                else:
+                    new_config = r.replace(import_as_tool, import_as_subtool)
+            
+            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
+                w.write(new_config)
+        except:            
+            #write blender path to GoZ configuration
+            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+            with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+                GoB_Config.write(f"PATH = \'{PATH_BLENDER}\'")   
 
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
-            # IMPORT AS SUBTOOL
-            r = r.read().replace('\t', ' ') #fix indentations in source data
-            if self.as_tool:
-                new_config = r.replace(import_as_subtool, import_as_tool)
-            # IMPORT AS TOOL
-            else:
-                new_config = r.replace(import_as_tool, import_as_subtool)
-
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
-            w.write(new_config)
             
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
