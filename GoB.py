@@ -47,6 +47,13 @@ def gob_init_os_paths():
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
+        if platform.release() > 10.15:
+            print("use zsh")
+            useZSH = True
+        else:
+            print("use bash")
+            useZSH = False
+
         isMacOS = True
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
         PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
