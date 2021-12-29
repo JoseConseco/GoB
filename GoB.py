@@ -1409,9 +1409,9 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
             bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
         else: 
             if isMacOS:
-                path = prefs().zbrush_exec.strip("ZBrush.app")   
+                path = prefs().zbrush_exec.strip("ZBrush.app")  
                 GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
-                Popen([GOZ_INSTALLER], shell=True)  
+                Popen(['open', '-a', GOZ_INSTALLER])  
             else: 
                 path = prefs().zbrush_exec.strip("ZBrush.exe")           
                 GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
