@@ -1398,7 +1398,7 @@ def find_zbrush(self, context):
 
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
-        /Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
+        /Troubleshoot Help/GoZ_for_ZBrush_Installer'''
     bl_idname = "gob.install_goz" 
     bl_label = "Run GoZ Installer"
 
