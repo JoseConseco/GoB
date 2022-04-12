@@ -1071,7 +1071,8 @@ class GoB_OT_export(Operator):
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
             with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
-                GoB_Config.write(f"PATH = \'{PATH_BLENDER}\'")
+                blender_path = os.path.join(f"{PATH_BLENDER}").replace('\\', '/')
+                GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")            
