@@ -83,7 +83,7 @@ class GoB_Preferences(AddonPreferences):
     custom_pixologoc_path: BoolProperty(
         name="Custom Pixologic Public Path",
         description="Define a Custom Pixologic Public Path",
-        default=True)
+        default=False)
 
     pixologoc_path: StringProperty(
         name="Pixologic Public Path", 
@@ -336,7 +336,7 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'custom_pixologoc_path')
         if self.custom_pixologoc_path:
             col.prop(self, 'pixologoc_path')
-            
+
         col.prop(self, 'clean_project_path')    
         col.prop(self, 'flip_up_axis')
         col.prop(self, 'flip_forward_axis')   
