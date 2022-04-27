@@ -80,6 +80,17 @@ class GoB_Preferences(AddonPreferences):
         subtype='FILE_PATH',
         default="") 
 
+    custom_pixologoc_path: BoolProperty(
+        name="Custom Pixologic Public Path",
+        description="Define a Custom Pixologic Public Path",
+        default=True)
+
+    pixologoc_path: StringProperty(
+        name="Pixologic Public Path", 
+        description="pixologoc_path", 
+        subtype='DIR_PATH',
+        default=os.path.join(os.environ['PUBLIC'] , "Pixologic\\"))    
+
     project_path: StringProperty(
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
@@ -321,6 +332,11 @@ class GoB_Preferences(AddonPreferences):
         col = box.column(align=True) 
         col.prop(self, 'zbrush_exec')
         col.prop(self, 'project_path') 
+
+        col.prop(self, 'custom_pixologoc_path')
+        if self.custom_pixologoc_path:
+            col.prop(self, 'pixologoc_path')
+            
         col.prop(self, 'clean_project_path')    
         col.prop(self, 'flip_up_axis')
         col.prop(self, 'flip_forward_axis')   
