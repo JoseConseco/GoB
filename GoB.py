@@ -596,7 +596,7 @@ class GoB_OT_import(Operator):
              
 
     def execute(self, context):
-        PATH_GOZ = custom_pixologic_path()
+        PATH_GOZ = override_public_pixologic_path()
         global gob_import_cache
         goz_obj_paths = []             
         try:
@@ -1060,7 +1060,7 @@ class GoB_OT_export(Operator):
         return
 
     def execute(self, context): 
-        #PATH_GOZ = custom_pixologic_path()
+        #PATH_GOZ = override_public_pixologic_path()
         PATH_PROJECT = os.path.join(prefs().project_path)
         PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
         #setup GoZ configuration
@@ -1276,7 +1276,7 @@ class GoB_OT_export_button(Operator):
         bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
 
-def custom_pixologic_path():
+def override_public_pixologic_path():
     if prefs().custom_pixologoc_path:
         PATH_GOZ =  prefs().pixologoc_path        
     return PATH_GOZ

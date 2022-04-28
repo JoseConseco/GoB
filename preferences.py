@@ -82,12 +82,13 @@ class GoB_Preferences(AddonPreferences):
 
     custom_pixologoc_path: BoolProperty(
         name="Custom Pixologic Public Path",
-        description="Define a Custom Pixologic Public Path",
+        description="This will allow you to set a custom Public Pixologic Path, this is where ZBrush stores GoZ configurations",
         default=False)
 
     pixologoc_path: StringProperty(
         name="Pixologic Public Path", 
-        description="pixologoc_path", 
+        description="Set public pixologic path, this needs to be a valid folder which zbrush accesses." 
+                    "By default this folder is on the windows system drive under C:\\Users\\Public\\Pixologic", 
         subtype='DIR_PATH',
         default=os.path.join(os.environ['PUBLIC'] , "Pixologic\\"))    
 
