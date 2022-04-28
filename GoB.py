@@ -1458,7 +1458,10 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
             if not norm_node:
                 norm_node = nodes.new('ShaderNodeNormalMap')
                 norm_node.location = -300, -100  
-                mat.node_tree.links.new(shader_node.inputs[22], norm_node.outputs[0])
+                if bpy.app.version < (3,1,0):
+                    mat.node_tree.links.new(shader_node.inputs[20], norm_node.outputs[0])
+                else:
+                    mat.node_tree.links.new(shader_node.inputs[22], norm_node.outputs[0])
             if not normTxt_node:    
                 normTxt_node = nodes.new('ShaderNodeTexImage')
                 normTxt_node.location = -700, -100  
