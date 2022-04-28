@@ -994,7 +994,7 @@ class GoB_OT_export(Operator):
                                     norm = node.image
                             elif node.type == 'GROUP':
                                 print("group found")
-            
+            user_file_fomrat = scn.render.image_settings.file_format
             scn.render.image_settings.file_format = 'BMP'
             #fileExt = ('.' + prefs().texture_format.lower())
             fileExt = '.bmp'
@@ -1053,6 +1053,8 @@ class GoB_OT_export(Operator):
                 print(30*"=")
 
         bpy.data.meshes.remove(me)
+        #restore user file format
+        scn.render.image_settings.file_format = user_file_fomrat
         return
 
     def execute(self, context):               
