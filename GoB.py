@@ -1061,7 +1061,7 @@ class GoB_OT_export(Operator):
         return
 
     def execute(self, context): 
-        #PATH_GOZ = override_public_pixologic_path()
+        PATH_GOZ = override_public_pixologic_path()
         PATH_PROJECT = os.path.join(prefs().project_path)
         PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
         #setup GoZ configuration
