@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from hashlib import blake2b
 import bpy
 import os
 import shutil
@@ -43,8 +44,8 @@ def gob_init_os_paths():
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        #if os.path.isfile(os.environ['PUBLIC'] + "/Pixologic/GoZBrush/GoZBrushFromApp.exe"):
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] + "/Pixologic")
+        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
+
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
         isMacOS = True
@@ -56,11 +57,11 @@ def gob_init_os_paths():
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = os.path.join(bpy.app.binary_path)
-    PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST
+    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER
 
 
-isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER, PATH_OBJLIST = gob_init_os_paths()
+#create GoB paths when loading the addon
+isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
 
 run_background_update = False
@@ -73,7 +74,8 @@ gob_import_cache = []
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-    if context.region.alignment != 'RIGHT':
+
+    if context.region.alignment == 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
 
@@ -595,6 +597,7 @@ class GoB_OT_import(Operator):
              
 
     def execute(self, context):
+        PATH_GOZ = override_public_pixologic_path()
         global gob_import_cache
         goz_obj_paths = []             
         try:
@@ -685,7 +688,7 @@ class GoB_OT_export(Operator):
         description="Export as a tool instead of a subtool",
         default=False,
     )
-
+    
     @classmethod
     def poll(cls, context):
         selected_objects = export_poll(cls, context)                
@@ -1057,8 +1060,10 @@ class GoB_OT_export(Operator):
         scn.render.image_settings.file_format = user_file_fomrat
         return
 
-    def execute(self, context):               
+    def execute(self, context): 
+        #PATH_GOZ = override_public_pixologic_path()
         PATH_PROJECT = os.path.join(prefs().project_path)
+        PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
         #setup GoZ configuration
         #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
@@ -1126,6 +1131,7 @@ class GoB_OT_export(Operator):
         wm.progress_begin(0,100)
         step =  100  / len(context.selected_objects)
         surface_types = ['SURFACE', 'CURVE', 'FONT', 'META']
+        
         with open(PATH_OBJLIST, 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
                 if obj.type in surface_types:
@@ -1270,6 +1276,11 @@ class GoB_OT_export_button(Operator):
         as_tool = event.shift or event.ctrl or event.alt
         bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
+
+def override_public_pixologic_path():
+    if prefs().custom_pixologoc_path:
+        PATH_GOZ =  prefs().pixologoc_path        
+    return PATH_GOZ
 
 def find_zbrush(self, context):
     #get the highest version of zbrush and use it as default zbrush to send to
