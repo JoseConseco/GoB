@@ -36,7 +36,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (3, 5, 70),
+    "version": (3, 5, 71),
     "blender": (2, 93, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -66,7 +66,7 @@ def register():
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
     GoB.preview_collections["main"] = icons
 
-    bpy.types.TOPBAR_HT_upper_bar.append(GoB.draw_goz_buttons)
+    bpy.types.TOPBAR_HT_upper_bar.prepend(GoB.draw_goz_buttons)
 
 
 def unregister():

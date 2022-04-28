@@ -74,12 +74,8 @@ gob_import_cache = []
 def draw_goz_buttons(self, context):
     global run_background_update, icons
     icons = preview_collections["main"]
-    if prefs().debug_output:
-        button_alignement = 'RIGHT'
-    else:
-        button_alignement = 'LEFT'
 
-    if context.region.alignment != button_alignement:
+    if context.region.alignment == 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
 
