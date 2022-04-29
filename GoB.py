@@ -63,6 +63,8 @@ def gob_init_os_paths():
 #create GoB paths when loading the addon
 isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
 
+print("PATH_GOZ: ", PATH_GOZ)
+
 
 run_background_update = False
 icons = None
@@ -106,7 +108,6 @@ class GoB_OT_import(Operator):
             ('AUTO', 'toggle automatic import', 'toggle automatic import')
         ]
     )
-
 
     def GoZit(self, pathFile): 
         if prefs().performance_profiling: 
@@ -596,8 +597,11 @@ class GoB_OT_import(Operator):
         return
              
 
-    def execute(self, context):
-        PATH_GOZ = override_public_pixologic_path()
+    def execute(self, context):   
+        global PATH_GOZ     
+        if prefs().custom_pixologoc_path:
+            PATH_GOZ =  prefs().pixologoc_path  
+
         global gob_import_cache
         goz_obj_paths = []             
         try:
@@ -1061,7 +1065,9 @@ class GoB_OT_export(Operator):
         return
 
     def execute(self, context): 
-        PATH_GOZ = override_public_pixologic_path()
+        global PATH_GOZ  
+        if prefs().custom_pixologoc_path:
+            PATH_GOZ =  prefs().pixologoc_path  
         PATH_PROJECT = os.path.join(prefs().project_path)
         PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
         #setup GoZ configuration
@@ -1277,10 +1283,6 @@ class GoB_OT_export_button(Operator):
         bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
 
-def override_public_pixologic_path():
-    if prefs().custom_pixologoc_path:
-        PATH_GOZ =  prefs().pixologoc_path        
-    return PATH_GOZ
 
 def find_zbrush(self, context):
     #get the highest version of zbrush and use it as default zbrush to send to
