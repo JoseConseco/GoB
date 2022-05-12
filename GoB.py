@@ -1369,8 +1369,8 @@ def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
 
 class GOB_OT_Popup(Operator):
     bl_label = "GoB: Zbrush Path not found!"
-    bl_description ="look for zbrush in specified path or in default intstallation"\
-                    "directories and if its not found promt the user to inptu the path manualy"
+    bl_description ="look for zbrush in specified path or in default installation"\
+                    "directories and if its not found prompt the user to input the path manually"
     bl_idname = "gob.search_zbrush"
           
     def draw(self, context):        
@@ -1730,7 +1730,7 @@ def apply_modifiers(obj):
                     
 
 def mesh_welder(obj, d = 0.0001):    
-    " merges vertices that are clsoer than d to each other" 
+    " merges vertices that are closer than d to each other" 
     d = prefs().export_merge_distance
     bm = bmesh.new()
     bm.from_mesh(obj.data)
