@@ -62,13 +62,13 @@ class GoB_Preferences(AddonPreferences):
         default="blender_addon_updater.zip") 
 
     auto_update_check: BoolProperty(
-        name="Check for updates automaticaly",
+        name="Check for updates automatically",
         description="auto_update_check",
         default=False)
 
     experimental_versions: BoolProperty(
-        name="Experimental Verions",
-        description="Check for experimental verions",
+        name="Experimental Versions",
+        description="Check for experimental versions",
         default=False)
     ############################################
 
@@ -227,7 +227,7 @@ class GoB_Preferences(AddonPreferences):
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
-            items=[('TEXTURES', 'from Textures', 'Create Mateial inputs from Textures'),        #TODO: fix export to zbrush
+            items=[('TEXTURES', 'from Textures', 'Create Material inputs from Textures'),        #TODO: fix export to zbrush
                    ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                    ('NONE', 'None', 'No additional material inputs are created'),
                    ],
