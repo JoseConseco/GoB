@@ -767,71 +767,65 @@ class GoB_OT_export(Operator):
         variablesFile = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")      
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
-            if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write 1st")
-
             #list size
             GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
             GoBVars.write(pack('<2B', 0x00, 0x00)) 
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write list size")
+                start_time = profiler(start_time, "    variablesFile: Write list size")
 
             # 0: fileExtension
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.GoZ')
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write fileExtension")
+                start_time = profiler(start_time, "    variablesFile: Write fileExtension")
 
             # 1: textureFormat   
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.bmp') 
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write textureFormat")
+                start_time = profiler(start_time, "    variablesFile: Write textureFormat")
 
             # 2: diffTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S            
             name = prefs().import_diffuse_suffix
             GoBVars.write(name.encode('utf-8'))  
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write diffTexture suffix") 
+                start_time = profiler(start_time, "    variablesFile: Write diffTexture suffix") 
 
             # 3: normTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_normal_suffix
             GoBVars.write(name.encode('utf-8')) 
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write normTexture suffix") 
+                start_time = profiler(start_time, "    variablesFile: Write normTexture suffix") 
 
             # 4: dispTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_displace_suffix
             GoBVars.write(name.encode('utf-8')) 
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write dispTexture suffix")
+                start_time = profiler(start_time, "    variablesFile: Write dispTexture suffix")
 
-            #5: GoB version   
-            GoBVars.write(pack('<2B',0x00, 0x53))   #.S    
+            #5: GoB version  
+            GoBVars.write(pack('<2B',0x00, 0x53))   #.S  
             version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
             GoBVars.write(version.encode('utf-8'))
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write GoB version")
+                start_time = profiler(start_time, "    variablesFile: Write GoB version")
 
             # 6: Project Path
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().project_path
             GoBVars.write(name.encode('utf-8')) 
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Project Path")
-
+                start_time = profiler(start_time, "    variablesFile: Write Project Path")
             #end  
             GoBVars.write(pack('<B', 0x00))  #. 
         if prefs().performance_profiling: 
-            start_time = profiler(start_time, "Write GoB_variables")
-                
+            start_time = profiler(start_time, "variablesFile: Write GoB_variables")
 
 
-        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
-            
+        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:            
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
 
@@ -851,8 +845,7 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<Q', 1))
             goz_file.write(pack('<I', 0))           
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Object Name")
-            
+                start_time = profiler(start_time, "Write Object Name")            
 
             # --Vertices--
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
@@ -861,11 +854,9 @@ class GoB_OT_export(Operator):
             for vert in me.vertices:
                 modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
                 modif_coo = mat_transform @ modif_coo
-                goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
-                
+                goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))                
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Vertices")
-            
+                start_time = profiler(start_time, "Write Vertices")            
 
             # --Faces--
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
@@ -882,10 +873,8 @@ class GoB_OT_export(Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
-
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write Faces")
-
 
             # --UVs--
             if me.uv_layers.active:
@@ -893,11 +882,18 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xA9, 0x61, 0x00, 0x00))
                 goz_file.write(pack('<I', len(me.polygons)*4*2*4+16))
                 goz_file.write(pack('<Q', len(me.polygons)))
+                
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    UV: polygones")
+                    
                 for face in me.polygons:
                     for i, loop_index in enumerate(face.loop_indices):
                         goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
                     if i == 2:
                         goz_file.write(pack('<2f', 0., 1.))
+                        
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    UV: write uvs")
                         
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write UV")
@@ -907,23 +903,34 @@ class GoB_OT_export(Operator):
             if me.vertex_colors.active:
                 vcoldata = me.vertex_colors.active.data # color[loop_id]
                 vcolArray = bytearray([0] * numVertices * 3)
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint: vcolArray")
                 #fill vcArray(vert_idx + rgb_offset) = color_xyz
                 for loop in me.loops: #in the end we will fill verts with last vert_loop color
                     vert_idx = loop.vertex_index
                     vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
                     vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
                     vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  loop")
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                 goz_file.write(pack('<I', numVertices*4+16))
                 goz_file.write(pack('<Q', numVertices))
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  write numVertices")
 
                 for i in range(0, len(vcolArray), 3):
                     goz_file.write(pack('<B', vcolArray[i+2]))
                     goz_file.write(pack('<B', vcolArray[i+1]))
                     goz_file.write(pack('<B', vcolArray[i]))
                     goz_file.write(pack('<B', 0))
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint: write color")
+
                 vcolArray.clear()
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
             
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write Polypaint")
