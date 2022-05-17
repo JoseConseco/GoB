@@ -212,7 +212,7 @@ author: Daniel Grauer
                 [VarSet, subtoolExists, objectName] //subtoolExists (str:objectName/ -1: for no subtool match
                 [VarSet,subtoolCount, count] 
                 [LoopExit]
-            ,
+            , //else
                 [VarSet, subtoolExists, -1] //subtoolExists (str:objectName/ -1: for no subtool match
             ] 
             [VarInc, count]           
@@ -270,20 +270,21 @@ author: Daniel Grauer
             ]
             [CanvasClick,10,10,10,20]
             [IPress,Transform: Edit]
-        ,
+        , //else
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
                 [IPress,PopUp:Cube3D] 
-            ,                  
+            ,  //else                
                 [IPress,Tool:SubTool:Insert]
                 [IPress,PopUp:PolyMesh3D]
             ]     
             [If,[FileExists,objectPath],
                 [FileNameSetNext,objectPath] 
                 [IPress,Tool:Import]                            
-                [RoutineCall, LoadTextures]  
+                [RoutineCall, LoadTextures] 
             ] 
-        ]       
+        ]    
+        
         [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]
     , objectName, objectPath]
 
@@ -294,10 +295,11 @@ author: Daniel Grauer
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath] 
             [IPress,Tool:Import]                        
-            [RoutineCall, LoadTextures]  
+            [RoutineCall, LoadTextures]    
         ]         
         [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,reportDuration]  
     , objectName, objectPath, subtoolCount]
+
 
     [VarSet,subtoolCount,0] 
     [VarSet,objectMemIndex,0] 
@@ -330,27 +332,31 @@ author: Daniel Grauer
 
             // import as Tool
             [If, importAsSubtool == 0,                                   
-                [RoutineCall, AddTool, objectName, objectPath]  
-                [RoutineCall, setOrigin]   
-            , 
-            // Import as Subtools  
-                [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
-                    [RoutineCall, AddSubTool, objectName, objectPath]                
-                ,
-                    //update subtools
-                    [If, subtoolExists == objectName, 
-                        [RoutineCall, UpdateSubTool, objectName, objectPath, subtoolCount]
-                    ,
-                        //does a exception exist?
-                        [Note,[StrMerge, "\n GoB subtool exception: ", subtoolExists, objectName],,reportDuration] 
-                    ]
-                ]                                      
+                [RoutineCall, AddTool, objectName, objectPath] 
+                [RoutineCall, setOrigin] 
+                // delete undo histroy after new tool has been added
+                [IPress,Edit:Tool:DelUH] 
+            ]
+
+            // import as subtool
+            [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
+                [RoutineCall, AddSubTool, objectName, objectPath]  
+                [IPress,Edit:Tool:DelUH]  
+            ]
+
+            //update subtools
+            [If, subtoolExists == objectName, 
+                [RoutineCall, UpdateSubTool, objectName, objectPath, subtoolCount]
+            , //else
+                //does a exception exist?
+                [Note,[StrMerge, "\n GoB subtool already exists: ", subtoolExists, objectName],,reportDuration] 
             ]
             //[RoutineCall, setOrigin] 
-    
+            
             //next loop or exit if end of file
             [VarSet, subtoolCount, subtoolCount + 1]
             [VarSet, objectMemIndex, objectMemIndex + lineBytes]
+
             [If, objectMemIndex >= [MemGetSize, GoB_ObjectList_InputMem],
             
                 [IPress,Transform: Fit]
