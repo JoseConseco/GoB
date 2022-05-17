@@ -767,42 +767,67 @@ class GoB_OT_export(Operator):
         variablesFile = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")      
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write 1st")
+
             #list size
             GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
             GoBVars.write(pack('<2B', 0x00, 0x00)) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write list size")
 
             # 0: fileExtension
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.GoZ')
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write fileExtension")
+
             # 1: textureFormat   
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.bmp') 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write textureFormat")
+
             # 2: diffTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S            
             name = prefs().import_diffuse_suffix
-            GoBVars.write(name.encode('utf-8'))    
+            GoBVars.write(name.encode('utf-8'))  
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write diffTexture suffix") 
+
             # 3: normTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_normal_suffix
-            GoBVars.write(name.encode('utf-8'))   
+            GoBVars.write(name.encode('utf-8')) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write normTexture suffix") 
+
             # 4: dispTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_displace_suffix
             GoBVars.write(name.encode('utf-8')) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write dispTexture suffix")
+
             #5: GoB version   
-            GoBVars.write(pack('<2B',0x00, 0x53))   #.S         
-            for mod in addon_utils.modules():
-                if mod.bl_info.get('name') in {'GoB'}:
-                    version = str(mod.bl_info.get('version', (-1, -1, -1)))
+            GoBVars.write(pack('<2B',0x00, 0x53))   #.S    
+            version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
             GoBVars.write(version.encode('utf-8'))
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write GoB version")
+
             # 6: Project Path
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().project_path
             GoBVars.write(name.encode('utf-8')) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "Write Project Path")
 
             #end  
             GoBVars.write(pack('<B', 0x00))  #. 
-                 
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Write GoB_variables")
+                
 
 
         with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
