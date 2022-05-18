@@ -64,9 +64,7 @@ def register():
     icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
     icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    GoB.preview_collections["main"] = icons
-    #GoB.addon_version = bl_info['version']
-
+    GoB.preview_collections["main"] = icons 
     bpy.types.TOPBAR_HT_upper_bar.prepend(GoB.draw_goz_buttons)
 
 

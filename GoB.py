@@ -33,6 +33,8 @@ from bpy.types import Operator
 from bpy.props import EnumProperty
 from bpy.app.translations import pgettext_iface as iface_
 
+gob_version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
+
 def prefs():
     user_preferences = bpy.context.preferences
     return user_preferences.addons[__package__].preferences 
@@ -807,9 +809,9 @@ class GoB_OT_export(Operator):
                 start_time = profiler(start_time, "    variablesFile: Write dispTexture suffix")
 
             #5: GoB version  
-            GoBVars.write(pack('<2B',0x00, 0x53))   #.S  
-            version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
-            GoBVars.write(version.encode('utf-8'))
+            GoBVars.write(pack('<2B',0x00, 0x53))   #.S 
+            global gob_version
+            GoBVars.write(gob_version.encode('utf-8'))
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "    variablesFile: Write GoB version")
 
