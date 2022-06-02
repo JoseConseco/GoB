@@ -920,6 +920,7 @@ class GoB_OT_export(Operator):
 
                 # Polygroups from Vertex Groups
                 if prefs().export_polygroups == 'VERTEX_GROUPS':
+                    #print(obj.vertex_groups)
                     goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces)) 
@@ -937,9 +938,9 @@ class GoB_OT_export(Operator):
                     
 
                     ''' 
-                        # create a list of each vertex group assignement so one vertex can be in x amount of groups 
-                        # then check for each face to which groups their vertices are MOST assigned to 
-                        # and choose that group for the polygroup color if its on all vertices of the face
+                    # create a list of each vertex group assignement so one vertex can be in x amount of groups 
+                    # then check for each face to which groups their vertices are MOST assigned to 
+                    # and choose that group for the polygroup color if its on all vertices of the face
                     '''
                     vgData = []  
                     for face in me.polygons:
@@ -958,6 +959,7 @@ class GoB_OT_export(Operator):
                             if len(face.vertices) == count:
                                 #print("full:", face.index,  "\n")
                                 goz_file.write(pack('<H', groupColor[group]))
+                                print(group)
                             else:
                                 goz_file.write(pack('<H', 65504))
                         else:
@@ -972,16 +974,36 @@ class GoB_OT_export(Operator):
 
                 # Polygroups from materials
                 if prefs().export_polygroups == 'MATERIALS':
-                    for index, slot in enumerate(obj.material_slots):
+                    #print(obj.material_slots)
+                    for index, slot in enumerate(obj.material_slots):                                    
                         if not slot.material:
                             continue
+                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                        goz_file.write(pack('<I', numFaces*2+16))
+                        goz_file.write(pack('<Q', numFaces))  
+                     
+                        groupColor=[]  
+                        #name = name.encode('utf8')                      
+                        #create a color for each material slot (0xffff)
+                        for slot in obj.material_slots:
+                            if slot:
+                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                                color = int(randcolor, 16)
+                                groupColor.append(color)
+                            else:
+                                groupColor.append(65504)
+
+
                         verts = [v for f in obj.data.polygons
                                 if f.material_index == index for v in f.vertices]
-                        if len(verts):
-                            vg = obj.vertex_groups.get(slot.material.name)
-                            if vg is None:
-                                vg = obj.vertex_groups.new(name=slot.material.name)
-                                vg.add(verts, 1.0, 'ADD')
+                        try:
+                            for i in verts:
+                                goz_file.write(pack('<H', groupColor[index]))
+                                print(groupColor[index])
+                        except:
+                            goz_file.write(pack('<H', 65504))
+                            
+                            
                 """ else:
                     #print("Export Polygroups: ", prefs().export_polygroups) """
                     
@@ -1227,7 +1249,7 @@ class GoB_OT_export(Operator):
 
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not is_file_empty(PATH_OBJLIST): 
+        if not is_file_empty(PATH_OBJLIST) and not prefs().debug_dry_run: 
             path_exists = find_zbrush(self, context)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
