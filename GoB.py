@@ -985,13 +985,12 @@ class GoB_OT_export(Operator):
                             groupColor.append(color)
                         else:
                             groupColor.append(65504)
-                      
-                    for index, slot in enumerate(obj.material_slots):
-                        for f in me.polygons:  # iterate over faces
-                            print(f.index, f.material_index, groupColor[index])
-                            goz_file.write(pack('<H', groupColor[f.material_index]))
-                        else:
-                            goz_file.write(pack('<H', 65504))
+                    
+                    for f in me.polygons:  # iterate over faces
+                        print(f.index, f.material_index, groupColor[f.material_index])
+                        goz_file.write(pack('<H', groupColor[f.material_index]))
+                    else:
+                        goz_file.write(pack('<H', 65504))
                             
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroup materials") 
