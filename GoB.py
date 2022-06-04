@@ -26,6 +26,7 @@ import addon_utils
 import bmesh
 import mathutils
 import math
+import random
 import time
 from struct import pack, unpack
 import string
@@ -883,7 +884,6 @@ class GoB_OT_export(Operator):
             # --Polygroups--     
             if not prefs().export_polygroups == 'NONE':  
                 #print("Export Polygroups: ", prefs().export_polygroups)
-                import random
 
                 #Polygroups from Face Maps
                 if prefs().export_polygroups == 'FACE_MAPS':
@@ -908,25 +908,24 @@ class GoB_OT_export(Operator):
                                 if map.value < 0: #write default polygroup color
                                     goz_file.write(pack('<H', 65504))                                                                     
                                 else:
+                                    print(map.value, groupColor[map.value], numFaces)
                                     goz_file.write(pack('<H', groupColor[map.value]))
 
                         else:   #assign empty when no face maps are found        
-                            for face in me.polygons:         
+                            for face in me.polygons:   
+                                print(face.index)     
                                 goz_file.write(pack('<H', 65504))
 
                     if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write FaceMaps") 
+                        start_time = profiler(start_time, "Write Polygroup FaceMaps") 
                 
 
                 # Polygroups from Vertex Groups
                 if prefs().export_polygroups == 'VERTEX_GROUPS':
-                    #print(obj.vertex_groups)
                     goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces)) 
 
-
-                    import random
                     groupColor=[]                        
                     #create a color for each facemap (0xffff)
                     for vg in obj.vertex_groups:
@@ -969,43 +968,34 @@ class GoB_OT_export(Operator):
                     #print(groupColor)
 
                     if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write Polygroups")
+                        start_time = profiler(start_time, "Write Polygroup Vertex groups")
 
 
                 # Polygroups from materials
-                if prefs().export_polygroups == 'MATERIALS':
-                    #print(obj.material_slots)
-                    for index, slot in enumerate(obj.material_slots):                                    
-                        if not slot.material:
-                            continue
-                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-                        goz_file.write(pack('<I', numFaces*2+16))
-                        goz_file.write(pack('<Q', numFaces))  
-                     
-                        groupColor=[]  
-                        #name = name.encode('utf8')                      
-                        #create a color for each material slot (0xffff)
-                        for slot in obj.material_slots:
-                            if slot:
-                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                                color = int(randcolor, 16)
-                                groupColor.append(color)
-                            else:
-                                groupColor.append(65504)
-
-
-                        verts = [v for f in obj.data.polygons
-                                if f.material_index == index for v in f.vertices]
-                        try:
-                            for i in verts:
-                                goz_file.write(pack('<H', groupColor[index]))
-                                print(groupColor[index])
-                        except:
+                if prefs().export_polygroups == 'MATERIALS':                  
+                    goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                    goz_file.write(pack('<I', numFaces*2+16))
+                    goz_file.write(pack('<Q', numFaces))  
+                    
+                    groupColor=[]
+                    #create a color for each material slot (0xffff)
+                    for mat in obj.material_slots:
+                        if mat:
+                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                            color = int(randcolor, 16)
+                            groupColor.append(color)
+                        else:
+                            groupColor.append(65504)
+                      
+                    for index, slot in enumerate(obj.material_slots):
+                        for f in me.polygons:  # iterate over faces
+                            print(f.index, f.material_index, groupColor[index])
+                            goz_file.write(pack('<H', groupColor[f.material_index]))
+                        else:
                             goz_file.write(pack('<H', 65504))
                             
-                            
-                """ else:
-                    #print("Export Polygroups: ", prefs().export_polygroups) """
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "Write Polygroup materials") 
                     
 
             # Diff, disp and norm maps
@@ -1310,7 +1300,7 @@ class GoB_OT_export_button(Operator):
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
-        bpy.ops.scene.gob_export(as_tool=as_tool)
+        bpy.ops.scene.gob_export(as_tool=as_tool) ## TODO: fix wrong context when in edit mode
         return {'FINISHED'}
 
 
