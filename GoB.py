@@ -956,9 +956,8 @@ class GoB_OT_export(Operator):
                             #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
                             #"\ngroup:", group, "color:", groupColor[group] )                            
                             if len(face.vertices) == count:
-                                #print("full:", face.index,  "\n")
+                                print(face.index, group, groupColor[group], count)
                                 goz_file.write(pack('<H', groupColor[group]))
-                                print(group)
                             else:
                                 goz_file.write(pack('<H', 65504))
                         else:

@@ -337,7 +337,7 @@ class GoB_Preferences(AddonPreferences):
     debug_dry_run: BoolProperty(
         name="Debug: Dry Run",
         description="Run export without launching Zbrush",
-        default=True)         
+        default=False)         
     performance_profiling: BoolProperty(
         name="Debug: Performance profiling",
         description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
