@@ -971,27 +971,26 @@ class GoB_OT_export(Operator):
 
 
                 # Polygroups from materials
-                if prefs().export_polygroups == 'MATERIALS':                  
-                    goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-                    goz_file.write(pack('<I', numFaces*2+16))
-                    goz_file.write(pack('<Q', numFaces))  
-                    
-                    groupColor=[]
-                    #create a color for each material slot (0xffff)
-                    for mat in obj.material_slots:
-                        if mat:
-                            randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                            color = int(randcolor, 16)
-                            groupColor.append(color)
-                        else:
-                            groupColor.append(65504)
-                    
-                    for f in me.polygons:  # iterate over faces
-                        if not f.material_index:
-                            continue
-                        print(f.index, f.material_index, groupColor[f.material_index], len(me.polygons))
-                        goz_file.write(pack('<H', groupColor[f.material_index]))
-                    
+                if prefs().export_polygroups == 'MATERIALS':   
+                    #print("material slots: ", len(obj.material_slots))
+                    if len(obj.material_slots) > 0:               
+                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                        goz_file.write(pack('<I', numFaces*2+16))
+                        goz_file.write(pack('<Q', numFaces))  
+                        
+                        groupColor=[]
+                        #create a color for each material slot (0xffff)
+                        for mat in obj.material_slots:
+                            if mat:
+                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+                                color = int(randcolor, 16)
+                                groupColor.append(color)
+                            else:
+                                groupColor.append(65504)
+
+                        for f in me.polygons:  # iterate over faces
+                            #print(f.index, f.material_index, groupColor[f.material_index], numFaces, len(me.polygons))
+                            goz_file.write(pack('<H', groupColor[f.material_index]))                        
                             
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroup materials") 
