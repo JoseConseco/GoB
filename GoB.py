@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from hashlib import blake2b
+from pickletools import float8
 import bpy
 import os
 import shutil
@@ -396,72 +397,71 @@ class GoB_OT_import(Operator):
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
 
 
-                        groupsData = []
-                        facemapsData = []
-                        goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                        #print("polygroup data:", cnt)
-                        
-                        for i in range(cnt):    # faces of each polygroup
-                            group = unpack('<H', goz_file.read(2))[0]
-                            #print("polygroup data:", i, group, hex(group))
-
-                            # vertex groups import
-                            if prefs().import_polygroups_to_vertexgroups:
-                                if group not in groupsData: #this only works if mask is already there
-                                    if str(group) in obj.vertex_groups:
-                                        obj.vertex_groups.remove(obj.vertex_groups[str(group)])
-                                    vg = obj.vertex_groups.new(name=str(group))
-                                    groupsData.append(group)
-                                else:
-                                    vg = obj.vertex_groups[str(group)]
-                                
-                                try:    #if vg assignment failes the mesh has some bad elements
-                                    vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
-                                except:
-                                    print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
-
-                            # Face maps import
-                            if prefs().import_polygroups_to_facemaps:
-                                if group not in facemapsData:
-                                    if str(group) in obj.face_maps:
-                                        obj.face_maps.remove(obj.face_maps[str(group)])
-                                    faceMap = obj.face_maps.new(name=str(group))
-                                    facemapsData.append(group)
-                                else:                        
-                                    faceMap = obj.face_maps[str(group)] 
-
-                                try:
-                                    if obj.data.polygons[i]:
-                                        faceMap.add([i])     # add faces to facemap
-                                except:
-                                    pass
-                            
-
-
-                        try:
-                            #print("VGs: ", obj.vertex_groups.get('0'))
-                            obj.vertex_groups.remove(obj.vertex_groups.get('0'))
-                        except:
-                            pass
-
-                        try:
-                            #print("FMs: ", obj.face_maps.get('0'))
-                            obj.face_maps.remove(obj.face_maps.get('0'))
-                        except:
-                            pass
-                        
-                        groupsData.clear()
-                        facemapsData.clear()
-                        
-                        if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "Polyroups")
+                    vertexGroupData = []
+                    polyGroupData = []
+                    facemapsData = []
+                    goz_file.seek(4, 1)
+                    cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
+                    #print("polygroup data:", cnt)
                     
                     else:
                         utag += 1
                         cnt = unpack('<I', goz_file.read(4))[0] - 8
                         goz_file.seek(cnt, 1)
 
+                        # import polygroups to materials
+                        if prefs().import_material == 'POLYGROUPS':
+                            polyGroupData.append(group)
+
+                        # vertex groups import
+                        if prefs().import_polygroups_to_vertexgroups:
+                            if group not in vertexGroupData: #this only works if mask is already there
+                                if str(group) in obj.vertex_groups:
+                                    obj.vertex_groups.remove(obj.vertex_groups[str(group)])
+                                vg = obj.vertex_groups.new(name=str(group))
+                                vertexGroupData.append(group)
+                            else:
+                                vg = obj.vertex_groups[str(group)]
+                            
+                            try:    #if vg assignment failes the mesh has some bad elements
+                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
+                            except:
+                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
+
+                        # Face maps import
+                        if prefs().import_polygroups_to_facemaps:
+                            if group not in facemapsData:
+                                if str(group) in obj.face_maps:
+                                    obj.face_maps.remove(obj.face_maps[str(group)])
+                                faceMap = obj.face_maps.new(name=str(group))
+                                facemapsData.append(group)
+                            else:                        
+                                faceMap = obj.face_maps[str(group)] 
+
+                            try:
+                                if obj.data.polygons[i]:
+                                    faceMap.add([i])     # add faces to facemap
+                            except:
+                                pass
+                            
+                            
+                    try:
+                        #print("VGs: ", obj.vertex_groups.get('0'))
+                        obj.vertex_groups.remove(obj.vertex_groups.get('0'))
+                    except:
+                        pass
+
+                    try:
+                        #print("FMs: ", obj.face_maps.get('0'))
+                        obj.face_maps.remove(obj.face_maps.get('0'))
+                    except:
+                        pass
+                    
+                    vertexGroupData.clear()
+                    facemapsData.clear()
+
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "Polyroups")
 
                 # End
                 elif tag == b'\x00\x00\x00\x00': 
@@ -546,28 +546,57 @@ class GoB_OT_import(Operator):
             if prefs().import_material == 'NONE':
                 if prefs().debug_output:
                     print("Import Material: ", prefs().import_material) 
-            else:
-                
-                if len(obj.material_slots) > 0:
-                    #print("material slot: ", obj.material_slots[0])
-                    if obj.material_slots[0].material is not None:
-                        objMat = obj.material_slots[0].material
-                    else:
-                        objMat = bpy.data.materials.new(objName)
-                        obj.material_slots[0].material = objMat
-                else:
-                    objMat = bpy.data.materials.new(objName)
-                    obj.data.materials.append(objMat)
+            else:     
 
                 if prefs().import_material == 'POLYPAINT':                    
-                    if prefs().import_polypaint_name in me.vertex_colors:
+                    if prefs().import_polypaint_name in me.vertex_colors:                                                   
+                        if len(obj.material_slots) > 0:
+                            #print("material slot: ", obj.material_slots[0])
+                            if obj.material_slots[0].material is not None:
+                                objMat = obj.material_slots[0].material
+                            else:
+                                objMat = bpy.data.materials.new(objName)
+                                obj.material_slots[0].material = objMat
+                        else:
+                            objMat = bpy.data.materials.new(objName)
+                            obj.data.materials.append(objMat)
+
                         create_material_node(objMat, diff, norm, disp)  
                     
-                elif prefs().import_material == 'TEXTURES':
+                elif prefs().import_material == 'TEXTURES':                               
+                    if len(obj.material_slots) > 0:
+                        #print("material slot: ", obj.material_slots[0])
+                        if obj.material_slots[0].material is not None:
+                            objMat = obj.material_slots[0].material
+                        else:
+                            objMat = bpy.data.materials.new(objName)
+                            obj.material_slots[0].material = objMat
+                    else:
+                        objMat = bpy.data.materials.new(objName)
+                        obj.data.materials.append(objMat)
+                        
                     create_material_node(objMat, diff, norm, disp)  
                     
                 elif prefs().import_material == 'POLYGROUPS':
-                    create_material_node(objMat, diff, norm, disp)  
+                    print("polygroups: ", set(polyGroupData))                    
+                    for polygroup in set(polyGroupData):                        
+                        print("material slots: ", len(obj.material_slots))
+                        if not str(polygroup) in bpy.data.materials:
+                            objMat = bpy.data.materials.new(str(polygroup))
+                            print("create new material: ", polygroup)
+                        else:
+                            print("material found, will append: ", str(polygroup))
+                            objMat = bpy.data.materials[str(polygroup)]
+                            print("append existing material: ", polygroup)
+                            
+                        obj.data.materials.append(objMat)
+                        #objMat.diffuse_color = (1,0,0,1)\
+                        color = random.randrange(0, 1)
+                        objMat.use_nodes = True
+                        objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (color,color,color,1)
+                       
+
+                    polyGroupData.clear()
           
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
@@ -1533,6 +1562,10 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
             vcol_node.location = -300, 200
             vcol_node.layer_name = prefs().import_polypaint_name    
             mat.node_tree.links.new(shader_node.inputs[0], vcol_node.outputs[0])
+
+    if prefs().import_material == 'POLYGROUPS':
+        pass
+
 
 
 def apply_transformation(me, is_import=True): 

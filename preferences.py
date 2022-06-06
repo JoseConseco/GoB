@@ -225,6 +225,7 @@ class GoB_Preferences(AddonPreferences):
         step=0.1,
         precision=1,
         subtype='FACTOR') 
+        
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
@@ -233,7 +234,8 @@ class GoB_Preferences(AddonPreferences):
                     ('POLYGROUPS', 'from Polygroups', 'Create Materials from Polygroups'),
                     ('NONE', 'None', 'No additional material inputs are created'),
                     ],
-            default='POLYGROUPS')            
+            default='POLYGROUPS')   
+
     import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
