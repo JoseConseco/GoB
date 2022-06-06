@@ -230,7 +230,7 @@ class GoB_Preferences(AddonPreferences):
             description="Create Material",
             items=[('TEXTURES', 'from Textures', 'Create Material inputs from Textures'),        #TODO: fix export to zbrush
                     ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
-                    ('POLYGROUPS', 'from Materials', 'Create Materials from Polygroups'),
+                    ('POLYGROUPS', 'from Polygroups', 'Create Materials from Polygroups'),
                     ('NONE', 'None', 'No additional material inputs are created'),
                     ],
             default='POLYGROUPS')            
