@@ -402,12 +402,25 @@ class GoB_OT_import(Operator):
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                    #print("polygroup data:", cnt)
                     
-                    else:
-                        utag += 1
-                        cnt = unpack('<I', goz_file.read(4))[0] - 8
-                        goz_file.seek(cnt, 1)
+                    """ polygroupsData = []
+                    for i in range(cnt): 
+                        colordata = unpack('<3B', goz_file.read(3)) # Color
+                        unpack('<B', goz_file.read(1))  # Alpha
+                        alpha = 1                        
+
+                        #convert color to vector                         
+                        rgb = [x / 255.0 for x in colordata]    
+                        rgb.reverse()                    
+                        rgba = rgb + [alpha]                                          
+                        polygroupsData.append(tuple(rgba))
+                    
+                    print("polygroupsData: ", polygroupsData) """
+
+
+                    for i in range(cnt):    # faces of each polygroup
+                        group = unpack('<H', goz_file.read(2))[0]
+                        #print("polygroup data:", i, group, hex(group))
 
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':
@@ -590,13 +603,18 @@ class GoB_OT_import(Operator):
                             print("append existing material: ", polygroup)
                             
                         obj.data.materials.append(objMat)
-                        #objMat.diffuse_color = (1,0,0,1)\
-                        color = random.randrange(0, 1)
+                        
+                        #number = 65535
+                        #print(f"number: {number}")
+                        rgb = list(chr(polygroup).encode("utf-8"))
+                      
+                        print(f"List of byte: {rgb}")
                         objMat.use_nodes = True
-                        objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (color,color,color,1)
+                        objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (rgb[0], rgb[1], rgb[2], 1)
                        
 
                     polyGroupData.clear()
+
           
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Material Node")
