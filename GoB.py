@@ -396,31 +396,29 @@ class GoB_OT_import(Operator):
                         if prefs().import_polygroups_to_facemaps:              
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
 
-
                     vertexGroupData = []
                     polyGroupData = []
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
                     
-                    """ polygroupsData = []
+                    """ 
+                    polygroupColor = []
                     for i in range(cnt): 
-                        colordata = unpack('<3B', goz_file.read(3)) # Color
-                        unpack('<B', goz_file.read(1))  # Alpha
+                        colordata = unpack('<3B', goz_file.read(3)) # polygroup color                        
                         alpha = 1                        
 
                         #convert color to vector                         
                         rgb = [x / 255.0 for x in colordata]    
                         rgb.reverse()                    
                         rgba = rgb + [alpha]                                          
-                        polygroupsData.append(tuple(rgba))
+                        polygroupColor.append(tuple(rgba))
+                        print("color: ", rgba)
+                    """
                     
-                    print("polygroupsData: ", polygroupsData) """
-
-
                     for i in range(cnt):    # faces of each polygroup
                         group = unpack('<H', goz_file.read(2))[0]
-                        #print("polygroup data:", i, group, hex(group))
+                        print("polygroup data:", i, group, hex(group))
 
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':
@@ -455,8 +453,7 @@ class GoB_OT_import(Operator):
                                 if obj.data.polygons[i]:
                                     faceMap.add([i])     # add faces to facemap
                             except:
-                                pass
-                            
+                                pass                         
                             
                     try:
                         #print("VGs: ", obj.vertex_groups.get('0'))
@@ -604,15 +601,27 @@ class GoB_OT_import(Operator):
                             
                         obj.data.materials.append(objMat)
                         
-                        #number = 65535
-                        #print(f"number: {number}")
-                        rgb = list(chr(polygroup).encode("utf-8"))
-                      
-                        print(f"List of byte: {rgb}")
-                        objMat.use_nodes = True
-                        objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (rgb[0], rgb[1], rgb[2], 1)
-                       
+                        print("\npg: ", bin(polygroup))
+                        r = bin(polygroup)[2:7]
+                        g = bin(polygroup)[7:11]
+                        b = bin(polygroup)[12:18]
+                        print("red: ", r)
+                        print("green: ", g)
+                        print("blue: ", b)
+                        #0b 1010 1000 1001 00
+                        #0b 1010 0000 0100
+                        r = int(r, 2) / 31
+                        g = int(g, 2) / 31
+                        b = int(b, 2) / 31
+                        print("red: ", r)
+                        print("green: ", g)
+                        print("blue: ", b)
 
+                        rgba = (r, g, b, 1)
+                        objMat.use_nodes = True
+                        objMat.diffuse_color = rgba
+                        objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba
+                       
                     polyGroupData.clear()
 
           
