@@ -556,6 +556,7 @@ class GoB_OT_import(Operator):
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtNorm.image = img
                     norm = img
+                    print(norm)
                 
                 # Unknown tags
                 else: 
@@ -608,7 +609,7 @@ class GoB_OT_import(Operator):
                     else:
                         objMat = bpy.data.materials.new(objName)
                         obj.data.materials.append(objMat)
-                        
+                    
                     create_material_node(objMat, diff, norm, disp)  
 
 
@@ -1084,7 +1085,6 @@ class GoB_OT_export(Operator):
                                 #print("IMAGES: ", node.image.name, node.image)	
                                 if (prefs().import_diffuse_suffix) in node.image.name:                                
                                     diff = node.image
-                                    print("diff", diff)
                                 if (prefs().import_displace_suffix) in node.image.name:
                                     disp = node.image
                                 if (prefs().import_normal_suffix) in node.image.name:
@@ -1543,63 +1543,63 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
     
     if prefs().import_material == 'TEXTURES':        
         # Diffiuse Color Map
-        if diff:
-            diffTxt_node = False  
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == diff.name:
-                    diffTxt_node = node
-            if not diffTxt_node:    
-                diffTxt_node = nodes.new('ShaderNodeTexImage')
-                diffTxt_node.location = -700, 500  
-                diffTxt_node.image = diff
-                diffTxt_node.label = 'Diffuse Color Map'
+        diffTxt_node = False  
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == diff.name:
+                diffTxt_node = node
+        if not diffTxt_node:    
+            diffTxt_node = nodes.new('ShaderNodeTexImage')
+            diffTxt_node.location = -700, 500  
+            diffTxt_node.image = diff
+            diffTxt_node.label = 'Diffuse Color Map'            
+            if diff:
                 diffTxt_node.image.colorspace_settings.name = prefs().import_diffuse_colorspace
-                mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
+            mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
 
         # Normal Map
-        if norm:
-            norm_node = False  
-            normTxt_node = False 
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm.name:
-                    normTxt_node = node
-                if node.bl_idname == 'ShaderNodeNormalMap':
-                    norm_node = node
-            if not norm_node:
-                norm_node = nodes.new('ShaderNodeNormalMap')
-                norm_node.location = -300, -100  
-                if bpy.app.version < (3,1,0):
-                    mat.node_tree.links.new(shader_node.inputs[20], norm_node.outputs[0])
-                else:
-                    mat.node_tree.links.new(shader_node.inputs[22], norm_node.outputs[0])
-            if not normTxt_node:    
-                normTxt_node = nodes.new('ShaderNodeTexImage')
-                normTxt_node.location = -700, -100  
-                normTxt_node.image = norm
-                normTxt_node.label = 'Normal Map'
-                normTxt_node.image.colorspace_settings.name = prefs().import_normal_colorspace
-                mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
+        #if norm:
+        norm_node = False  
+        normTxt_node = False 
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm.name:
+                normTxt_node = node
+            if node.bl_idname == 'ShaderNodeNormalMap':
+                norm_node = node
+        if not norm_node:
+            norm_node = nodes.new('ShaderNodeNormalMap')
+            norm_node.location = -300, -100  
+            if bpy.app.version < (3,1,0):
+                mat.node_tree.links.new(shader_node.inputs[20], norm_node.outputs[0])
+            else:
+                mat.node_tree.links.new(shader_node.inputs[22], norm_node.outputs[0])
+        if not normTxt_node:    
+            normTxt_node = nodes.new('ShaderNodeTexImage')
+            normTxt_node.location = -700, -100  
+            normTxt_node.image = norm
+            normTxt_node.label = 'Normal Map'
+            normTxt_node.image.colorspace_settings.name = prefs().import_normal_colorspace
+            mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
 
         # Displacement Map
-        if disp:
-            disp_node = False  
-            dispTxt_node = False  
-            for node in nodes:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp.name:
-                    dispTxt_node = node     
-                if node.bl_idname == 'ShaderNodeDisplacement':
-                    disp_node = node
-            if not disp_node:
-                disp_node = nodes.new('ShaderNodeDisplacement')
-                disp_node.location = -300, 200  
-                mat.node_tree.links.new(output_node.inputs[2], disp_node.outputs[0])
-            if not dispTxt_node:    
-                dispTxt_node = nodes.new('ShaderNodeTexImage')
-                dispTxt_node.location = -700, 200  
-                dispTxt_node.image = disp
-                dispTxt_node.label = 'Displacement Map'
-                dispTxt_node.image.colorspace_settings.name = prefs().import_displace_colorspace
-                mat.node_tree.links.new(disp_node.inputs[0], dispTxt_node.outputs[0])
+        #if disp:
+        disp_node = False  
+        dispTxt_node = False  
+        for node in nodes:
+            if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp.name:
+                dispTxt_node = node     
+            if node.bl_idname == 'ShaderNodeDisplacement':
+                disp_node = node
+        if not disp_node:
+            disp_node = nodes.new('ShaderNodeDisplacement')
+            disp_node.location = -300, 200  
+            mat.node_tree.links.new(output_node.inputs[2], disp_node.outputs[0])
+        if not dispTxt_node:    
+            dispTxt_node = nodes.new('ShaderNodeTexImage')
+            dispTxt_node.location = -700, 200  
+            dispTxt_node.image = disp
+            dispTxt_node.label = 'Displacement Map'
+            dispTxt_node.image.colorspace_settings.name = prefs().import_displace_colorspace
+            mat.node_tree.links.new(disp_node.inputs[0], dispTxt_node.outputs[0])
 
     if prefs().import_material == 'POLYPAINT':
         vcol_node = False   
