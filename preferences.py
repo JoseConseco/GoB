@@ -257,6 +257,10 @@ class GoB_Preferences(AddonPreferences):
         name="Vertex Color", 
         description="Set name for Vertex Color Layer", 
         default="Col")
+    import_polygroups: BoolProperty(
+        name="Polygroups",
+        description="Import Polygroup data",
+        default=True) 
     import_polygroups_to_vertexgroups: BoolProperty(
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
@@ -372,7 +376,8 @@ class GoB_Preferences(AddonPreferences):
         #col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
         col.prop(self, 'import_uv')
-        col.prop(self, 'import_polypaint')       
+        col.prop(self, 'import_polypaint')   
+        col.prop(self, 'import_polygroups')    
         col.prop(self, 'import_polygroups_to_vertexgroups')
         col.prop(self, 'import_polygroups_to_facemaps')          
         #col.prop(self, 'apply_facemaps_to_facesets')

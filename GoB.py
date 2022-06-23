@@ -389,70 +389,78 @@ class GoB_OT_import(Operator):
                     if prefs().debug_output:
                         print("Import Polyroups: ", prefs().import_polygroups_to_vertexgroups, prefs().import_polygroups_to_facemaps)
                     
-                    #wipe face maps before importing new ones due to random naming
-                    if prefs().import_polygroups_to_facemaps:              
-                        [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
+                    if prefs().import_polygroups:
+                        #wipe face maps before importing new ones due to random naming
+                        if prefs().import_polygroups_to_facemaps:              
+                            [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
 
 
-                    groupsData = []
-                    facemapsData = []
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                    #print("polygroup data:", cnt)
+                        groupsData = []
+                        facemapsData = []
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
+                        #print("polygroup data:", cnt)
+                        
+                        for i in range(cnt):    # faces of each polygroup
+                            group = unpack('<H', goz_file.read(2))[0]
+                            #print("polygroup data:", i, group, hex(group))
+
+                            # vertex groups import
+                            if prefs().import_polygroups_to_vertexgroups:
+                                if group not in groupsData: #this only works if mask is already there
+                                    if str(group) in obj.vertex_groups:
+                                        obj.vertex_groups.remove(obj.vertex_groups[str(group)])
+                                    vg = obj.vertex_groups.new(name=str(group))
+                                    groupsData.append(group)
+                                else:
+                                    vg = obj.vertex_groups[str(group)]
+                                
+                                try:    #if vg assignment failes the mesh has some bad elements
+                                    vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
+                                except:
+                                    print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
+
+                            # Face maps import
+                            if prefs().import_polygroups_to_facemaps:
+                                if group not in facemapsData:
+                                    if str(group) in obj.face_maps:
+                                        obj.face_maps.remove(obj.face_maps[str(group)])
+                                    faceMap = obj.face_maps.new(name=str(group))
+                                    facemapsData.append(group)
+                                else:                        
+                                    faceMap = obj.face_maps[str(group)] 
+
+                                try:
+                                    if obj.data.polygons[i]:
+                                        faceMap.add([i])     # add faces to facemap
+                                except:
+                                    pass
+                            
+
+
+                        try:
+                            #print("VGs: ", obj.vertex_groups.get('0'))
+                            obj.vertex_groups.remove(obj.vertex_groups.get('0'))
+                        except:
+                            pass
+
+                        try:
+                            #print("FMs: ", obj.face_maps.get('0'))
+                            obj.face_maps.remove(obj.face_maps.get('0'))
+                        except:
+                            pass
+                        
+                        groupsData.clear()
+                        facemapsData.clear()
+                        
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "Polyroups")
                     
-                    for i in range(cnt):    # faces of each polygroup
-                        group = unpack('<H', goz_file.read(2))[0]
-                        #print("polygroup data:", i, group, hex(group))
+                    else:
+                        utag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
 
-                        # vertex groups import
-                        if prefs().import_polygroups_to_vertexgroups:
-                            if group not in groupsData: #this only works if mask is already there
-                                if str(group) in obj.vertex_groups:
-                                    obj.vertex_groups.remove(obj.vertex_groups[str(group)])
-                                vg = obj.vertex_groups.new(name=str(group))
-                                groupsData.append(group)
-                            else:
-                                vg = obj.vertex_groups[str(group)]
-                            
-                            try:    #if vg assignment failes the mesh has some bad elements
-                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
-                            except:
-                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
-
-                        # Face maps import
-                        if prefs().import_polygroups_to_facemaps:
-                            if group not in facemapsData:
-                                if str(group) in obj.face_maps:
-                                    obj.face_maps.remove(obj.face_maps[str(group)])
-                                faceMap = obj.face_maps.new(name=str(group))
-                                facemapsData.append(group)
-                            else:                        
-                                faceMap = obj.face_maps[str(group)] 
-
-                            try:
-                                if obj.data.polygons[i]:
-                                    faceMap.add([i])     # add faces to facemap
-                            except:
-                                pass
-                            
-                            
-                    try:
-                        #print("VGs: ", obj.vertex_groups.get('0'))
-                        obj.vertex_groups.remove(obj.vertex_groups.get('0'))
-                    except:
-                        pass
-
-                    try:
-                        #print("FMs: ", obj.face_maps.get('0'))
-                        obj.face_maps.remove(obj.face_maps.get('0'))
-                    except:
-                        pass
-                    
-                    groupsData.clear()
-                    facemapsData.clear()
-
-                    if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Polyroups")
 
                 # End
                 elif tag == b'\x00\x00\x00\x00': 
