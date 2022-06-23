@@ -354,7 +354,7 @@ class GoB_Preferences(AddonPreferences):
         # GoB General Options 
         box.use_property_split = True
         box.label(text='GoB General Options', icon='PREFERENCES') 
-        col = box.column(align=True) 
+        col = box.column(align=False) 
         col.prop(self, 'zbrush_exec')
         col.prop(self, 'project_path') 
 
@@ -379,40 +379,48 @@ class GoB_Preferences(AddonPreferences):
         box.use_property_split = True
         #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')  
-        col = box.column(align=True) 
-        #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
+        col = box.column(align=False)
+        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching
         col.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
         col.prop(self, 'import_material')  
-        #col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
-        col.prop(self, 'import_uv')
-        col.prop(self, 'import_polypaint')   
-        col.prop(self, 'import_polygroups')    
-        col.prop(self, 'import_polygroups_to_vertexgroups')
-        col.prop(self, 'import_polygroups_to_facemaps')          
+        uv_row = col.row()
+        uv_row.prop(self, 'import_uv')
+        if self.import_uv:
+            uv_row.prop(self, 'import_uv_name', text='') 
+ 
+        pp_row = col.row()      
+        pp_row.prop(self, 'import_polypaint')   
+        if self.import_polypaint:
+            pp_row.prop(self, 'import_polypaint_name', text='') 
+
+        col.prop(self, 'import_polygroups')  
+        pg_col = col.column()
+        if self.import_polygroups:
+            pg_col.active=True  
+        else:            
+            pg_col.active=False
+        pg_col.prop(self, 'import_polygroups_to_vertexgroups')
+        pg_col.prop(self, 'import_polygroups_to_facemaps')
         #col.prop(self, 'apply_facemaps_to_facesets')
         
-        row = box.row(align=True)  
-        row.prop(self, 'import_diffuse_suffix') 
-        row.prop(self, 'import_diffuse_colorspace') 
-        row = box.row(align=True)
-        row.prop(self, 'import_normal_suffix')
-        row.prop(self, 'import_normal_colorspace')       
-        row = box.row(align=True)
-        row.prop(self, 'import_displace_suffix') 
-        row.prop(self, 'import_displace_colorspace')
-
-        col = box.column(align=True) 
-        col.prop(self, 'import_uv_name') 
-        col.prop(self, 'import_polypaint_name') 
-
+        if self.import_material == 'TEXTURES':
+            row = box.row(align=True)  
+            row.prop(self, 'import_diffuse_suffix') 
+            row.prop(self, 'import_diffuse_colorspace') 
+            row = box.row(align=True)
+            row.prop(self, 'import_normal_suffix')
+            row.prop(self, 'import_normal_colorspace')       
+            row = box.row(align=True)
+            row.prop(self, 'import_displace_suffix') 
+            row.prop(self, 'import_displace_colorspace')
         
 
     def draw_export(self, box):
         # GoB Export Options
         box.use_property_split = True
         box.label(text='GoB Export Options', icon='EXPORT')   
-        col = box.column(align=True) 
+        col = box.column(align=False) 
         col.prop(self, 'export_modifiers')
         col.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
