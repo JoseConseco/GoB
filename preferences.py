@@ -39,16 +39,15 @@ preferences_tabs = [
                     ("IMPORT", "Import", ""),
                     ("EXPORT", "Export", ""),
                     ("UPDATE", "Update", ""),
+                    ("DEBUG", "Debug", ""),
                     ("HELP", "Troubleshooting", "")
                     ]
 
 class GoB_Preferences(AddonPreferences):
-    bl_idname = __package__
-
-    
+    bl_idname = __package__    
     tabs: EnumProperty(name="Tabs", items=preferences_tabs, default="OPTIONS")  
 
-    #       ADDON UPDATER    
+    #ADDON UPDATER    
     repository_path: StringProperty(
         name="Project", 
         description="Github Project url example: https://github.com/JoseConseco/GoB", 
@@ -70,7 +69,7 @@ class GoB_Preferences(AddonPreferences):
         name="Experimental Versions",
         description="Check for experimental versions",
         default=False)
-    ############################################
+
 
     #GLOBAL
     zbrush_exec: StringProperty(
@@ -148,15 +147,8 @@ class GoB_Preferences(AddonPreferences):
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
-        default=True)        
-    performance_profiling: BoolProperty(
-        name="[Dev] Debug performance",
-        description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
         default=False)        
-    debug_output: BoolProperty(
-        name="[Dev] debug_output",
-        description="Show debug output in console, note this will slow down the GoZ transfer if enabled!",
-        default=False)
+
     """      
     texture_format: EnumProperty(
         name="Image Format",
@@ -168,6 +160,8 @@ class GoB_Preferences(AddonPreferences):
                ],
         default='BMP')   
         """
+
+
     # EXPORT
     export_modifiers: EnumProperty(
         name='Modifiers',
@@ -181,11 +175,11 @@ class GoB_Preferences(AddonPreferences):
         name="Polygroups",
         description="Create Polygroups",
         items=[ ('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
-                #('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
+                ('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='FACE_MAPS')  
+        default='MATERIALS')  
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",
         description="Only vertex weight higher than the threshold are converted to polygroups",
@@ -221,7 +215,6 @@ class GoB_Preferences(AddonPreferences):
         subtype='DISTANCE') 
 
 
-
     # IMPORT
     import_timer: FloatProperty(
         name="Update interval",
@@ -232,14 +225,17 @@ class GoB_Preferences(AddonPreferences):
         step=0.1,
         precision=1,
         subtype='FACTOR') 
+        
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
             items=[('TEXTURES', 'from Textures', 'Create Material inputs from Textures'),        #TODO: fix export to zbrush
-                   ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
-                   ('NONE', 'None', 'No additional material inputs are created'),
-                   ],
-            default='POLYPAINT')            
+                    ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
+                    ('POLYGROUPS', 'from Polygroups', 'Create Materials from Polygroups'),
+                    ('NONE', 'None', 'No additional material inputs are created'),
+                    ],
+            default='POLYGROUPS')   
+
     import_method: EnumProperty(
             name="Import Button Method",
             description="Manual Mode requires to press the import every time you send a model from zbrush to import it.",
@@ -306,7 +302,8 @@ class GoB_Preferences(AddonPreferences):
     import_displace_suffix: StringProperty(
         name="Displacement Map", 
         description="Set Suffix for Displacement Map", 
-        default="_disp")    
+        default="_disp")   
+
     import_displace_colorspace: EnumProperty(
         name="",
         description="displace_colorspace",
@@ -323,7 +320,8 @@ class GoB_Preferences(AddonPreferences):
     import_normal_suffix: StringProperty(
         name="Normal Map", 
         description="Set Suffix for Normal Map", 
-        default="_norm")        
+        default="_norm")     
+
     import_normal_colorspace: EnumProperty(
         name="",
         description="normal_colorspace",
@@ -337,12 +335,26 @@ class GoB_Preferences(AddonPreferences):
                 ],
         default='Non-Color')   
     
+    # DEBUG
+    debug_dry_run: BoolProperty(
+        name="Debug: Dry Run",
+        description="Run export without launching Zbrush",
+        default=False)         
+    performance_profiling: BoolProperty(
+        name="Debug: Performance profiling",
+        description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
+        default=False)        
+    debug_output: BoolProperty(
+        name="Debug: Output",
+        description="Show debug output in console, note this will slow down the GoZ transfer if enabled!",
+        default=False)
+
 
     def draw_options(self, box):
         # GoB General Options 
         box.use_property_split = True
         box.label(text='GoB General Options', icon='PREFERENCES') 
-        col = box.column(align=True) 
+        col = box.column(align=False) 
         col.prop(self, 'zbrush_exec')
         col.prop(self, 'project_path') 
 
@@ -359,8 +371,6 @@ class GoB_Preferences(AddonPreferences):
         if self.use_scale == 'ZUNITS':                   
             col.prop(self, 'zbrush_scale')
         col.prop(self, 'show_button_text')  
-        col.prop(self, 'performance_profiling')
-        col.prop(self, 'debug_output')
         #col.prop(self, 'texture_format')
         
 
@@ -369,40 +379,48 @@ class GoB_Preferences(AddonPreferences):
         box.use_property_split = True
         #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')  
-        col = box.column(align=True) 
-        #box.prop(self, 'import_method')            #TODO: disabled: some bugs when switching
+        col = box.column(align=False)
+        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching
         col.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
         col.prop(self, 'import_material')  
-        #col = box.column(align=True)  #TODO: add heading ="" in 2.9
         col.prop(self, 'import_mask')
-        col.prop(self, 'import_uv')
-        col.prop(self, 'import_polypaint')   
-        col.prop(self, 'import_polygroups')    
-        col.prop(self, 'import_polygroups_to_vertexgroups')
-        col.prop(self, 'import_polygroups_to_facemaps')          
+        uv_row = col.row()
+        uv_row.prop(self, 'import_uv')
+        if self.import_uv:
+            uv_row.prop(self, 'import_uv_name', text='') 
+ 
+        pp_row = col.row()      
+        pp_row.prop(self, 'import_polypaint')   
+        if self.import_polypaint:
+            pp_row.prop(self, 'import_polypaint_name', text='') 
+
+        col.prop(self, 'import_polygroups')  
+        pg_col = col.column()
+        if self.import_polygroups:
+            pg_col.active=True  
+        else:            
+            pg_col.active=False
+        pg_col.prop(self, 'import_polygroups_to_vertexgroups')
+        pg_col.prop(self, 'import_polygroups_to_facemaps')
         #col.prop(self, 'apply_facemaps_to_facesets')
         
-        row = box.row(align=True)  
-        row.prop(self, 'import_diffuse_suffix') 
-        row.prop(self, 'import_diffuse_colorspace') 
-        row = box.row(align=True)
-        row.prop(self, 'import_normal_suffix')
-        row.prop(self, 'import_normal_colorspace')       
-        row = box.row(align=True)
-        row.prop(self, 'import_displace_suffix') 
-        row.prop(self, 'import_displace_colorspace')
-
-        col = box.column(align=True) 
-        col.prop(self, 'import_uv_name') 
-        col.prop(self, 'import_polypaint_name') 
-
+        if self.import_material == 'TEXTURES':
+            row = box.row(align=True)  
+            row.prop(self, 'import_diffuse_suffix') 
+            row.prop(self, 'import_diffuse_colorspace') 
+            row = box.row(align=True)
+            row.prop(self, 'import_normal_suffix')
+            row.prop(self, 'import_normal_colorspace')       
+            row = box.row(align=True)
+            row.prop(self, 'import_displace_suffix') 
+            row.prop(self, 'import_displace_colorspace')
         
 
     def draw_export(self, box):
         # GoB Export Options
         box.use_property_split = True
         box.label(text='GoB Export Options', icon='EXPORT')   
-        col = box.column(align=True) 
+        col = box.column(align=False) 
         col.prop(self, 'export_modifiers')
         col.prop(self, 'export_polygroups')    
         if self.export_polygroups == 'VERTEX_GROUPS':  
@@ -412,23 +430,7 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'export_merge') 
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
-        col.prop(self, 'export_remove_internal_faces')         
-        
-        
-        
-
-    def draw_help(self, box):
-        # GoB Troubleshooting
-        box.use_property_split = True
-        #box = layout.box() 
-        box.label(text='GoB Troubleshooting', icon='QUESTION')   
-        import platform
-        if platform.system() == 'Windows':
-            icons = GoB.preview_collections["main"]  
-            box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
-            
-        
-
+        col.prop(self, 'export_remove_internal_faces') 
         
 
     def draw_update(self, box):
@@ -453,6 +455,25 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'experimental_versions') 
         #col.prop(self, 'auto_update_check')
 
+    def draw_debug(self,box):
+        box.use_property_split = True
+        col = box.column(align=True) 
+        col.prop(self, 'debug_dry_run')
+        col.prop(self, 'performance_profiling')
+        col.prop(self, 'debug_output')
+
+
+    def draw_help(self, box):
+        # GoB Troubleshooting
+        box.use_property_split = True
+        #box = layout.box() 
+        box.label(text='GoB Troubleshooting', icon='QUESTION')   
+        import platform
+        if platform.system() == 'Windows':
+            icons = GoB.preview_collections["main"]  
+            box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
+            
+        
 
     def draw(self, context):
         
@@ -471,6 +492,8 @@ class GoB_Preferences(AddonPreferences):
             self.draw_import(box)
         elif self.tabs == "HELP":
             self.draw_help(box)
+        elif self.tabs == "DEBUG":
+            self.draw_debug(box)
         elif self.tabs == "UPDATE":
             self.draw_update(box)
 
