@@ -16,12 +16,9 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from hashlib import blake2b
-from pickletools import float8
 import bpy
 import os
 import shutil
-import requests
 from subprocess import Popen
 import addon_utils
 import bmesh
@@ -401,24 +398,13 @@ class GoB_OT_import(Operator):
                     facemapsData = []
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                    
-                    """ 
-                    polygroupColor = []
-                    for i in range(cnt): 
-                        colordata = unpack('<3B', goz_file.read(3)) # polygroup color                        
-                        alpha = 1                        
-
-                        #convert color to vector                         
-                        rgb = [x / 255.0 for x in colordata]    
-                        rgb.reverse()                    
-                        rgba = rgb + [alpha]                                          
-                        polygroupColor.append(tuple(rgba))
-                        print("color: ", rgba)
-                    """
-                    
-                    for i in range(cnt):    # faces of each polygroup
+                                        
+                    for i in range(cnt):    # faces of each polygroup      
                         group = unpack('<H', goz_file.read(2))[0]
-                        print("\npolygroup data:", i, group, hex(group))
+                        r = random.random()
+                        g = random.random()
+                        b = random.random()
+                        #print(r,g, b)
 
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':
@@ -426,7 +412,6 @@ class GoB_OT_import(Operator):
                                 
                             # create or define active material
                             for group in set(polyGroupData): 
-                                print(i, group)  
                                 if not str(group) in bpy.data.materials:
                                     objMat = bpy.data.materials.new(str(group))
                                 else:
@@ -435,17 +420,18 @@ class GoB_OT_import(Operator):
                                 # assign material to object
                                 if not objMat.name in obj.material_slots:
                                     obj.data.materials.append(objMat)                                    
-                                    objMat.use_nodes = True
+                                   
+                                    objMat.use_nodes = True     
+                                    rgba = (r, g, b, 1)
+                                    objMat.diffuse_color = rgba
+                                    objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba                                    
 
                             #add material to faces
-                            slot = obj.material_slots[objMat.name].slot_index
-                            print("slot: ", objMat.name, slot)
-
                             if obj.data.polygons[i]:
-                                obj.data.polygons[i].material_index = slot
+                                slot = obj.material_slots[objMat.name].slot_index
+                                obj.data.polygons[i].material_index = slot    
 
-                        polyGroupData.clear()
-                                    
+                        polyGroupData.clear()                                    
 
 
                         # import polygroups to vertex groups
@@ -481,7 +467,7 @@ class GoB_OT_import(Operator):
                                     faceMap.add([i])     
                             except:
                                 pass   
-                              
+
                         facemapsData.clear()                    
                             
                     try:
@@ -615,35 +601,9 @@ class GoB_OT_import(Operator):
                         
                     create_material_node(objMat, diff, norm, disp)  
 
-                # POLYGROUPS
-                elif prefs().import_material == 'POLYGROUPS':
-                    print("polygroups: ", set(polyGroupData))                    
-                        
-                        #print("\npg: ", bin(polygroup))
-                        #r = bin(group)[2:7]
-                        #g = bin(group)[7:11]
-                        #b = bin(group)[12:18]
-                        #print("red: ", r)
-                        #print("green: ", g)
-                        #print("blue: ", b)
-                        #0b 1010 1000 1001 00
-                        #0b 1010 0000 0100
-                        #r = int(r, 2) / 31
-                        #g = int(g, 2) / 31
-                        #b = int(b, 2) / 31
-                        #print("red: ", r)
-                        #print("green: ", g)
-                        #print("blue: ", b)
 
-                        #rgba = (r, g, b, 1)
-                        #objMat.diffuse_color = rgba
-                        #objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba
-                       
-
-          
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Material Node")
-                
+                start_time = profiler(start_time, "Material Node")                
 
             # #apply face maps to sculpt mode face sets
             if prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
@@ -969,8 +929,7 @@ class GoB_OT_export(Operator):
                         #create a color for each facemap (0xffff)
                         for faceMap in obj.face_maps:
                             if faceMap:
-                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                                color = int(randcolor, 16)
+                                color = random_color()
                                 groupColor.append(color)
                             else:
                                 groupColor.append(65504)
@@ -1001,8 +960,7 @@ class GoB_OT_export(Operator):
                     groupColor=[]                        
                     #create a color for each facemap (0xffff)
                     for vg in obj.vertex_groups:
-                        randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                        color = int(randcolor, 16)
+                        color = random_color()
                         groupColor.append(color)
                     #add a color for elements that are not part of a vertex group
                     groupColor.append(0)
@@ -1054,8 +1012,7 @@ class GoB_OT_export(Operator):
                         #create a color for each material slot (0xffff)
                         for mat in obj.material_slots:
                             if mat:
-                                randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
-                                color = int(randcolor, 16)
+                                color = random_color()
                                 groupColor.append(color)
                             else:
                                 groupColor.append(65504)
@@ -1821,7 +1778,10 @@ def apply_modifiers(obj):
     bm.free()       
     obj.to_mesh_clear()
     return export_mesh            
-                    
+
+def random_color(base=16):    
+    randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+    return int(randcolor, base)                  
 
 def mesh_welder(obj, d = 0.0001):    
     " merges vertices that are closer than d to each other" 
@@ -1838,7 +1798,6 @@ def restore_selection(selected, active):
     for ob in selected:
         bpy.data.objects[ob.name].select_set(state=True)
     bpy.context.view_layer.objects.active = active
-
 
 
 def remove_internal_faces(obj): 
