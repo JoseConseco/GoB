@@ -1323,11 +1323,12 @@ class GoB_OT_export_button(Operator):
     
     @classmethod
     def poll(cls, context):
-        return bpy.context.selected_objects
+        selected_objects = export_poll(cls, context)                
+        return selected_objects
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
-        bpy.ops.scene.gob_export(as_tool=as_tool) ## TODO: fix wrong context when in edit mode
+        bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
 
 
