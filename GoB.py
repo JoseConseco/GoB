@@ -464,6 +464,8 @@ class GoB_OT_import(Operator):
                             except:
                                 print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
 
+                        vertexGroupData.clear()
+
                         # import polygroups to face maps
                         if prefs().import_polygroups_to_facemaps:
                             if group not in facemapsData:
@@ -478,7 +480,9 @@ class GoB_OT_import(Operator):
                                 if obj.data.polygons[i]:
                                     faceMap.add([i])     
                             except:
-                                pass                         
+                                pass   
+                              
+                        facemapsData.clear()                    
                             
                     try:
                         #print("VGs: ", obj.vertex_groups.get('0'))
@@ -492,8 +496,6 @@ class GoB_OT_import(Operator):
                     except:
                         pass
                     
-                    vertexGroupData.clear()
-                    facemapsData.clear()
 
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Polyroups")
