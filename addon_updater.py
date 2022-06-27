@@ -73,14 +73,14 @@ class AU_OT_SearchUpdates(Operator):
 
     def addon_version(self):
         for mod in addon_utils.modules():
-            if mod.bl_info.get('name') == 'GoB':
+            if mod.bl_info.get('name') in {'GoB'}:
                 n = self.extract_numbers(str(mod.bl_info.get('version', (-1, -1, -1))))
                 version = "v"+ str(n[0]) + "_"+ str(n[1]) + "_"+ str(n[2])
                 return version
 
 
     def extract_numbers(self, input_str):    
-        if input_str is None or input_str == '':
+        if input_str is None or input_str in {''}:
             return 0
         number = [n for n in input_str if n.isdigit()] 
         return number

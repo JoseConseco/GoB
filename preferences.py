@@ -147,7 +147,7 @@ class GoB_Preferences(AddonPreferences):
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
-        default=False)        
+        default=True)        
 
     """      
     texture_format: EnumProperty(
@@ -158,8 +158,7 @@ class GoB_Preferences(AddonPreferences):
                 ('JPEG', '.jpg', ' Output image in JPEG format'), 
                 ('PNG', '.png', ' Output image in PNG format'), 
                ],
-        default='BMP')   
-        """
+        default='BMP')           """
 
 
     # EXPORT
@@ -171,6 +170,7 @@ class GoB_Preferences(AddonPreferences):
                ('IGNORE', 'Ignore', 'Do not export modifiers')
                ],
         default='ONLY_EXPORT')
+
     export_polygroups: EnumProperty(
         name="Polygroups",
         description="Create Polygroups",
@@ -179,7 +179,8 @@ class GoB_Preferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='MATERIALS')  
+        default='VERTEX_GROUPS')  
+
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",
         description="Only vertex weight higher than the threshold are converted to polygroups",
@@ -229,12 +230,12 @@ class GoB_Preferences(AddonPreferences):
     import_material: EnumProperty(
             name="Material",
             description="Create Material",
-            items=[('TEXTURES', 'from Textures', 'Create Material inputs from Textures'),        #TODO: fix export to zbrush
+            items=[('TEXTURES', 'from Textures', 'Create Material inputs from Textures'),
                     ('POLYPAINT', 'from Polypaint', 'Create Material from Polypaint'),
                     ('POLYGROUPS', 'from Polygroups', 'Create Materials from Polygroups'),
                     ('NONE', 'None', 'No additional material inputs are created'),
                     ],
-            default='POLYGROUPS')   
+            default='POLYPAINT')   
 
     import_method: EnumProperty(
             name="Import Button Method",
