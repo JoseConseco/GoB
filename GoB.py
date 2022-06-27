@@ -611,7 +611,7 @@ class GoB_OT_import(Operator):
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
-                        if area.type == 'VIEW_3D':
+                        if area.type in {'VIEW_3D'}: 
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
                             break                   
@@ -623,7 +623,7 @@ class GoB_OT_import(Operator):
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
-                        if area.type == 'VIEW_3D':
+                        if area.type in {'VIEW_3D'}:
                             override = {'window': window, 'screen': screen, 'area': area}
                             bpy.ops.mesh.reveal(override)
                             break  
@@ -784,7 +784,7 @@ class GoB_OT_export(Operator):
             #5: GoB version   
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S         
             for mod in addon_utils.modules():
-                if mod.bl_info.get('name') == 'GoB':
+                if mod.bl_info.get('name') in {'GoB'}:
                     version = str(mod.bl_info.get('version', (-1, -1, -1)))
             GoBVars.write(version.encode('utf-8'))
             # 6: Project Path
@@ -898,7 +898,7 @@ class GoB_OT_export(Operator):
             # --Mask--
             if not prefs().export_clear_mask:
                 for vertexGroup in obj.vertex_groups:
-                    if vertexGroup.name.lower() == 'mask':
+                    if vertexGroup.name.lower() in {'mask'}:
                         goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
                         goz_file.write(pack('<I', numVertices*2+16))
                         goz_file.write(pack('<Q', numVertices))                        
@@ -1036,7 +1036,7 @@ class GoB_OT_export(Operator):
                         #print("material:", mat.name, "using nodes \n")
                         for node in material.node_tree.nodes:	
                             #print("node: ", node.type)                                
-                            if node.type == 'TEX_IMAGE' and node.image:
+                            if node.type in {'TEX_IMAGE'} and node.image:
                                 #print("IMAGES: ", node.image.name, node.image)	
                                 if (prefs().import_diffuse_suffix) in node.image.name:                                
                                     diff = node.image
@@ -1045,7 +1045,7 @@ class GoB_OT_export(Operator):
                                     disp = node.image
                                 if (prefs().import_normal_suffix) in node.image.name:
                                     norm = node.image
-                            elif node.type == 'GROUP':
+                            elif node.type in {'GROUP'}:
                                 print("group found")
             user_file_fomrat = scn.render.image_settings.file_format
             scn.render.image_settings.file_format = 'BMP'
@@ -1228,7 +1228,7 @@ class GoB_OT_export(Operator):
                         #cleanup temp mesh
                         bpy.data.meshes.remove(mesh_tmp)
 
-                elif  obj.type == 'MESH':
+                elif obj.type in {'MESH'}:
                     depsgraph = bpy.context.evaluated_depsgraph_get() 
 
                     # if one or less objects check amount of faces, 0 faces will crash zbrush
@@ -1741,12 +1741,10 @@ def export_poll(cls, context):
                     if not prefs().export_modifiers == 'IGNORE': 
                         object_eval = obj.evaluated_get(depsgraph)
                         if len(object_eval.data.polygons):
-                            numFaces = len(object_eval.data.polygons)
-                            print("object_eval.data.polygons", numFaces)                            
+                            numFaces = len(object_eval.data.polygons)                         
                     else: 
                         if len(obj.data.polygons):
                             numFaces = len(obj.data.polygons)
-                            print("obj.data.polygons ", numFaces)
                 elif obj.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:  
                     #allow export for non mesh type objects
                     numFaces = True
