@@ -735,9 +735,8 @@ class GoB_OT_export(Operator):
     )
     
     @classmethod
-    def poll(cls, context):
-        selected_objects = export_poll(cls, context)                
-        return selected_objects
+    def poll(cls, context):              
+        return export_poll(cls, context)
     
 
     def exportGoZ(self, path, scn, obj, pathImport):      
@@ -1322,15 +1321,13 @@ class GoB_OT_export_button(Operator):
     bl_options = {'INTERNAL'}
     
     @classmethod
-    def poll(cls, context):
-        selected_objects = export_poll(cls, context)                
-        return selected_objects
+    def poll(cls, context):              
+        return export_poll(cls, context)
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
         bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
-
 
 def find_zbrush(self, context):
     #get the highest version of zbrush and use it as default zbrush to send to
@@ -1718,35 +1715,42 @@ def clone_as_object(obj, link=True):
 
 
 def export_poll(cls, context):
-    selected_objects = context.selected_objects
-    if selected_objects:
+    if context.selected_objects: 
+        numFaces = 0     
         depsgraph = bpy.context.evaluated_depsgraph_get() 
-        # if one or less objects check amount of faces, 0 faces will crash zbrush
-        if len(selected_objects) <= 1: 
+        # if one or less objects, check amount of faces. 0 faces will crash zbrush!
+        if len(context.selected_objects) <= 1: 
             active_object = context.active_object 
-            try:
-                if active_object.type == 'MESH':
-                    if not prefs().export_modifiers == 'IGNORE':
-                            object_eval = active_object.evaluated_get(depsgraph)
-                            numFaces = len(object_eval.data.polygons)
-                    else: 
+            if active_object.type in {'MESH'}:
+                if not prefs().export_modifiers == 'IGNORE':
+                    if active_object.mode in {'EDIT'}: 
                         numFaces = len(active_object.data.polygons)
-                    return numFaces
-            except:
-                pass
-        else: #poll for faces in multiple objects, only if any face in object is found
-            for obj in selected_objects:                    
-                if obj.type == 'MESH':
+                    else:                        
+                        object_eval = active_object.evaluated_get(depsgraph)
+                        numFaces = len(object_eval.data.polygons)                    
+                else: 
+                    numFaces = len(active_object.data.polygons)
+            elif active_object.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:   
+                #allow export for non mesh type objects
+                numFaces = True
+       
+        #check for faces in multiple objects, only if any face in object is found
+        else: 
+            for obj in context.selected_objects:                   
+                if obj.type in {'MESH'}:
                     if not prefs().export_modifiers == 'IGNORE': 
                         object_eval = obj.evaluated_get(depsgraph)
                         if len(object_eval.data.polygons):
-                            return True
+                            numFaces = len(object_eval.data.polygons)
+                            print("object_eval.data.polygons", numFaces)                            
                     else: 
                         if len(obj.data.polygons):
-                            return True
-            return False
-            
-        return selected_objects 
+                            numFaces = len(obj.data.polygons)
+                            print("obj.data.polygons ", numFaces)
+                elif obj.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:  
+                    #allow export for non mesh type objects
+                    numFaces = True
+        return numFaces
 
 
 def apply_modifiers(obj):      
