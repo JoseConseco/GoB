@@ -269,7 +269,7 @@ class GoB_OT_import(Operator):
             facesData.clear()
 
             if prefs().performance_profiling:  
-                start_time = profiler(start_time, "Make Mesh")
+                start_time = profiler(start_time, "Make Mesh import")
                 
             
             utag = 0
@@ -757,14 +757,22 @@ class GoB_OT_export(Operator):
         if prefs().performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
-            start_total_time = profiler(time.perf_counter(), "-------------")
+            start_total_time = profiler(time.perf_counter(), 80*"=")
 
         me = apply_modifiers(obj)
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh apply_modifiers")
+
         me.calc_loop_triangles()
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh calc_loop_triangles")
+
         me, mat_transform = apply_transformation(me, is_import=False)
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh apply_transformation")
 
         if prefs().performance_profiling: 
-            start_time = profiler(start_time, "Make Mesh")
+            start_time = profiler(start_time, "Make Mesh export")
 
         fileExt = '.bmp'
         
@@ -1809,22 +1817,58 @@ def export_poll(cls, context):
         return numFaces
 
 
-def apply_modifiers(obj):      
+def apply_modifiers(obj):  
+    if prefs().performance_profiling: 
+        print("\\_____")
+        start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
+        start_total_time = profiler(time.perf_counter(), "")
+
     depsgraph = bpy.context.evaluated_depsgraph_get()  
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh depsgraph")
+        
     object_eval = obj.evaluated_get(depsgraph)   
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh object_eval")
+
     if prefs().export_modifiers == 'APPLY_EXPORT':      
         mesh_tmp = bpy.data.meshes.new_from_object(object_eval) 
         obj.data = mesh_tmp
         obj.modifiers.clear() 
+
     elif prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)     
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh to_mesh") 
+
     else:
         mesh_tmp = obj.data
 
     #DO the triangulation of Ngons only, but do not write it to original object.    
     bm = bmesh.new()
-    bm.from_mesh(mesh_tmp)
-    #join traingles only that are result of ngon triangulation        
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh bmesh new")
+
+    bm.from_mesh(mesh_tmp)    
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh bmesh")
+
+    #join traingles only that are result of ngon triangulation  
+    #""" 
+    tf = [f for f in bm.faces if len(f.edges) > 4]   
+    for f in enumerate(tf):
+        result = bmesh.ops.triangulate(bm, faces=tf)
+        bmesh.ops.join_triangles(
+            bm, faces = result['faces'], 
+            cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
+            cmp_vcols=False,cmp_materials=False, 
+            angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
+    #"""
+
+
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh triangulate1")
+    #""" 
     for f in bm.faces:
         if len(f.edges) > 4:
             result = bmesh.ops.triangulate(bm, faces=[f])
@@ -1832,13 +1876,32 @@ def apply_modifiers(obj):
                 bm, faces= result['faces'], 
                 cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
                 cmp_vcols=False,cmp_materials=False, 
-                angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
+                angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
+    #"""
     
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh triangulate2")
+
     export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh export_mesh")
+
     bm.to_mesh(export_mesh)
-    bm.free()       
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh to_mesh")
+
+    bm.free()     
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh bm free")  
+
     obj.to_mesh_clear()
-    return export_mesh            
+    if prefs().performance_profiling: 
+        start_time = profiler(start_time, "Make Mesh to_mesh_clear")  
+    
+    if prefs().performance_profiling:         
+        profiler(start_total_time, "Make Mesh return\n _____/") 
+    return export_mesh         
+
 
 def random_color(base=16):    
     randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
