@@ -368,7 +368,7 @@ author: Daniel Grauer
 
             [If, objectMemIndex >= [MemGetSize, GoB_ObjectList_InputMem],
             
-                //[IPress,Transform: Fit]
+                [IPress,Transform: Fit]
                 [LoopExit]
             ]
         ]     
