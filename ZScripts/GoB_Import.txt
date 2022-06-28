@@ -212,7 +212,7 @@ author: Daniel Grauer
                 [VarSet, subtoolExists, objectName] //subtoolExists (str:objectName/ -1: for no subtool match
                 [VarSet,subtoolCount, count] 
                 [LoopExit]
-            ,
+            , //else
                 [VarSet, subtoolExists, -1] //subtoolExists (str:objectName/ -1: for no subtool match
             ] 
             [VarInc, count]           
@@ -223,18 +223,22 @@ author: Daniel Grauer
     , objectName, SubtoolList, subtoolExists
     ]
 
+    [RoutineDef, setScale, 
+        // set offset and scale to default, this has been transfered to the subtool.
+        [ISet,Tool:Geometry:XYZ Size, [IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
+        [ISet,Tool:Export:Scale,1]    
+        //[Note,[StrMerge, "\n GoB scale transfered", ""],,reportDuration]  
+    ]
 
     [RoutineDef, setOrigin, 
         // transfer export offset and scale to subtool offset, this is needed to correct origins that are not in the wrold center
-        [ISet,Tool:Geometry:XYZ Size, [IGet,Tool:Geometry:XYZ Size] * [IGet,Tool:Export: Scale]]
         [ISet,Tool:Geometry:X Position, ([IGet,Tool:Geometry:X Position] + [IGet,Tool:Export:X Offset]) * [IGet,Tool:Export: Scale]]
         [ISet,Tool:Geometry:Y Position, ([IGet,Tool:Geometry:Y Position] + [IGet,Tool:Export:Y Offset]) * [IGet,Tool:Export: Scale]]
         [ISet,Tool:Geometry:Z Position, ([IGet,Tool:Geometry:Z Position] + [IGet,Tool:Export:Z Offset]) * [IGet,Tool:Export: Scale]]
         // set offset and scale to default, this has been transfered to the subtool.
-        [ISet,Tool:Export:Scale,1]
         [ISet,Tool:Export:X Offset,0.0]
         [ISet,Tool:Export:Y Offset,0.0]
-        [ISet,Tool:Export:Z Offset,0.0]     
+        [ISet,Tool:Export:Z Offset,0.0]    
         //[Note,[StrMerge, "\n GoB Origin transfered", ""],,reportDuration]  
     ]
 
@@ -270,20 +274,21 @@ author: Daniel Grauer
             ]
             [CanvasClick,10,10,10,20]
             [IPress,Transform: Edit]
-        ,
+        , //else
             [If, [StrFind,"PolyMesh3D",subtoolName] != -1, 
                 [IPress,Tool:SubTool:Insert]
                 [IPress,PopUp:Cube3D] 
-            ,                  
+            ,  //else                
                 [IPress,Tool:SubTool:Insert]
                 [IPress,PopUp:PolyMesh3D]
             ]     
             [If,[FileExists,objectPath],
                 [FileNameSetNext,objectPath] 
                 [IPress,Tool:Import]                            
-                [RoutineCall, LoadTextures]  
+                [RoutineCall, LoadTextures] 
             ] 
-        ]       
+        ]    
+        
         [Note,[StrMerge,"\n\C2200FF Created new Subtool:      \CFFFFFF", objectName] ,,reportDuration]
     , objectName, objectPath]
 
@@ -294,10 +299,11 @@ author: Daniel Grauer
         [If,[FileExists,objectPath],
             [FileNameSetNext,objectPath] 
             [IPress,Tool:Import]                        
-            [RoutineCall, LoadTextures]  
+            [RoutineCall, LoadTextures]    
         ]         
         [Note,[StrMerge,"\n\CFFEE00 Updated Subtool:    \CFFFFFF",objectName],,reportDuration]  
     , objectName, objectPath, subtoolCount]
+
 
     [VarSet,subtoolCount,0] 
     [VarSet,objectMemIndex,0] 
@@ -330,26 +336,36 @@ author: Daniel Grauer
 
             // import as Tool
             [If, importAsSubtool == 0,                                   
-                [RoutineCall, AddTool, objectName, objectPath]     
-            , 
-            // Import as Subtools  
+                [RoutineCall, AddTool, objectName, objectPath] 
+                //[RoutineCall, setOrigin] 
+                //[RoutineCall, setScale] 
+                // delete undo histroy after new tool has been added
+                [IPress,Edit:Tool:DelUH] 
+            ,
+
+                // import as subtool
                 [If, subtoolExists == -1, //subtoolExists (str:objectName/ -1: for no subtool match
-                    [RoutineCall, AddSubTool, objectName, objectPath]                
+                    [RoutineCall, AddSubTool, objectName, objectPath]  
+                    //[RoutineCall, setOrigin] 
+                    [IPress,Edit:Tool:DelUH]  
                 ,
+
                     //update subtools
                     [If, subtoolExists == objectName, 
                         [RoutineCall, UpdateSubTool, objectName, objectPath, subtoolCount]
-                    ,
+                    , //else
                         //does a exception exist?
-                        [Note,[StrMerge, "\n GoB subtool exception: ", subtoolExists, objectName],,reportDuration] 
+                        [Note,[StrMerge, "\n GoB subtool already exists: ", subtoolExists, objectName],,reportDuration] 
                     ]
-                ]                                      
+                ]
             ]
-    
-            [RoutineCall, setOrigin] 
+
+            //[RoutineCall, setOrigin] 
+            
             //next loop or exit if end of file
             [VarSet, subtoolCount, subtoolCount + 1]
             [VarSet, objectMemIndex, objectMemIndex + lineBytes]
+
             [If, objectMemIndex >= [MemGetSize, GoB_ObjectList_InputMem],
             
                 [IPress,Transform: Fit]

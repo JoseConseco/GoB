@@ -33,12 +33,15 @@ from bpy.types import Operator
 from bpy.props import EnumProperty
 from bpy.app.translations import pgettext_iface as iface_
 
+gob_version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
+
 def prefs():
     user_preferences = bpy.context.preferences
     return user_preferences.addons[__package__].preferences 
 
 def gob_init_os_paths():   
     isMacOS = False
+    useZSH = False
     import platform
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
@@ -47,6 +50,13 @@ def gob_init_os_paths():
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
+        # with macOS Catalina (10.15) apple switched from bash to zsh as default shell
+        if platform.mac_ver()[0] < str(10.15):
+            print("use bash")
+            useZSH = False
+        else: 
+            print("use zsh")
+            useZSH = True
         isMacOS = True
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
         PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
@@ -740,7 +750,7 @@ class GoB_OT_export(Operator):
     
 
     def exportGoZ(self, path, scn, obj, pathImport):      
-        PATH_PROJECT = os.path.join(prefs().project_path)  
+        PATH_PROJECT = os.path.join(prefs().project_path).replace("\\", "/")
         if prefs().performance_profiling: 
             print("\n", 100*"=")
             start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
@@ -762,43 +772,62 @@ class GoB_OT_export(Operator):
             #list size
             GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
             GoBVars.write(pack('<2B', 0x00, 0x00)) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write list size")
 
             # 0: fileExtension
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.GoZ')
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write fileExtension")
+
             # 1: textureFormat   
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.bmp') 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write textureFormat")
+
             # 2: diffTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S            
             name = prefs().import_diffuse_suffix
-            GoBVars.write(name.encode('utf-8'))    
+            GoBVars.write(name.encode('utf-8'))  
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write diffTexture suffix") 
+
             # 3: normTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_normal_suffix
-            GoBVars.write(name.encode('utf-8'))   
+            GoBVars.write(name.encode('utf-8')) 
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write normTexture suffix") 
+
             # 4: dispTexture suffix
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().import_displace_suffix
             GoBVars.write(name.encode('utf-8')) 
-            #5: GoB version   
-            GoBVars.write(pack('<2B',0x00, 0x53))   #.S         
-            for mod in addon_utils.modules():
-                if mod.bl_info.get('name') in {'GoB'}:
-                    version = str(mod.bl_info.get('version', (-1, -1, -1)))
-            GoBVars.write(version.encode('utf-8'))
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write dispTexture suffix")
+
+            #5: GoB version  
+            GoBVars.write(pack('<2B',0x00, 0x53))   #.S 
+            global gob_version
+            GoBVars.write(gob_version.encode('utf-8'))
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write GoB version")
+
             # 6: Project Path
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             name = prefs().project_path
             GoBVars.write(name.encode('utf-8')) 
-
+            if prefs().performance_profiling: 
+                start_time = profiler(start_time, "    variablesFile: Write Project Path")
             #end  
             GoBVars.write(pack('<B', 0x00))  #. 
-                 
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "variablesFile: Write GoB_variables")
 
 
-        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
-            
+        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:            
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
 
@@ -818,8 +847,7 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<Q', 1))
             goz_file.write(pack('<I', 0))           
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Object Name")
-            
+                start_time = profiler(start_time, "Write Object Name")            
 
             # --Vertices--
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
@@ -828,11 +856,9 @@ class GoB_OT_export(Operator):
             for vert in me.vertices:
                 modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
                 modif_coo = mat_transform @ modif_coo
-                goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))
-                
+                goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))                
             if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Vertices")
-            
+                start_time = profiler(start_time, "Write Vertices")            
 
             # --Faces--
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
@@ -849,10 +875,8 @@ class GoB_OT_export(Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
-
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write Faces")
-
 
             # --UVs--
             if me.uv_layers.active:
@@ -860,11 +884,18 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<4B', 0xA9, 0x61, 0x00, 0x00))
                 goz_file.write(pack('<I', len(me.polygons)*4*2*4+16))
                 goz_file.write(pack('<Q', len(me.polygons)))
+                
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    UV: polygones")
+                    
                 for face in me.polygons:
                     for i, loop_index in enumerate(face.loop_indices):
                         goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
                     if i == 2:
                         goz_file.write(pack('<2f', 0., 1.))
+                        
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    UV: write uvs")
                         
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write UV")
@@ -874,23 +905,34 @@ class GoB_OT_export(Operator):
             if me.vertex_colors.active:
                 vcoldata = me.vertex_colors.active.data # color[loop_id]
                 vcolArray = bytearray([0] * numVertices * 3)
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint: vcolArray")
                 #fill vcArray(vert_idx + rgb_offset) = color_xyz
                 for loop in me.loops: #in the end we will fill verts with last vert_loop color
                     vert_idx = loop.vertex_index
                     vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
                     vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
                     vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  loop")
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                 goz_file.write(pack('<I', numVertices*4+16))
                 goz_file.write(pack('<Q', numVertices))
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  write numVertices")
 
                 for i in range(0, len(vcolArray), 3):
                     goz_file.write(pack('<B', vcolArray[i+2]))
                     goz_file.write(pack('<B', vcolArray[i+1]))
                     goz_file.write(pack('<B', vcolArray[i]))
                     goz_file.write(pack('<B', 0))
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint: write color")
+
                 vcolArray.clear()
+                if prefs().performance_profiling: 
+                    start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
             
             if prefs().performance_profiling: 
                 start_time = profiler(start_time, "Write Polypaint")
@@ -1121,6 +1163,7 @@ class GoB_OT_export(Operator):
         try:    #install in GoZApps if missing     
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/")
             target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/")
+            print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/GoZ_Info.txt")
@@ -1134,8 +1177,7 @@ class GoB_OT_export(Operator):
                 GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
-                GoZ_Application.write("Blender")            
-
+                GoZ_Application.write("Blender")   
 
         #update project path
         #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
@@ -1161,18 +1203,24 @@ class GoB_OT_export(Operator):
         """         
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
         import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
+        try:
+            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
+                # IMPORT AS SUBTOOL
+                r = r.read().replace('\t', ' ') #fix indentations in source data
+                if self.as_tool:
+                    new_config = r.replace(import_as_subtool, import_as_tool)
+                # IMPORT AS TOOL
+                else:
+                    new_config = r.replace(import_as_tool, import_as_subtool)
+            
+            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
+                w.write(new_config)
+        except:            
+            #write blender path to GoZ configuration
+            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+            with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+                GoB_Config.write(f"PATH = \'{PATH_BLENDER}\'")   
 
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
-            # IMPORT AS SUBTOOL
-            r = r.read().replace('\t', ' ') #fix indentations in source data
-            if self.as_tool:
-                new_config = r.replace(import_as_subtool, import_as_tool)
-            # IMPORT AS TOOL
-            else:
-                new_config = r.replace(import_as_tool, import_as_subtool)
-
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
-            w.write(new_config)
             
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
@@ -1247,7 +1295,7 @@ class GoB_OT_export(Operator):
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
-                        ShowReport(self, [obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
+                        ShowReport(self, ["Object: ", obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
                     
                 else:
                     ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
@@ -1389,7 +1437,7 @@ def find_zbrush(self, context):
 
 class GoB_OT_GoZ_Installer_WIN(Operator):
     ''' Run the Pixologic GoZ installer 
-        /Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe'''
+        /Troubleshoot Help/GoZ_for_ZBrush_Installer'''
     bl_idname = "gob.install_goz" 
     bl_label = "Run GoZ Installer"
 
@@ -1399,9 +1447,14 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
         if not path_exists:
             bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
         else: 
-            path = prefs().zbrush_exec.strip("ZBrush.exe")            
-            GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
-            Popen([GOZ_INSTALLER], shell=True)     
+            if isMacOS:
+                path = prefs().zbrush_exec.strip("ZBrush.app")  
+                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
+                Popen(['open', '-a', GOZ_INSTALLER])  
+            else: 
+                path = prefs().zbrush_exec.strip("ZBrush.exe")           
+                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
+                Popen([GOZ_INSTALLER], shell=True)     
         return {'FINISHED'}
 
 
