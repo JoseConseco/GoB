@@ -50,6 +50,7 @@ def gob_init_os_paths():
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
+
         # with macOS Catalina (10.15) apple switched from bash to zsh as default shell
         if platform.mac_ver()[0] < str(10.15):
             print("use bash")
@@ -57,7 +58,8 @@ def gob_init_os_paths():
         else: 
             print("use zsh")
             useZSH = True
-        isMacOS = True
+
+        isMacOS = True        
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
         PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
     else:
@@ -71,9 +73,7 @@ def gob_init_os_paths():
 
 #create GoB paths when loading the addon
 isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
-
-print("PATH_GOZ: ", PATH_GOZ)
-
+#print("PATH_GOZ: ", PATH_GOZ)
 
 run_background_update = False
 icons = None
@@ -131,7 +131,8 @@ class GoB_OT_import(Operator):
         diff_texture, disp_texture, norm_texture =  None, None, None
         exists = os.path.isfile(pathFile)
         if not exists:
-            print(f'Cant read mesh from: {pathFile}. Skipping')
+            if prefs().debug_output:
+                print(f'Cant read mesh from: {pathFile}. Skipping')
             return
         
         with open(pathFile, 'rb') as goz_file:
@@ -457,8 +458,9 @@ class GoB_OT_import(Operator):
                             try:   # add vertices to vertex groups
                                 #if vg assignment failes the mesh has some bad elements
                                 vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
-                            except:
-                                print("polygroups to vertex groups exception: ", str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
+                            except Exception as e:
+                                print(e)
+                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
 
                         vertexGroupData.clear()
 
@@ -475,22 +477,23 @@ class GoB_OT_import(Operator):
                             try: # add faces to facemap
                                 if obj.data.polygons[i]:
                                     faceMap.add([i])     
-                            except:
-                                pass   
+                            except Exception as e:
+                                print(e)
+                                #pass   
 
                         facemapsData.clear()                    
                             
                     try:
                         #print("VGs: ", obj.vertex_groups.get('0'))
                         obj.vertex_groups.remove(obj.vertex_groups.get('0'))
-                    except:
-                        pass
+                    except Exception as e:
+                        print(e)
 
                     try:
                         #print("FMs: ", obj.face_maps.get('0'))
                         obj.face_maps.remove(obj.face_maps.get('0'))
-                    except:
-                        pass
+                    except Exception as e:
+                        print(e)
                     
 
                     if prefs().performance_profiling: 
@@ -585,7 +588,6 @@ class GoB_OT_import(Operator):
                 if prefs().import_material == 'POLYPAINT':                    
                     if prefs().import_polypaint_name in me.vertex_colors:                                                   
                         if len(obj.material_slots) > 0:
-                            #print("material slot: ", obj.material_slots[0])
                             if obj.material_slots[0].material is not None:
                                 objMat = obj.material_slots[0].material
                             else:
@@ -600,7 +602,6 @@ class GoB_OT_import(Operator):
                 # TEXTURES    
                 elif prefs().import_material == 'TEXTURES':                               
                     if len(obj.material_slots) > 0:
-                        #print("material slot: ", obj.material_slots[0])
                         if obj.material_slots[0].material is not None:
                             objMat = obj.material_slots[0].material
                         else:
@@ -665,6 +666,9 @@ class GoB_OT_import(Operator):
             if prefs().debug_output:
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
 
+        except Exception as e:
+            print(e)
+
         # Goz wipes this file before each export so it can be used to reset the import cache
         if not goz_obj_paths:
             if prefs().debug_output:
@@ -707,7 +711,8 @@ class GoB_OT_import(Operator):
 
     
     def invoke(self, context, event):  
-        #print("ACTION: ", self.action) 
+        if prefs().debug_output:
+            print("ACTION: ", self.action) 
         if self.action == 'MANUAL':
             run_import_manually()
             return{'FINISHED'}
@@ -718,14 +723,16 @@ class GoB_OT_import(Operator):
                 if run_background_update:
                     if bpy.app.timers.is_registered(run_import_periodically):
                         bpy.app.timers.unregister(run_import_periodically)
-                        print('Disabling GOZ background listener')
+                        if prefs().debug_output:
+                            print('Disabling GOZ background listener')
                     run_background_update = False
                 else:
                     if not bpy.app.timers.is_registered(run_import_periodically):
                         global cached_last_edition_time
                         cached_last_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
                         bpy.app.timers.register(run_import_periodically, persistent=True)
-                        print('Enabling GOZ background listener')
+                        if prefs().debug_output:
+                            print('Enabling GOZ background listener')
                     run_background_update = True
             else:
                 if run_background_update:
@@ -958,7 +965,8 @@ class GoB_OT_export(Operator):
                         for i in range(numVertices):                                
                             try:
                                 goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
-                            except:
+                            except Exception as e:
+                                print(e)
                                 goz_file.write(pack('<H', 65535))                                
                 
             if prefs().performance_profiling: 
@@ -967,11 +975,13 @@ class GoB_OT_export(Operator):
            
             # --Polygroups--     
             if not prefs().export_polygroups == 'NONE':  
-                #print("Export Polygroups: ", prefs().export_polygroups)
+                if prefs().debug_output:
+                    print("Export Polygroups: ", prefs().export_polygroups)
 
                 #Polygroups from Face Maps
                 if prefs().export_polygroups == 'FACE_MAPS':
-                    #print(obj.face_maps.items)
+                    if prefs().debug_output:
+                        print(obj.face_maps.items)
                     if obj.face_maps.items:                   
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
@@ -1040,16 +1050,13 @@ class GoB_OT_export(Operator):
                             #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
                             #"\ngroup:", group, "color:", groupColor[group] )                            
                             if len(face.vertices) == count:
-                                print(face.index, group, groupColor[group], count)
+                                #print(face.index, group, groupColor[group], count)
                                 goz_file.write(pack('<H', groupColor[group]))
                             else:
                                 goz_file.write(pack('<H', 65504))
                         else:
                             goz_file.write(pack('<H', 65504))
-
-                    #print(vgData)
-                    #print(groupColor)
-
+                            
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Write Polygroup Vertex groups")
 
@@ -1111,8 +1118,8 @@ class GoB_OT_export(Operator):
                 try:
                     diff_texture.save_render(name)
                     print(name)
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xc9, 0xaf, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1126,8 +1133,8 @@ class GoB_OT_export(Operator):
                 try:
                     disp_texture.save_render(name)
                     print(name)
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0xd9, 0xd6, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1140,9 +1147,9 @@ class GoB_OT_export(Operator):
                 name = PATH_PROJECT + obj.name + prefs().import_normal_suffix + fileExt                
                 try:
                     norm_texture.save_render(name)
-                    print(name)
-                except:
-                    pass
+                    print(name)                
+                except Exception as e:
+                    print(e)
                 name = name.encode('utf8')
                 goz_file.write(pack('<4B', 0x51, 0xc3, 0x00, 0x00))
                 goz_file.write(pack('<I', len(name)+16))
@@ -1191,6 +1198,9 @@ class GoB_OT_export(Operator):
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")   
 
+        except Exception as e:
+            print(e)
+
         #update project path
         #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
@@ -1227,7 +1237,8 @@ class GoB_OT_export(Operator):
             
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
                 w.write(new_config)
-        except:            
+        except Exception as e:
+            print(e)         
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
             with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
@@ -1319,8 +1330,9 @@ class GoB_OT_export(Operator):
         global cached_last_edition_time
         try:
             cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
-        except:
-            return
+        except Exception as e:
+            print(e)
+
         PATH_SCRIPT = os.path.join(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
 
         
@@ -1534,8 +1546,10 @@ def run_import_periodically():
                 print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
             gob_import_cache.clear()   #reset import cache
         else:
-            #print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
-            pass    
+            if prefs().debug_output:
+                print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
+            else:
+                pass    
         return prefs().import_timer       
     
     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
@@ -1648,7 +1662,8 @@ def apply_transformation(me, is_import=True):
             obj = bpy.context.active_object
             i, max = max_list_value(obj.dimensions)
             scale =  1 / prefs().zbrush_scale * max
-            #print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+            if prefs().debug_output:
+                print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
             
     #import
     if prefs().flip_up_axis:  # fixes bad mesh orientation for some people
@@ -1935,8 +1950,9 @@ def remove_internal_faces(obj):
         obj.select_set(state=True) 
         bpy.context.view_layer.objects.active = obj
         last_context = obj.mode
-        #print("last_context: ", last_context)
         last_select_mode = bpy.ops.mesh.select_mode
+        if prefs().debug_output:
+            print("last_context: ", last_context, last_select_mode)
 
         bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT')
         bpy.ops.mesh.select_mode(use_extend=True, 
