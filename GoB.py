@@ -310,12 +310,8 @@ class GoB_OT_import(Operator):
                         bm.free()    
                                            
                         me.update(calc_edges=True, calc_edges_loose=True)  
-                        if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "UV Map") 
-                    else:
-                        utag += 1
-                        cnt = unpack('<I', goz_file.read(4))[0] - 8
-                        goz_file.seek(cnt, 1)
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "UV Map") 
                         
 
                 # Polypainting
@@ -364,10 +360,6 @@ class GoB_OT_import(Operator):
                         polypaintData.clear()    
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
-                    else:
-                        utag += 1
-                        cnt = unpack('<I', goz_file.read(4))[0] - 8
-                        goz_file.seek(cnt, 1)
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
@@ -389,10 +381,6 @@ class GoB_OT_import(Operator):
 
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Mask")
-                    else:
-                        utag += 1
-                        cnt = unpack('<I', goz_file.read(4))[0] - 8
-                        goz_file.seek(cnt, 1)
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
@@ -400,50 +388,57 @@ class GoB_OT_import(Operator):
                         print("Import Polyroups: ", prefs().import_polygroups_to_vertexgroups, prefs().import_polygroups_to_facemaps)
                     
                     if prefs().import_polygroups:
-                        #wipe face maps before importing new ones due to random naming
-                        if prefs().import_polygroups_to_facemaps:              
-                            [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
+                        
+                        vertexGroupData = []
+                        polyGroupData = []
+                        facemapsData = []
+                        goz_file.seek(4, 1)
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces                                               
 
-                    vertexGroupData = []
-                    polyGroupData = []
-                    facemapsData = []
-                    goz_file.seek(4, 1)
-                    cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces
-                                        
-                    for i in range(cnt):    # faces of each polygroup      
-                        group = unpack('<H', goz_file.read(2))[0]
-                        r = random.random()
-                        g = random.random()
-                        b = random.random()
-                        #print(r,g, b)
+                        for i in range(cnt):    # faces of each polygroup      
+                            group = unpack('<H', goz_file.read(2))[0]   
+                            
+                            if prefs().import_polygroups_to_vertexgroups:
+                                vertexGroupData.append(group)
 
+                            if prefs().import_polygroups_to_facemaps:
+                                facemapsData.append(group)                            
+                            
+                            if prefs().import_material == 'POLYGROUPS':
+                                polyGroupData.append(group)            
+
+                        
                         # import polygroups to materials
-                        if prefs().import_material == 'POLYGROUPS':
-                            polyGroupData.append(group)
-                                
+                        if prefs().import_material == 'POLYGROUPS':                                
                             # create or define active material
-                            for group in set(polyGroupData): 
-                                if not str(group) in bpy.data.materials:
-                                    objMat = bpy.data.materials.new(str(group))
+                            #print(polyGroupData)
+                            for pgmat in set(polyGroupData):                                     
+                                r = random.random()
+                                g = random.random()
+                                b = random.random()
+                                #print("group: ", i, pgmat, r, g, b)  
+
+                                if not str(pgmat) in bpy.data.materials:
+                                    objMat = bpy.data.materials.new(str(pgmat))
                                 else:
-                                    objMat = bpy.data.materials[str(group)]                      
+                                    objMat = bpy.data.materials[str(pgmat)]                      
                                 
                                 # assign material to object
                                 if not objMat.name in obj.material_slots:
-                                    obj.data.materials.append(objMat)                                    
-                                   
+                                    obj.data.materials.append(objMat)
                                     objMat.use_nodes = True     
                                     rgba = (r, g, b, 1)
                                     objMat.diffuse_color = rgba
                                     objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba                                    
-
+                            
                             #add material to faces
-                            if obj.data.polygons[i]:
-                                slot = obj.material_slots[objMat.name].slot_index
-                                obj.data.polygons[i].material_index = slot    
+                            for i, pgmat in enumerate(polyGroupData):
+                                if obj.data.polygons[i]:
+                                    slot = obj.material_slots[bpy.data.materials[str(pgmat)].name].slot_index
+                                    obj.data.polygons[i].material_index = slot    
 
-                        polyGroupData.clear()                                    
-
+                        polyGroupData.clear()     
+                                                           
 
                         # import polygroups to vertex groups
                         if prefs().import_polygroups_to_vertexgroups:
@@ -464,8 +459,13 @@ class GoB_OT_import(Operator):
 
                         vertexGroupData.clear()
 
+
                         # import polygroups to face maps
-                        if prefs().import_polygroups_to_facemaps:
+                        if prefs().import_polygroups_to_facemaps:                                
+                            #wipe face maps before importing new ones due to random naming           
+                            [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
+
+                            print(facemapsData[:])
                             if group not in facemapsData:
                                 if str(group) in obj.face_maps:
                                     obj.face_maps.remove(obj.face_maps[str(group)])
@@ -479,22 +479,20 @@ class GoB_OT_import(Operator):
                                     faceMap.add([i])     
                             except Exception as e:
                                 print(e)
-                                #pass   
 
                         facemapsData.clear()                    
-                            
-                    try:
-                        #print("VGs: ", obj.vertex_groups.get('0'))
-                        obj.vertex_groups.remove(obj.vertex_groups.get('0'))
-                    except Exception as e:
-                        print(e)
+                                
+                        try:
+                            #print("VGs: ", obj.vertex_groups.get('0'))
+                            obj.vertex_groups.remove(obj.vertex_groups.get('0'))
+                        except Exception as e:
+                            print(e)
 
-                    try:
-                        #print("FMs: ", obj.face_maps.get('0'))
-                        obj.face_maps.remove(obj.face_maps.get('0'))
-                    except Exception as e:
-                        print(e)
-                    
+                        try:
+                            #print("FMs: ", obj.face_maps.get('0'))
+                            obj.face_maps.remove(obj.face_maps.get('0'))
+                        except Exception as e:
+                            print(e) 
 
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "Polyroups")
@@ -713,6 +711,7 @@ class GoB_OT_import(Operator):
     def invoke(self, context, event):  
         if prefs().debug_output:
             print("ACTION: ", self.action) 
+
         if self.action == 'MANUAL':
             run_import_manually()
             return{'FINISHED'}
@@ -1337,7 +1336,7 @@ class GoB_OT_export(Operator):
 
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not is_file_empty(PATH_OBJLIST) and not prefs().debug_dry_run: 
+        if not is_file_empty(PATH_OBJLIST) and not prefs().debug_dry_export: 
             path_exists = find_zbrush(self, context)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
@@ -1735,14 +1734,16 @@ def apply_transformation(me, is_import=True):
     return me, mat_transform
 
 
-def profiler(start_time=False, string=None): 
+def profiler(start_time=False, string=None):    
+
     elapsed = time.perf_counter()
     measured_time = elapsed-start_time
     if start_time:
-        print("{:.10f}".format(measured_time*1000), "ms << ", string)  
+        print("{:.6f}(ms) <<".format(measured_time*1000), string)  
     else:
         print("debug_profiling: ", string)  
         
+             
     start_time = time.perf_counter()
     return start_time  
 

@@ -341,8 +341,8 @@ class GoB_Preferences(AddonPreferences):
         default='Non-Color') # Default: Non-Color      
     
     # DEBUG
-    debug_dry_run: BoolProperty(
-        name="Debug: Dry Run",
+    debug_dry_export: BoolProperty(
+        name="Debug: Dry Export",
         description="Run export without launching Zbrush",
         default=False) # Default:False          
     performance_profiling: BoolProperty(
@@ -463,7 +463,7 @@ class GoB_Preferences(AddonPreferences):
     def draw_debug(self,box):
         box.use_property_split = True
         col = box.column(align=True) 
-        col.prop(self, 'debug_dry_run')
+        col.prop(self, 'debug_dry_export')
         col.prop(self, 'performance_profiling')
         col.prop(self, 'debug_output')
 
