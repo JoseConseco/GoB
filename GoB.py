@@ -310,8 +310,9 @@ class GoB_OT_import(Operator):
                         bm.free()    
                                            
                         me.update(calc_edges=True, calc_edges_loose=True)  
-                    if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "UV Map") 
+                        
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "UV Map") 
                         
 
                 # Polypainting
@@ -355,17 +356,16 @@ class GoB_OT_import(Operator):
 
                             bm.to_mesh(me)                        
                             me.update(calc_edges=True, calc_edges_loose=True)  
-                            bm.free()
-                            
+                            bm.free()                            
                         polypaintData.clear()    
+                        
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
                     if prefs().debug_output:
-                        print("Import Mask: ", prefs().import_mask)
-                    
+                        print("Import Mask: ", prefs().import_mask)                    
                     
                     if prefs().import_mask:
                         goz_file.seek(4, 1)
@@ -387,8 +387,7 @@ class GoB_OT_import(Operator):
                     if prefs().debug_output:
                         print("Import Polyroups: ", prefs().import_polygroups_to_vertexgroups, prefs().import_polygroups_to_facemaps)
                     
-                    if prefs().import_polygroups:
-                        
+                    if prefs().import_polygroups:                        
                         vertexGroupData = []
                         polyGroupData = []
                         facemapsData = []
@@ -397,16 +396,7 @@ class GoB_OT_import(Operator):
 
                         for i in range(cnt):    # faces of each polygroup      
                             group = unpack('<H', goz_file.read(2))[0]   
-                            
-                            if prefs().import_polygroups_to_vertexgroups:
-                                vertexGroupData.append(group)
-
-                            if prefs().import_polygroups_to_facemaps:
-                                facemapsData.append(group)                            
-                            
-                            if prefs().import_material == 'POLYGROUPS':
-                                polyGroupData.append(group)            
-
+                            polyGroupData.append(group)  
                         
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':                                
@@ -437,65 +427,36 @@ class GoB_OT_import(Operator):
                                     slot = obj.material_slots[bpy.data.materials[str(pgmat)].name].slot_index
                                     obj.data.polygons[i].material_index = slot    
 
-                        polyGroupData.clear()     
-                                                           
 
                         # import polygroups to vertex groups
                         if prefs().import_polygroups_to_vertexgroups:
-                            if group not in vertexGroupData: #this only works if mask is already there
+                            for group in set(polyGroupData):
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
                                 vg = obj.vertex_groups.new(name=str(group))
-                                vertexGroupData.append(group)
-                            else:
-                                vg = obj.vertex_groups[str(group)]
                             
-                            try:   # add vertices to vertex groups
-                                #if vg assignment failes the mesh has some bad elements
-                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
-                            except Exception as e:
-                                print(e)
-                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
-
-                        vertexGroupData.clear()
+                            # add vertices to vertex groups
+                            for i, pgmat in enumerate(polyGroupData):
+                                if obj.data.polygons[i]:
+                                    vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group    
 
 
                         # import polygroups to face maps
                         if prefs().import_polygroups_to_facemaps:                                
                             #wipe face maps before importing new ones due to random naming           
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
+                            for group in set(polyGroupData):
+                                faceMap = obj.face_maps.new(name=str(group))                            
 
-                            print(facemapsData[:])
-                            if group not in facemapsData:
-                                if str(group) in obj.face_maps:
-                                    obj.face_maps.remove(obj.face_maps[str(group)])
-                                faceMap = obj.face_maps.new(name=str(group))
-                                facemapsData.append(group)
-                            else:                        
-                                faceMap = obj.face_maps[str(group)] 
-
-                            try: # add faces to facemap
+                            # add faces to facemap
+                            for i, pgmat in enumerate(polyGroupData):
                                 if obj.data.polygons[i]:
-                                    faceMap.add([i])     
-                            except Exception as e:
-                                print(e)
+                                    faceMap.add([i])
+                                             
+                        polyGroupData.clear() 
 
-                        facemapsData.clear()                    
-                                
-                        try:
-                            #print("VGs: ", obj.vertex_groups.get('0'))
-                            obj.vertex_groups.remove(obj.vertex_groups.get('0'))
-                        except Exception as e:
-                            print(e)
-
-                        try:
-                            #print("FMs: ", obj.face_maps.get('0'))
-                            obj.face_maps.remove(obj.face_maps.get('0'))
-                        except Exception as e:
-                            print(e) 
-
-                    if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Polyroups")
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "Polyroups")
 
                 # End
                 elif tag == b'\x00\x00\x00\x00': 

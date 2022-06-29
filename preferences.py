@@ -407,7 +407,7 @@ class GoB_Preferences(AddonPreferences):
             pg_col.active=False
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
         pg_col.prop(self, 'import_polygroups_to_facemaps')
-        #col.prop(self, 'apply_facemaps_to_facesets')
+        #pg_col.prop(self, 'apply_facemaps_to_facesets')
         
         if self.import_material == 'TEXTURES':
             row = box.row(align=True)  
