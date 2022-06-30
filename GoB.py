@@ -255,6 +255,7 @@ class GoB_OT_import(Operator):
                         v.co  = mathutils.Vector(vertsData[i])  
                     bm.to_mesh(me)   
                     bm.free()
+                    #bmesh.update_edit_mesh(mesh, loop_triangles=True, destructive=True) #https://docs.blender.org/api/current/bmesh.html#bmesh.update_edit_mesh
 
                 #mesh has different vertex count
                 else:              
@@ -271,10 +272,14 @@ class GoB_OT_import(Operator):
                 start_time = profiler(start_time, "____transform mesh")      
            
             # update mesh data after transformations to fix normals 
-            me.validate(verbose=True)
-            me.update(calc_edges=True, calc_edges_loose=True) 
+            if prefs().debug_output:
+                me.validate(verbose=False) # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=validate#bpy.types.Mesh.validate
+                if prefs().performance_profiling:  
+                    start_time = profiler(start_time, "____validate mesh")
+            
+            me.update(calc_edges=True, calc_edges_loose=True)  # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=update#bpy.types.Mesh.update
             if prefs().performance_profiling:  
-                start_time = profiler(start_time, "____validate mesh")
+                start_time = profiler(start_time, "____update mesh")
             
             # make object active
             obj.select_set(state=True) 
@@ -396,7 +401,7 @@ class GoB_OT_import(Operator):
                             groupMask.add([faceIndex], 1.0-weight, 'ADD')  
 
                         if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "Mask")
+                            start_time = profiler(start_time, "Mask\n")
 
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00':   
@@ -406,14 +411,16 @@ class GoB_OT_import(Operator):
                     if prefs().import_polygroups:
                         polyGroupData = []
                         goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces                                               
-
+                        cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces  
+                        #""" 
                         for i in range(cnt):    # faces of each polygroup      
-                            group = unpack('<H', goz_file.read(2))[0]   
-                            polyGroupData.append(group)  
-                            
+                            #group = unpack('<H', goz_file.read(2))[0]   
+                            polyGroupData.append(unpack('<H', goz_file.read(2))[0]) 
+                        #"""
+                        #[polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                                                    
                         if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "____PG 0")
+                            start_time = profiler(start_time, "____create polyGroupData")
 
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':                                
@@ -460,7 +467,7 @@ class GoB_OT_import(Operator):
                             
                             if prefs().performance_profiling: 
                                 start_time = profiler(start_time, "____import_polygroups_to_facemaps")
-                            
+                       
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
                             # add materials to faces
