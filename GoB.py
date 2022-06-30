@@ -155,6 +155,8 @@ class GoB_OT_import(Operator):
                         print("name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
+                    if prefs().performance_profiling:  
+                        start_time = profiler(start_time, "____Unpack Mesh Name")
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
@@ -167,6 +169,9 @@ class GoB_OT_import(Operator):
                         co2 = unpack('<f', goz_file.read(4))[0]
                         co3 = unpack('<f', goz_file.read(4))[0]
                         vertsData.append((co1, co2, co3))
+
+                    if prefs().performance_profiling:  
+                        start_time = profiler(start_time, "____Unpack Mesh Vertices")
                 
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
@@ -185,6 +190,9 @@ class GoB_OT_import(Operator):
                             facesData.append((v4, v1, v2, v3))
                         else:
                             facesData.append((v1, v2, v3, v4))
+                    if prefs().performance_profiling:  
+                        start_time = profiler(start_time, "____Unpack Mesh Faces")
+
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
                     if prefs().debug_output:
@@ -223,7 +231,7 @@ class GoB_OT_import(Operator):
                 tag = goz_file.read(4)
                 
             if prefs().performance_profiling:  
-                start_time = profiler(start_time, "Unpack Mesh Data")
+                start_time = profiler(start_time, "Unpack Mesh Data\n")
 
             # create new object
             if not objName in bpy.data.objects.keys():
@@ -253,24 +261,32 @@ class GoB_OT_import(Operator):
                     me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
+            if prefs().performance_profiling:  
+                start_time = profiler(start_time, "____create mesh") 
            
             me,_ = apply_transformation(me, is_import=True)
             # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
-            me.transform(obj.matrix_world.inverted())         
+            me.transform(obj.matrix_world.inverted())   
+            if prefs().performance_profiling:  
+                start_time = profiler(start_time, "____transform mesh")      
            
             # update mesh data after transformations to fix normals 
             me.validate(verbose=True)
             me.update(calc_edges=True, calc_edges_loose=True) 
+            if prefs().performance_profiling:  
+                start_time = profiler(start_time, "____validate mesh")
             
             # make object active
             obj.select_set(state=True) 
             bpy.context.view_layer.objects.active = obj
+            if prefs().performance_profiling:  
+                start_time = profiler(start_time, "____make object active")
 
             vertsData.clear()
             facesData.clear()
 
             if prefs().performance_profiling:  
-                start_time = profiler(start_time, "Make Mesh import")
+                start_time = profiler(start_time, "Make Mesh import\n")
                 
             
             utag = 0
@@ -397,7 +413,7 @@ class GoB_OT_import(Operator):
                             polyGroupData.append(group)  
                             
                         if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "PG 0")
+                            start_time = profiler(start_time, "____PG 0")
 
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':                                
@@ -423,7 +439,7 @@ class GoB_OT_import(Operator):
                                     objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba
 
                             if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "import_material POLYGROUPS")
+                                start_time = profiler(start_time, "____import_material POLYGROUPS")
 
                         # import polygroups to vertex groups
                         if prefs().import_polygroups_to_vertexgroups:
@@ -433,7 +449,7 @@ class GoB_OT_import(Operator):
                                 vg = obj.vertex_groups.new(name=str(group))  
                             
                             if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "import_polygroups_to_vertexgroups")
+                                start_time = profiler(start_time, "____import_polygroups_to_vertexgroups")
                             
                         # import polygroups to face maps
                         if prefs().import_polygroups_to_facemaps:                                
@@ -443,11 +459,8 @@ class GoB_OT_import(Operator):
                                 faceMap = obj.face_maps.new(name=str(group)) 
                             
                             if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "import_polygroups_to_facemaps")
-                                
-                        if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "PG 2")
-
+                                start_time = profiler(start_time, "____import_polygroups_to_facemaps")
+                            
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
                             # add materials to faces
@@ -463,13 +476,13 @@ class GoB_OT_import(Operator):
                             if prefs().import_polygroups_to_vertexgroups: 
                                 vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')
                         
-                            if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "add data to polygones") 
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "____add data to polygones") 
 
                         polyGroupData.clear()
 
                         if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "Polyroups")
+                            start_time = profiler(start_time, "Polyroups\n")
 
                 # End
                 elif tag == b'\x00\x00\x00\x00': 
