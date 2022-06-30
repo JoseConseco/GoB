@@ -387,17 +387,18 @@ class GoB_OT_import(Operator):
                     if prefs().debug_output:
                         print("Import Polyroups: ", prefs().import_polygroups_to_vertexgroups, prefs().import_polygroups_to_facemaps)
                     
-                    if prefs().import_polygroups:                        
-                        vertexGroupData = []
+                    if prefs().import_polygroups:
                         polyGroupData = []
-                        facemapsData = []
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces                                               
 
                         for i in range(cnt):    # faces of each polygroup      
                             group = unpack('<H', goz_file.read(2))[0]   
                             polyGroupData.append(group)  
-                        
+                            
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "PG 0")
+
                         # import polygroups to materials
                         if prefs().import_material == 'POLYGROUPS':                                
                             # create or define active material
@@ -419,41 +420,53 @@ class GoB_OT_import(Operator):
                                     objMat.use_nodes = True     
                                     rgba = (r, g, b, 1)
                                     objMat.diffuse_color = rgba
-                                    objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba                                    
-                            
-                            #add material to faces
-                            for i, pgmat in enumerate(polyGroupData):
-                                if obj.data.polygons[i]:
-                                    slot = obj.material_slots[bpy.data.materials[str(pgmat)].name].slot_index
-                                    obj.data.polygons[i].material_index = slot    
+                                    objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba
 
+                            if prefs().performance_profiling: 
+                                start_time = profiler(start_time, "import_material POLYGROUPS")
 
                         # import polygroups to vertex groups
                         if prefs().import_polygroups_to_vertexgroups:
                             for group in set(polyGroupData):
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
-                                vg = obj.vertex_groups.new(name=str(group))
+                                vg = obj.vertex_groups.new(name=str(group))  
                             
-                            # add vertices to vertex groups
-                            for i, pgmat in enumerate(polyGroupData):
-                                if obj.data.polygons[i]:
-                                    vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group    
-
-
+                            if prefs().performance_profiling: 
+                                start_time = profiler(start_time, "import_polygroups_to_vertexgroups")
+                            
                         # import polygroups to face maps
                         if prefs().import_polygroups_to_facemaps:                                
                             #wipe face maps before importing new ones due to random naming           
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
                             for group in set(polyGroupData):
-                                faceMap = obj.face_maps.new(name=str(group))                            
+                                faceMap = obj.face_maps.new(name=str(group)) 
+                            
+                            if prefs().performance_profiling: 
+                                start_time = profiler(start_time, "import_polygroups_to_facemaps")
+                                
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "PG 2")
 
+                        #add data to polygones
+                        for i, pgmat in enumerate(polyGroupData):
+                            # add materials to faces
+                            if prefs().import_material == 'POLYGROUPS':
+                                slot = obj.material_slots[bpy.data.materials[str(pgmat)].name].slot_index
+                                obj.data.polygons[i].material_index = slot     
+                            
                             # add faces to facemap
-                            for i, pgmat in enumerate(polyGroupData):
-                                if obj.data.polygons[i]:
-                                    faceMap.add([i])
-                                             
-                        polyGroupData.clear() 
+                            if prefs().import_polygroups_to_facemaps:  
+                                faceMap.add([i])
+                            
+                            # add vertices to vertex groups  
+                            if prefs().import_polygroups_to_vertexgroups: 
+                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')
+                        
+                            if prefs().performance_profiling: 
+                                start_time = profiler(start_time, "add data to polygones") 
+
+                        polyGroupData.clear()
 
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polyroups")
