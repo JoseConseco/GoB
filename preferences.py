@@ -198,12 +198,12 @@ class GoB_Preferences(AddonPreferences):
     export_remove_internal_faces: BoolProperty(
         name="Delete non manifold faces",
         description="Delete non manifold faces",
-        default=True)
+        default=False)
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
         description="Merges vertices of mesh type 'SURFACE', 'CURVE', 'FONT', 'META' that are in a given distance to each other",
-        default=True)
+        default=False)
 
     export_merge_distance: FloatProperty(
         name="Vertex Merge Threshold",
