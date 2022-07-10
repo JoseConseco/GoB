@@ -122,21 +122,21 @@ class GoB_Preferences(AddonPreferences):
         name="ZBrush Scale",
         description="Target ZBrush Scale",
         default=2.0,
-        soft_min = 0.1,
+        soft_min = 0.01,
         min = 0,
         soft_max=10,
-        step=1.0,
-        precision=1,
+        step=0.01,
+        precision=2,
         subtype='FACTOR') 
     manual_scale: FloatProperty(
         name="Scale Factor",
         description="Change Scale in Zbrush",
         default=1.0,
-        soft_min = 0.1,
+        soft_min = 0.01,
         min = 0,
         soft_max=10,
-        step=1.0,
-        precision=1,
+        step=0.01,
+        precision=2,
         subtype='FACTOR') 
     flip_up_axis: BoolProperty(
         name="Flip up axis",
@@ -228,7 +228,7 @@ class GoB_Preferences(AddonPreferences):
         min = 0.1,
         soft_max=2.0,
         step=0.1,
-        precision=1,
+        precision=2,
         subtype='FACTOR') 
         
     import_material: EnumProperty(
