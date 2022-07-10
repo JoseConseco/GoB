@@ -181,7 +181,7 @@ class GoB_Preferences(AddonPreferences):
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')  
+        default='FACE_MAPS')  
 
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",
