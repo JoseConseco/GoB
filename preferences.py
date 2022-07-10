@@ -199,9 +199,9 @@ class GoB_Preferences(AddonPreferences):
         default=False) # Default: False
         
     export_remove_internal_faces: BoolProperty(
-        name="Delete non manifold faces",
-        description="Delete non manifold faces",
-        default=False) # Default: False
+        name="Delete internal non-manifold faces",
+        description="Delete non manifold faces where all edges have more than 2 face users",
+        default=True) # Default: True
 
     export_merge: BoolProperty(
         name="Merge Vertices of Curves, Surfaces, Fonts and Meta Objects",
