@@ -1857,7 +1857,7 @@ def restore_selection(selected, active):
 
 
 def remove_internal_faces(obj): 
-    "remove nonmanifold faces that are inside a mesh"  
+    "remove internal non-manifold faces where all edges have more than 2 face users https://github.com/JoseConseco/GoB/issues/210"  
     if prefs().export_remove_internal_faces:     
         #remember whats selected
         selected = bpy.context.selected_objects
@@ -1877,7 +1877,7 @@ def remove_internal_faces(obj):
                                 action='ENABLE')   
 
         bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.mesh.select_interior_faces()
+        bpy.ops.mesh.select_interior_faces() #Select faces where all edges have more than 2 face users
         bpy.ops.mesh.select_non_manifold(extend=True, 
                                         use_wire=True, 
                                         use_boundary=False, 
