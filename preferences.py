@@ -199,8 +199,8 @@ class GoB_Preferences(AddonPreferences):
         default=False) # Default: False
         
     export_remove_internal_faces: BoolProperty(
-        name="Delete internal non-manifold faces",
-        description="Delete non manifold faces where all edges have more than 2 face users",
+        name="Delete internal faces",
+        description="Delete internal faces where all edges have more than 2 face users",
         default=True) # Default: True
 
     export_merge: BoolProperty(
