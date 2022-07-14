@@ -1492,11 +1492,11 @@ class GOB_OT_Popup(Operator):
 
 
 def run_import_manually():     
+    global gob_import_cache  
+    gob_import_cache.clear() 
     window = bpy.context.window_manager.windows[0]
     context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)   
-    global gob_import_cache  
-    gob_import_cache.clear()
+    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)  
     
 
 def run_import_periodically():
