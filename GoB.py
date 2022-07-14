@@ -458,7 +458,7 @@ class GoB_OT_import(Operator):
                                 #if vg assignment failes the mesh has some bad elements
                                 vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
                             except:
-                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
+                                print("polygroups to vertex groups exception: ", str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
 
                         vertexGroupData.clear()
 
@@ -559,7 +559,7 @@ class GoB_OT_import(Operator):
                 
                 # Unknown tags
                 else: 
-                    if not prefs().debug_output:
+                    if prefs().debug_output:
                         print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
                         if prefs().debug_output:
@@ -981,12 +981,13 @@ class GoB_OT_export(Operator):
                                 if map.value < 0: #write default polygroup color
                                     goz_file.write(pack('<H', 65504))                                                                     
                                 else:
-                                    print(map.value, groupColor[map.value], numFaces)
+                                    print("face_maps PG color: ", map.value, groupColor[map.value], numFaces)
                                     goz_file.write(pack('<H', groupColor[map.value]))
 
                         else:   #assign empty when no face maps are found        
                             for face in me.polygons:   
-                                print(face.index)     
+                                if prefs().debug_output:
+                                    print("write empty color for PG face", face.index)     
                                 goz_file.write(pack('<H', 65504))
 
                     if prefs().performance_profiling: 
