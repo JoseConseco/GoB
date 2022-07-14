@@ -458,7 +458,7 @@ class GoB_OT_import(Operator):
                                 #if vg assignment failes the mesh has some bad elements
                                 vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')    # add vertices to vertex group
                             except:
-                                print(str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
+                                print("polygroups to vertex groups exception: ", str(group), "index out of range, check Mesh Integrity in ZBrush \nhttp://docs.pixologic.com/reference-guide/tool/polymesh/geometry/#mesh-integrity")
 
                         vertexGroupData.clear()
 
@@ -559,7 +559,7 @@ class GoB_OT_import(Operator):
                 
                 # Unknown tags
                 else: 
-                    if not prefs().debug_output:
+                    if prefs().debug_output:
                         print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
                         if prefs().debug_output:
@@ -705,12 +705,12 @@ class GoB_OT_import(Operator):
 
     
     def invoke(self, context, event):  
-        print("ACTION: ", self.action) 
+        #print("ACTION: ", self.action) 
         if self.action == 'MANUAL':
             run_import_manually()
             return{'FINISHED'}
-        else:
         
+        if self.action == 'AUTO':        
             if prefs().import_method == 'AUTOMATIC':
                 global run_background_update
                 if run_background_update:
@@ -720,17 +720,18 @@ class GoB_OT_import(Operator):
                     run_background_update = False
                 else:
                     if not bpy.app.timers.is_registered(run_import_periodically):
+                        global cached_last_edition_time
+                        cached_last_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
                         bpy.app.timers.register(run_import_periodically, persistent=True)
                         print('Enabling GOZ background listener')
                     run_background_update = True
-                return{'FINISHED'}
             else:
                 if run_background_update:
                     if bpy.app.timers.is_registered(run_import_periodically):
                         bpy.app.timers.unregister(run_import_periodically)
                         print('Disabling GOZ background listener')
                     run_background_update = False
-                return{'FINISHED'}
+            return{'FINISHED'}
 
 
 class GoB_OT_export(Operator):
@@ -980,12 +981,13 @@ class GoB_OT_export(Operator):
                                 if map.value < 0: #write default polygroup color
                                     goz_file.write(pack('<H', 65504))                                                                     
                                 else:
-                                    print(map.value, groupColor[map.value], numFaces)
+                                    print("face_maps PG color: ", map.value, groupColor[map.value], numFaces)
                                     goz_file.write(pack('<H', groupColor[map.value]))
 
                         else:   #assign empty when no face maps are found        
                             for face in me.polygons:   
-                                print(face.index)     
+                                if prefs().debug_output:
+                                    print("write empty color for PG face", face.index)     
                                 goz_file.write(pack('<H', 65504))
 
                     if prefs().performance_profiling: 
@@ -1489,15 +1491,15 @@ class GOB_OT_Popup(Operator):
         return {'FINISHED'}
 
 
-def run_import_manually():
-    global gob_import_cache
+def run_import_manually():     
+    global gob_import_cache  
+    gob_import_cache.clear() 
     window = bpy.context.window_manager.windows[0]
     context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
+    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)  
     
 
 def run_import_periodically():
-    global gob_import_cache
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
 
@@ -1512,13 +1514,11 @@ def run_import_periodically():
         return prefs().import_timer
     
     if file_edition_time > cached_last_edition_time:
-        cached_last_edition_time = file_edition_time           
-        # ! cant get proper context from timers for now. 
-        # Override context: https://developer.blender.org/T62074     
-        window = bpy.context.window_manager.windows[0]
-        context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
+        cached_last_edition_time = file_edition_time        
+        context = bpy.context.copy()
         bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
-    else:         
+    else:       
+        global gob_import_cache  
         if gob_import_cache:  
             if prefs().debug_output:   
                 print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
@@ -1534,7 +1534,6 @@ def run_import_periodically():
 
 
 def create_material_node(mat, diff=None, norm=None, disp=None):
-
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     """ for node in nodes:
