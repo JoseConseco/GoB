@@ -385,8 +385,8 @@ class GoB_Preferences(AddonPreferences):
         #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')  
         col = box.column(align=False)
-        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching
-        col.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
+        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching import method
+        col.prop(self, 'import_timer')          
         col.prop(self, 'import_material')  
         col.prop(self, 'import_mask')
         uv_row = col.row()
