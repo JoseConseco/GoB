@@ -128,7 +128,7 @@ class GoB_OT_import(Operator):
         vertsData = []
         facesData = []
         objMat = None
-        diff, disp, norm =  None, None, None
+        diff_texture, disp_texture, norm_texture =  None, None, None
         exists = os.path.isfile(pathFile)
         if not exists:
             print(f'Cant read mesh from: {pathFile}. Skipping')
@@ -517,7 +517,7 @@ class GoB_OT_import(Operator):
                     if not texture_name in bpy.data.textures:
                         txtDiff = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDiff.image = img            
-                    diff = img
+                    diff_texture = img
   
                 # Displacement Texture 
                 elif tag == b'\xd9\xd6\x00\x00':  
@@ -536,7 +536,7 @@ class GoB_OT_import(Operator):
                     if not texture_name in bpy.data.textures:
                         txtDisp = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtDisp.image = img
-                    disp = img
+                    disp_texture = img
 
                 # Normal Map Texture
                 elif tag == b'\x51\xc3\x00\x00':   
@@ -555,8 +555,8 @@ class GoB_OT_import(Operator):
                     if not texture_name in bpy.data.textures:
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtNorm.image = img
-                    norm = img
-                    print(norm)
+                    norm_texture = img
+                    print(norm_texture)
                 
                 # Unknown tags
                 else: 
@@ -595,7 +595,7 @@ class GoB_OT_import(Operator):
                             objMat = bpy.data.materials.new(objName)
                             obj.data.materials.append(objMat)
 
-                        create_material_node(objMat, diff, norm, disp) 
+                        create_material_node(objMat, diff_texture, norm_texture, disp_texture) 
 
                 # TEXTURES    
                 elif prefs().import_material == 'TEXTURES':                               
@@ -611,7 +611,7 @@ class GoB_OT_import(Operator):
                         obj.data.materials.append(objMat)
                     
                     print("create material node:", objMat)
-                    create_material_node(objMat, diff, norm, disp)  
+                    create_material_node(objMat, diff_texture, norm_texture, disp_texture)  
 
 
             if prefs().performance_profiling: 
@@ -1071,10 +1071,10 @@ class GoB_OT_export(Operator):
                         start_time = profiler(start_time, "Write Polygroup materials") 
                     
 
-            # Diff, disp and norm maps
-            diff = 0
-            disp = 0
-            norm = 0
+            # Diff, disp_texture and norm_texture maps
+            diff_texture = None
+            disp_texture = None
+            norm_texture = None
 
             for mat in obj.material_slots:
                 if mat.name:
@@ -1086,11 +1086,11 @@ class GoB_OT_export(Operator):
                             if node.type in {'TEX_IMAGE'} and node.image:
                                 #print("IMAGES: ", node.image.name, node.image)	
                                 if (prefs().import_diffuse_suffix) in node.image.name:                                
-                                    diff = node.image
+                                    diff_texture = node.image
                                 if (prefs().import_displace_suffix) in node.image.name:
-                                    disp = node.image
+                                    disp_texture = node.image
                                 if (prefs().import_normal_suffix) in node.image.name:
-                                    norm = node.image
+                                    norm_texture = node.image
                             elif node.type in {'GROUP'}:
                                 print("group found")
             user_file_fomrat = scn.render.image_settings.file_format
@@ -1098,10 +1098,10 @@ class GoB_OT_export(Operator):
             #fileExt = ('.' + prefs().texture_format.lower())
             fileExt = '.bmp'
 
-            if diff:
+            if diff_texture:
                 name = PATH_PROJECT + obj.name + prefs().import_diffuse_suffix + fileExt
                 try:
-                    diff.save_render(name)
+                    diff_texture.save_render(name)
                     print(name)
                 except:
                     pass
@@ -1111,12 +1111,12 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))                
                 if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "Write diff")
+                    start_time = profiler(start_time, "Write diff_texture")
 
-            if disp:
+            if disp_texture:
                 name = PATH_PROJECT + obj.name + prefs().import_displace_suffix + fileExt
                 try:
-                    disp.save_render(name)
+                    disp_texture.save_render(name)
                     print(name)
                 except:
                     pass
@@ -1126,12 +1126,12 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))                
                 if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "Write disp")
+                    start_time = profiler(start_time, "Write disp_texture")
 
-            if norm:
+            if norm_texture:
                 name = PATH_PROJECT + obj.name + prefs().import_normal_suffix + fileExt                
                 try:
-                    norm.save_render(name)
+                    norm_texture.save_render(name)
                     print(name)
                 except:
                     pass
@@ -1141,7 +1141,7 @@ class GoB_OT_export(Operator):
                 goz_file.write(pack('<Q', 1))
                 goz_file.write(pack('%ss' % len(name), name))                
                 if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "Write norm")
+                    start_time = profiler(start_time, "Write norm_texture")
             # end
             goz_file.write(pack('16x'))
             
@@ -1535,16 +1535,14 @@ def run_import_periodically():
     return prefs().import_timer
 
 
-def create_material_node(mat, diff=None, norm=None, disp=None):
+def create_material_node(mat, diff_texture=None, norm_texture=None, disp_texture=None):
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
-    """ for node in nodes:
-        print(node) """
     output_node = nodes.get('Material Output') 
     shader_node = nodes.get('Principled BSDF')   
-    print("\n\nmain nodes: ", shader_node, output_node)
 
     if prefs().import_material == 'TEXTURES': 
+        #create main shader node if it does not exist to attach the texture nodes to
         if not output_node:      
             output_node = nodes.new('ShaderNodeOutputMaterial')
             output_node.location = 400, 400 
@@ -1553,38 +1551,34 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
             shader_node.location = 0, 400 
         mat.node_tree.links.new(output_node.inputs[0], shader_node.outputs[0])
 
-        # Diffiuse Color Map
-        diffTxt_node = False  
-        for node in nodes: 
-            try:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == diff.name:
-                    print("diff node.image.name: ", node.image.name)
-                    diffTxt_node = node
-            except:
-                print("no albedo texture found: ", node)
-                
-        if not diffTxt_node:    
+        # create the Diffiuse Color nodes
+        diffTxt_node = None  
+        image_node = nodes.get('Image Texture')  
+        if not image_node or not image_node.label == 'Diffuse Color Map': 
             diffTxt_node = nodes.new('ShaderNodeTexImage')
             diffTxt_node.location = -700, 500  
-            diffTxt_node.image = diff
+            diffTxt_node.image = diff_texture
             diffTxt_node.label = 'Diffuse Color Map'            
-            if diff:
+            if diff_texture:
                 diffTxt_node.image.colorspace_settings.name = prefs().import_diffuse_colorspace
             mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
 
-        # Normal Map
-        #if norm:
-        norm_node = False  
-        normTxt_node = False 
+
+
+
+        # create the Normal Map nodes
+        norm_node = None  
+        normTxt_node = None 
         for node in nodes:
             try:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm.name:
-                    print("norm node.image.name: ", node.image.name)
+                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm_texture.name:
+                    print("norm_texture node.image.name: ", node.image.name)
                     normTxt_node = node
                 if node.bl_idname == 'ShaderNodeNormalMap':
                     norm_node = node
             except:
-                print("no normal texture found: ", node)
+                #print("no normal texture found: ", node)
+                pass
 
         if not norm_node:
             norm_node = nodes.new('ShaderNodeNormalMap')
@@ -1597,24 +1591,26 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
         if not normTxt_node:    
             normTxt_node = nodes.new('ShaderNodeTexImage')
             normTxt_node.location = -700, -100  
-            normTxt_node.image = norm
+            normTxt_node.image = norm_texture
             normTxt_node.label = 'Normal Map'          
-            if norm:
+            if norm_texture:
                 normTxt_node.image.colorspace_settings.name = prefs().import_normal_colorspace
             mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
 
-        # Displacement Map
-        #if disp:
-        disp_node = False  
-        dispTxt_node = False  
+
+
+        # create the Displacement nodes
+        disp_node = None  
+        dispTxt_node = None  
         for node in nodes:
             try:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp.name:
+                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp_texture.name:
                     dispTxt_node = node     
                 if node.bl_idname == 'ShaderNodeDisplacement':
                     disp_node = node
             except:
-                print("no displacement texture found: ", node)
+                #print("no displacement texture found: ", node)
+                pass
 
         if not disp_node:
             disp_node = nodes.new('ShaderNodeDisplacement')
@@ -1624,14 +1620,14 @@ def create_material_node(mat, diff=None, norm=None, disp=None):
         if not dispTxt_node:    
             dispTxt_node = nodes.new('ShaderNodeTexImage')
             dispTxt_node.location = -700, 200  
-            dispTxt_node.image = disp
+            dispTxt_node.image = disp_texture
             dispTxt_node.label = 'Displacement Map'
-            if disp:
+            if disp_texture:
                 dispTxt_node.image.colorspace_settings.name = prefs().import_displace_colorspace
             mat.node_tree.links.new(disp_node.inputs[0], dispTxt_node.outputs[0])
 
     if prefs().import_material == 'POLYPAINT':
-        vcol_node = False   
+        vcol_node = None   
         for node in nodes:
             if node.bl_idname == 'ShaderNodeVertexColor':
                 if prefs().import_polypaint_name in node.layer_name:
