@@ -1540,6 +1540,7 @@ def create_material_node(mat, diff_texture=None, norm_texture=None, disp_texture
     nodes = mat.node_tree.nodes
     output_node = nodes.get('Material Output') 
     shader_node = nodes.get('Principled BSDF')   
+    
 
     if prefs().import_material == 'TEXTURES': 
         #create main shader node if it does not exist to attach the texture nodes to
@@ -1550,36 +1551,26 @@ def create_material_node(mat, diff_texture=None, norm_texture=None, disp_texture
             shader_node = nodes.new('ShaderNodeBsdfPrincipled')
             shader_node.location = 0, 400 
         mat.node_tree.links.new(output_node.inputs[0], shader_node.outputs[0])
+ 
+
+        node_cache = []
+        for node in nodes:  
+            node_cache.append(node.label) 
 
         # create the Diffiuse Color nodes
-        diffTxt_node = None  
-        image_node = nodes.get('Image Texture')  
-        if not image_node or not image_node.label == 'Diffuse Color Map': 
-            diffTxt_node = nodes.new('ShaderNodeTexImage')
-            diffTxt_node.location = -700, 500  
-            diffTxt_node.image = diff_texture
-            diffTxt_node.label = 'Diffuse Color Map'            
+        #image_node = nodes.get('Image Texture') # ShaderNodeTexImage Image Texture
+        diff_texture_node = None 
+        if not 'Diffuse Color Map' in node_cache: 
+            diff_texture_node = nodes.new('ShaderNodeTexImage')
+            diff_texture_node.location = -700, 500  
+            diff_texture_node.image = diff_texture
+            diff_texture_node.label = 'Diffuse Color Map'            
             if diff_texture:
-                diffTxt_node.image.colorspace_settings.name = prefs().import_diffuse_colorspace
-            mat.node_tree.links.new(shader_node.inputs[0], diffTxt_node.outputs[0])
+                diff_texture_node.image.colorspace_settings.name = prefs().import_diffuse_colorspace
+            mat.node_tree.links.new(shader_node.inputs[0], diff_texture_node.outputs[0])
 
-
-
-
-        # create the Normal Map nodes
-        norm_node = None  
-        normTxt_node = None 
-        for node in nodes:
-            try:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == norm_texture.name:
-                    print("norm_texture node.image.name: ", node.image.name)
-                    normTxt_node = node
-                if node.bl_idname == 'ShaderNodeNormalMap':
-                    norm_node = node
-            except:
-                #print("no normal texture found: ", node)
-                pass
-
+        # create the Normal Map nodes   
+        norm_node = nodes.get('Normal Map')     # ShaderNodeNormalMap Normal Map     
         if not norm_node:
             norm_node = nodes.new('ShaderNodeNormalMap')
             norm_node.location = -300, -100  
@@ -1588,43 +1579,34 @@ def create_material_node(mat, diff_texture=None, norm_texture=None, disp_texture
         else:
             mat.node_tree.links.new(shader_node.inputs[22], norm_node.outputs[0])
 
-        if not normTxt_node:    
-            normTxt_node = nodes.new('ShaderNodeTexImage')
-            normTxt_node.location = -700, -100  
-            normTxt_node.image = norm_texture
-            normTxt_node.label = 'Normal Map'          
+        norm_texture_node = None 
+        if not 'Normal Map' in node_cache:   
+            norm_texture_node = nodes.new('ShaderNodeTexImage')
+            norm_texture_node.location = -700, -100  
+            norm_texture_node.image = norm_texture
+            norm_texture_node.label = 'Normal Map'          
             if norm_texture:
-                normTxt_node.image.colorspace_settings.name = prefs().import_normal_colorspace
-            mat.node_tree.links.new(norm_node.inputs[1], normTxt_node.outputs[0])
+                norm_texture_node.image.colorspace_settings.name = prefs().import_normal_colorspace
+            mat.node_tree.links.new(norm_node.inputs[1], norm_texture_node.outputs[0])
 
-
-
-        # create the Displacement nodes
-        disp_node = None  
-        dispTxt_node = None  
-        for node in nodes:
-            try:
-                if node.bl_idname == 'ShaderNodeTexImage' and node.image.name == disp_texture.name:
-                    dispTxt_node = node     
-                if node.bl_idname == 'ShaderNodeDisplacement':
-                    disp_node = node
-            except:
-                #print("no displacement texture found: ", node)
-                pass
-
+        # create the Displacement nodes   
+        disp_node = nodes.get('Displacement')   # ShaderNodeDisplacement Displacement       
         if not disp_node:
             disp_node = nodes.new('ShaderNodeDisplacement')
             disp_node.location = -300, 200  
         mat.node_tree.links.new(output_node.inputs[2], disp_node.outputs[0])
-        
-        if not dispTxt_node:    
-            dispTxt_node = nodes.new('ShaderNodeTexImage')
-            dispTxt_node.location = -700, 200  
-            dispTxt_node.image = disp_texture
-            dispTxt_node.label = 'Displacement Map'
+
+        disp_texture_node = None                
+        if not 'Displacement Map' in node_cache:     
+            disp_texture_node = nodes.new('ShaderNodeTexImage')
+            disp_texture_node.location = -700, 200  
+            disp_texture_node.image = disp_texture
+            disp_texture_node.label = 'Displacement Map'
             if disp_texture:
-                dispTxt_node.image.colorspace_settings.name = prefs().import_displace_colorspace
-            mat.node_tree.links.new(disp_node.inputs[0], dispTxt_node.outputs[0])
+                disp_texture_node.image.colorspace_settings.name = prefs().import_displace_colorspace
+            mat.node_tree.links.new(disp_node.inputs[0], disp_texture_node.outputs[0])
+    
+
 
     if prefs().import_material == 'POLYPAINT':
         vcol_node = None   
