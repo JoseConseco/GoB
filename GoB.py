@@ -1652,7 +1652,6 @@ def apply_transformation(me, is_import=True):
                     (0.0, 1.0, 0.0, 0.0),
                     (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
-                me.flip_normals()
             else:
                 #export
                 mat_transform = mathutils.Matrix([
@@ -1686,7 +1685,7 @@ def apply_transformation(me, is_import=True):
                     (0.0, -1.0, 0.0, 0.0),
                     (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
-                me.flip_normals()
+                #me.flip_normals()
             else:
                 #export
                 mat_transform = mathutils.Matrix([
