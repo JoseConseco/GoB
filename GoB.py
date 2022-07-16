@@ -1647,7 +1647,7 @@ def apply_transformation(me, is_import=True):
         if prefs().flip_forward_axis:
             if is_import:
                 me.transform(mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
+                    (1.0, 0.0, 0.0, 0.0),
                     (0.0, 0.0, -1.0, 0.0),
                     (0.0, 1.0, 0.0, 0.0),
                     (0.0, 0.0, 0.0, 1.0)]) * scale
@@ -1681,7 +1681,7 @@ def apply_transformation(me, is_import=True):
             if is_import:
                 #import
                 me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
+                    (-1.0, 0.0, 0.0, 0.0),
                     (0.0, 0.0, -1.0, 0.0),
                     (0.0, -1.0, 0.0, 0.0),
                     (0.0, 0.0, 0.0, 1.0)]) * scale
