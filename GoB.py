@@ -384,7 +384,7 @@ class GoB_OT_import(Operator):
 
                         for faceIndex in range(cnt):
                             weight = unpack('<H', goz_file.read(2))[0] / 65535                          
-                            groupMask.add([faceIndex], 1.-weight, 'ADD')  
+                            groupMask.add([faceIndex], 1.0-weight, 'ADD')  
 
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Mask")
@@ -893,9 +893,9 @@ class GoB_OT_export(Operator):
                     
                 for face in me.polygons:
                     for i, loop_index in enumerate(face.loop_indices):
-                        goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1. - uv_layer.data[loop_index].uv.y))
+                        goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1.0 - uv_layer.data[loop_index].uv.y))
                     if i == 2:
-                        goz_file.write(pack('<2f', 0., 1.))
+                        goz_file.write(pack('<2f', 0.0, 1.0))
                         
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    UV: write uvs")
@@ -1647,69 +1647,68 @@ def apply_transformation(me, is_import=True):
         if prefs().flip_forward_axis:
             if is_import:
                 me.transform(mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
+                    (1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, -1.0, 0.0),
+                    (0.0, 1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
-                me.flip_normals()
             else:
                 #export
                 mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
+                    (1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, 1.0, 0.0),
+                    (0.0, -1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
         else:
             if is_import:
                 #import
                 me.transform(mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
+                    (-1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, 1.0, 0.0),
+                    (0.0, 1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
+                    (-1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, 1.0, 0.0),
+                    (0.0, 1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
     else:
         if prefs().flip_forward_axis:            
             if is_import:
                 #import
                 me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
+                    (-1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, -1.0, 0.0),
+                    (0.0, -1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
-                me.flip_normals()
+                #me.flip_normals()
             else:
                 #export
                 mat_transform = mathutils.Matrix([
-                    (-1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
+                    (-1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, -1.0, 0.0),
+                    (0.0, -1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
         else:
             if is_import:
                 #import
                 me.transform(mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., 1., 0.),
-                    (0., -1., 0., 0.),
-                    (0., 0., 0., 1.)]) * scale
+                    (1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, 1.0, 0.0),
+                    (0.0, -1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * scale
                 )
             else:
                 #export
                 mat_transform = mathutils.Matrix([
-                    (1., 0., 0., 0.),
-                    (0., 0., -1., 0.),
-                    (0., 1., 0., 0.),
-                    (0., 0., 0., 1.)]) * (1/scale)
+                    (1.0, 0.0, 0.0, 0.0),
+                    (0.0, 0.0, -1.0, 0.0),
+                    (0.0, 1.0, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
     return me, mat_transform
 
 
