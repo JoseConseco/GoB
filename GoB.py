@@ -551,7 +551,6 @@ class GoB_OT_import(Operator):
                         txtNorm = bpy.data.textures.new(texture_name, 'IMAGE')
                         txtNorm.image = img
                     norm_texture = img
-                    print(norm_texture)
                 
                 # Unknown tags
                 else: 
