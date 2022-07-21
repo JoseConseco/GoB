@@ -341,8 +341,8 @@ class GoB_Preferences(AddonPreferences):
         default='Non-Color') # Default: Non-Color      
     
     # DEBUG
-    debug_dry_run: BoolProperty(
-        name="Debug: Dry Run",
+    debug_dry_export: BoolProperty(
+        name="Debug: Dry Export",
         description="Run export without launching Zbrush",
         default=False) # Default:False          
     performance_profiling: BoolProperty(
@@ -385,8 +385,8 @@ class GoB_Preferences(AddonPreferences):
         #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')  
         col = box.column(align=False)
-        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching
-        col.prop(self, 'import_timer')           #TODO: disabled: some bugs when switching
+        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching import method
+        col.prop(self, 'import_timer')          
         col.prop(self, 'import_material')  
         col.prop(self, 'import_mask')
         uv_row = col.row()
@@ -407,7 +407,7 @@ class GoB_Preferences(AddonPreferences):
             pg_col.active=False
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
         pg_col.prop(self, 'import_polygroups_to_facemaps')
-        #col.prop(self, 'apply_facemaps_to_facesets')
+        #pg_col.prop(self, 'apply_facemaps_to_facesets')
         
         if self.import_material == 'TEXTURES':
             row = box.row(align=True)  
@@ -463,7 +463,7 @@ class GoB_Preferences(AddonPreferences):
     def draw_debug(self,box):
         box.use_property_split = True
         col = box.column(align=True) 
-        col.prop(self, 'debug_dry_run')
+        col.prop(self, 'debug_dry_export')
         col.prop(self, 'performance_profiling')
         col.prop(self, 'debug_output')
 
