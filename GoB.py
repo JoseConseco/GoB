@@ -453,7 +453,7 @@ class GoB_OT_import(Operator):
                             for group in set(polyGroupData):
                                 if str(group) in obj.vertex_groups:
                                     obj.vertex_groups.remove(obj.vertex_groups[str(group)])
-                                vg = obj.vertex_groups.new(name=str(group))  
+                                obj.vertex_groups.new(name=str(group))  
                             
                             if prefs().performance_profiling: 
                                 start_time = profiler(start_time, "____import_polygroups_to_vertexgroups")
@@ -463,7 +463,7 @@ class GoB_OT_import(Operator):
                             #wipe face maps before importing new ones due to random naming           
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
                             for group in set(polyGroupData):
-                                faceMap = obj.face_maps.new(name=str(group)) 
+                                obj.face_maps.new(name=str(group)) 
                             
                             if prefs().performance_profiling: 
                                 start_time = profiler(start_time, "____import_polygroups_to_facemaps")
@@ -476,12 +476,13 @@ class GoB_OT_import(Operator):
                                 obj.data.polygons[i].material_index = slot     
                             
                             # add faces to facemap
-                            if prefs().import_polygroups_to_facemaps:  
-                                faceMap.add([i])
+                            if prefs().import_polygroups_to_facemaps:
+                                obj.face_maps.get(str(pgmat)).add([i])
                             
                             # add vertices to vertex groups  
                             if prefs().import_polygroups_to_vertexgroups: 
-                                vg.add(list(me.polygons[i].vertices), 1.0, 'ADD')
+                                vertexGroup = obj.vertex_groups.get(str(pgmat))
+                                vertexGroup.add(list(me.polygons[i].vertices), 1.0, 'ADD')
                         
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "____add data to polygones") 
