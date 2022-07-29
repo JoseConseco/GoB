@@ -1863,31 +1863,19 @@ def apply_modifiers(obj):
     if prefs().performance_profiling: 
         start_time = profiler(start_time, "Make Mesh bmesh")
 
-    #join traingles only that are result of ngon triangulation  
-    #""" 
-    tf = [f for f in bm.faces if len(f.edges) > 4]   
-    for f in enumerate(tf):
-        result = bmesh.ops.triangulate(bm, faces=tf)
+    #join traingles only that are result of ngon triangulation 
+    facesTotTriangulate = [f for f in bm.faces if len(f.edges) > 4]   
+    if facesTotTriangulate:
+        result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate) 
         bmesh.ops.join_triangles(
             bm, faces = result['faces'], 
             cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
             cmp_vcols=False,cmp_materials=False, 
             angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
-    #"""
 
 
-    if prefs().performance_profiling: 
-        start_time = profiler(start_time, "Make Mesh triangulate1")
-    #""" 
-    for f in bm.faces:
-        if len(f.edges) > 4:
-            result = bmesh.ops.triangulate(bm, faces=[f])
-            bmesh.ops.join_triangles(
-                bm, faces= result['faces'], 
-                cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-                cmp_vcols=False,cmp_materials=False, 
-                angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
-    #"""
+        if prefs().performance_profiling: 
+            start_time = profiler(start_time, "Make Mesh triangulate1")
     
     if prefs().performance_profiling: 
         start_time = profiler(start_time, "Make Mesh triangulate2")
