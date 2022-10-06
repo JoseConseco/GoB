@@ -1388,6 +1388,7 @@ class GoB_OT_export_button(Operator):
     @classmethod
     def poll(cls, context):              
         return export_poll(cls, context)
+        #return bpy.context.selected_objects
 
     def invoke(self, context, event):
         as_tool = event.shift or event.ctrl or event.alt
@@ -1789,23 +1790,23 @@ def clone_as_object(obj, link=True):
         bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
     return obj_clone
 
-
 def export_poll(cls, context):
     if context.selected_objects: 
         numFaces = 0     
-        depsgraph = bpy.context.evaluated_depsgraph_get() 
         # if one or less objects, check amount of faces. 0 faces will crash zbrush!
         if len(context.selected_objects) <= 1: 
             active_object = context.active_object 
             if active_object.type in {'MESH'}:
                 if not prefs().export_modifiers == 'IGNORE':
-                    if active_object.mode in {'EDIT'}: 
-                        numFaces = len(active_object.data.polygons)
-                    else:                        
-                        object_eval = active_object.evaluated_get(depsgraph)
-                        numFaces = len(object_eval.data.polygons)                    
+                    for modifier in active_object.modifiers:
+                        print(modifier.name)
+                        if modifier.name in ['Skin'] and modifier.show_viewport:
+                            numFaces = True   
+                        else:
+                            numFaces = len(active_object.data.polygons)               
                 else: 
                     numFaces = len(active_object.data.polygons)
+
             elif active_object.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:   
                 #allow export for non mesh type objects
                 numFaces = True
@@ -1814,16 +1815,20 @@ def export_poll(cls, context):
         else: 
             for obj in context.selected_objects:                   
                 if obj.type in {'MESH'}:
-                    if not prefs().export_modifiers == 'IGNORE': 
-                        object_eval = obj.evaluated_get(depsgraph)
-                        if len(object_eval.data.polygons):
-                            numFaces = len(object_eval.data.polygons)                         
+                    if not prefs().export_modifiers == 'IGNORE':                         
+                        numFaces = len(obj.data.polygons)  
+                        for modifier in obj.modifiers:
+                            print(modifier.name)
+                            if modifier.name in ['Skin'] and modifier.show_viewport:
+                                numFaces = True   
+                            else:
+                                numFaces = len(obj.data.polygons) 
                     else: 
-                        if len(obj.data.polygons):
-                            numFaces = len(obj.data.polygons)
+                        numFaces = len(obj.data.polygons)
                 elif obj.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:  
                     #allow export for non mesh type objects
                     numFaces = True
+                    
         return numFaces
 
 
