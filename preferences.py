@@ -86,24 +86,24 @@ class GoB_Preferences(AddonPreferences):
 
     import platform
     if platform.system() == 'Windows':
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
+        PATH_GOZ_PIXOLOGIC = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
     elif platform.system() == 'Darwin': #osx
-        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ_PIXOLOGIC = os.path.join("/Users/Shared/Pixologic")
     else:
-        PATH_GOZ = False
+        PATH_GOZ_PIXOLOGIC = False
 
     pixologoc_path: StringProperty(
         name="Pixologic Public Path", 
         description="Set public pixologic path, this needs to be a valid folder which zbrush accesses." 
                     "By default this folder is on the windows system drive under C:\\Users\\Public\\Pixologic", 
         subtype='DIR_PATH',
-        default=PATH_GOZ)  # Default: PATH_GOZ  
+        default=PATH_GOZ_PIXOLOGIC)  # Default: PATH_GOZ_PIXOLOGIC  
 
     project_path: StringProperty(
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{GoB.PATH_GOZ}/GoZProjects/Default/"))
+        default=os.path.join(f"{GoB.PATH_GOZ_PIXOLOGIC}/GoZProjects/Default/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",

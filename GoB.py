@@ -48,7 +48,8 @@ def gob_init_os_paths():
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
+        PATH_GOZ_PIXOLOGIC = os.path.join(os.environ['PUBLIC'] , "Pixologic")
+        PATH_GOZ_MAXON = os.path.join(os.environ['PUBLIC'] , "Maxon")
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
@@ -63,19 +64,22 @@ def gob_init_os_paths():
 
         isMacOS = True        
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ_PIXOLOGIC = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ_MAXON = os.path.join("/Users/Shared/Maxon")
     else:
         print("GoB Unkonwn System: ", platform.system())
-        PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+        PATH_GOZ_PIXOLOGIC = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+        PATH_GOZ_MAXON = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = os.path.join(bpy.app.binary_path)
-    return isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER
+    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON
 
 
 #create GoB paths when loading the addon
-isMacOS, PATH_GOZ, PATH_GOB, PATH_BLENDER = gob_init_os_paths()
-#print("PATH_GOZ: ", PATH_GOZ)
+isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON = gob_init_os_paths()
+print("PATH_GOZ_PIXOLOGIC: ", PATH_GOZ_PIXOLOGIC)
+print("PATH_GOZ_MAXON: ", PATH_GOZ_MAXON)
 
 run_background_update = False
 icons = None
@@ -681,19 +685,19 @@ class GoB_OT_import(Operator):
              
 
     def execute(self, context):   
-        global PATH_GOZ
+        global PATH_GOZ_PIXOLOGIC     
         if prefs().custom_pixologoc_path:
-            PATH_GOZ =  prefs().pixologoc_path  
+            PATH_GOZ_PIXOLOGIC =  prefs().pixologoc_path  
 
         global gob_import_cache
         goz_obj_paths = []
         try:
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
-                goz_obj_paths.extend(f'{line.strip()}.GoZ' for line in goz_objs_list)
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
+                for line in goz_objs_list:
+                    goz_obj_paths.append(line.strip() + '.GoZ')
         except PermissionError:
             if prefs().debug_output:
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
-
         except Exception as e:
             print(e)
 
@@ -817,7 +821,7 @@ class GoB_OT_export(Operator):
         fileExt = '.bmp'
         
         # write GoB ZScript variables
-        variablesFile = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")      
+        variablesFile = os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZProjects/Default/GoB_variables.zvr")      
         with open(variablesFile, 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
@@ -1238,38 +1242,38 @@ class GoB_OT_export(Operator):
         return
 
     def execute(self, context): 
-        global PATH_GOZ  
+        global PATH_GOZ_PIXOLOGIC  
         if prefs().custom_pixologoc_path:
-            PATH_GOZ =  prefs().pixologoc_path  
+            PATH_GOZ_PIXOLOGIC =  prefs().pixologoc_path  
         PATH_PROJECT = os.path.join(prefs().project_path)
-        PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        PATH_OBJLIST = os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_ObjectList.txt")
         #setup GoZ configuration
-        #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
+        #if not os.path.isfile(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/")
-            target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/")
+            target_GoZ_Info = os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/")
             print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
             source_GoZ_Info = os.path.join(f"{PATH_GOB}/Blender/GoZ_Info.txt")
-            target_GoZ_Info = os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt")
+            target_GoZ_Info = os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
 
             #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+            #if not os.path.isfile(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Config.txt"): 
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
                 blender_path = os.path.join(f"{PATH_BLENDER}").replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")   
 
         except Exception as e:
             print(e)
 
         #update project path
-        #print("Project file path: ", f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
-        with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
+        #print("Project file path: ", f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_ProjectPath.txt")
+        with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
@@ -1292,7 +1296,7 @@ class GoB_OT_export(Operator):
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
         import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
         try:
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_Config.txt")) as r:
                 # IMPORT AS SUBTOOL
                 r = r.read().replace('\t', ' ') #fix indentations in source data
                 if self.as_tool:
@@ -1301,13 +1305,13 @@ class GoB_OT_export(Operator):
                 else:
                     new_config = r.replace(import_as_tool, import_as_subtool)
             
-            with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_Config.txt"), "w") as w:
                 w.write(new_config)
         except Exception as e:
             print(e)         
             #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+            #if not os.path.isfile(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Config.txt"): 
+            with open(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
                 GoB_Config.write(f"PATH = \'{PATH_BLENDER}\'")   
 
             
@@ -1358,7 +1362,7 @@ class GoB_OT_export(Operator):
                     if len(mesh_tmp.polygons):
                         print("GoB: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
                         self.escape_object_name(obj_tmp)
-                        self.exportGoZ(PATH_GOZ, context.scene, obj_tmp, f'{PATH_PROJECT}')
+                        self.exportGoZ(PATH_GOZ_PIXOLOGIC, context.scene, obj_tmp, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj_tmp.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')                        
@@ -1379,7 +1383,7 @@ class GoB_OT_export(Operator):
                         process_linked_objects(obj) 
                         remove_internal_faces(obj)
                         self.escape_object_name(obj)
-                        self.exportGoZ(PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                        self.exportGoZ(PATH_GOZ_PIXOLOGIC, context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
@@ -1590,7 +1594,7 @@ def run_import_periodically():
     global cached_last_edition_time, run_background_update
 
     try:
-        file_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
+        file_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ_PIXOLOGIC}/GoZBrush/GoZ_ObjectList.txt"))
         #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)
