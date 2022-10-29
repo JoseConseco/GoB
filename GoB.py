@@ -84,11 +84,11 @@ gob_import_cache = []
 
 def draw_goz_buttons(self, context):
     global run_background_update, icons
-    icons = preview_collections["main"]
-
     if context.region.alignment == 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
+
+        icons = preview_collections["main"]
 
         if prefs().show_button_text:
             row.operator(operator="scene.gob_export_button", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
@@ -644,16 +644,15 @@ class GoB_OT_import(Operator):
              
 
     def execute(self, context):   
-        global PATH_GOZ     
+        global PATH_GOZ
         if prefs().custom_pixologoc_path:
             PATH_GOZ =  prefs().pixologoc_path  
 
         global gob_import_cache
-        goz_obj_paths = []             
+        goz_obj_paths = []
         try:
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
-                for line in goz_objs_list:
-                    goz_obj_paths.append(line.strip() + '.GoZ')
+                goz_obj_paths.extend(f'{line.strip()}.GoZ' for line in goz_objs_list)
         except PermissionError:
             if prefs().debug_output:
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
@@ -666,7 +665,7 @@ class GoB_OT_import(Operator):
             if prefs().debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
-        
+
         currentContext = 'OBJECT'
         if context.object:
             if context.object.mode != 'EDIT':
@@ -677,7 +676,7 @@ class GoB_OT_import(Operator):
                 bpy.ops.object.mode_set(mode=currentContext) 
             else:
                 bpy.ops.object.mode_set(mode='OBJECT')
-        
+
 
         if prefs().performance_profiling: 
             print("\n", 100*"=")
@@ -685,20 +684,20 @@ class GoB_OT_import(Operator):
             print(100*"-") 
 
         wm = context.window_manager
-        wm.progress_begin(0,100)   
+        wm.progress_begin(0,100)
         step =  100  / len(goz_obj_paths)
-        for i, ztool_path in enumerate(goz_obj_paths):              
-            if not ztool_path in gob_import_cache:
+        for i, ztool_path in enumerate(goz_obj_paths):          
+            if ztool_path not in gob_import_cache:
                 gob_import_cache.append(ztool_path)
-                self.GoZit(ztool_path)            
-            wm.progress_update(step * i)               
+                self.GoZit(ztool_path)
+            wm.progress_update(step * i)
         wm.progress_end()
         if prefs().debug_output:
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
-            
+
         if prefs().performance_profiling:  
             start_time = profiler(start_time, "GoB: Total Import Time")            
-            print(100*"=")       
+            print(100*"=")
         return{'FINISHED'}
 
     
@@ -709,8 +708,8 @@ class GoB_OT_import(Operator):
         if self.action == 'MANUAL':
             run_import_manually()
             return{'FINISHED'}
-        
-        if self.action == 'AUTO':        
+
+        if self.action == 'AUTO':    
             if prefs().import_method == 'AUTOMATIC':
                 global run_background_update
                 if run_background_update:
@@ -727,12 +726,11 @@ class GoB_OT_import(Operator):
                         if prefs().debug_output:
                             print('Enabling GOZ background listener')
                     run_background_update = True
-            else:
-                if run_background_update:
-                    if bpy.app.timers.is_registered(run_import_periodically):
-                        bpy.app.timers.unregister(run_import_periodically)
-                        print('Disabling GOZ background listener')
-                    run_background_update = False
+            elif run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
             return{'FINISHED'}
 
 

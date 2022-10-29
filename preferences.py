@@ -383,32 +383,29 @@ class GoB_Preferences(AddonPreferences):
         # GoB Import Options
         box.use_property_split = True
         #box = layout.box() 
-        box.label(text='GoB Import Options', icon='IMPORT')  
+        box.label(text='GoB Import Options', icon='IMPORT')
         col = box.column(align=False)
         #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching import method
-        col.prop(self, 'import_timer')          
-        col.prop(self, 'import_material')  
+        col.prop(self, 'import_timer')
+        col.prop(self, 'import_material')
         col.prop(self, 'import_mask')
         uv_row = col.row()
         uv_row.prop(self, 'import_uv')
         if self.import_uv:
             uv_row.prop(self, 'import_uv_name', text='') 
- 
-        pp_row = col.row()      
-        pp_row.prop(self, 'import_polypaint')   
+
+        pp_row = col.row()
+        pp_row.prop(self, 'import_polypaint')
         if self.import_polypaint:
             pp_row.prop(self, 'import_polypaint_name', text='') 
 
-        col.prop(self, 'import_polygroups')  
+        col.prop(self, 'import_polygroups')
         pg_col = col.column()
-        if self.import_polygroups:
-            pg_col.active=True  
-        else:            
-            pg_col.active=False
+        pg_col.active = bool(self.import_polygroups)
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
         pg_col.prop(self, 'import_polygroups_to_facemaps')
         #pg_col.prop(self, 'apply_facemaps_to_facesets')
-        
+
         if self.import_material == 'TEXTURES':
             row = box.row(align=True)  
             row.prop(self, 'import_diffuse_suffix') 
@@ -440,22 +437,23 @@ class GoB_Preferences(AddonPreferences):
 
     def draw_update(self, box):
         box.use_property_split = True
-        box.label(text='Addon Updater', icon='PREFERENCES')  
-        col  = box.column(align=False) 
+        box.label(text='Addon Updater', icon='PREFERENCES')
+        col  = box.column(align=False)
         row  = col.row(align=False)         
-        
+
         row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
-        if addon_updater.update_available == False:
-            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
-        elif addon_updater.update_available == None:
-            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
-        elif addon_updater.update_available == 'TIME':
+        if addon_updater.update_available == 'TIME':
             row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
+        elif addon_updater.update_available == False:
+            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
+        elif addon_updater.update_available is None:
+            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
         else:
-            row.operator("au.check_updates", text="Download: " + addon_updater.update_available, icon='COLORSET_03_VEC').button_input = 1
-        
-        col  = box.column(align=False)              
-        col.prop(self, 'repository_path') 
+            row.operator("au.check_updates", text=f"Download: {addon_updater.update_available}", icon='COLORSET_03_VEC').button_input = 1
+
+
+        col  = box.column(align=False)
+        col.prop(self, 'repository_path')
         #col.prop(self, 'zip_filename')
         col.prop(self, 'experimental_versions') 
         #col.prop(self, 'auto_update_check')
