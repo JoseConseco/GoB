@@ -1790,52 +1790,76 @@ def clone_as_object(obj, link=True):
         bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
     return obj_clone
 
-def export_poll(cls, context):
-    if context.selected_objects: 
-        numFaces = 0     
-        # if one or less objects, check amount of faces. 0 faces will crash zbrush!
-        if len(context.selected_objects) <= 1: 
-            active_object = context.active_object 
-            if active_object.type in {'MESH'}:
-                if not prefs().export_modifiers == 'IGNORE':
-                    for modifier in active_object.modifiers:
-                        print(modifier.name)
-                        if modifier.name in ['Skin'] and modifier.show_viewport:
-                            numFaces = True   
-                        else:
-                            numFaces = len(active_object.data.polygons)               
-                else: 
-                    numFaces = len(active_object.data.polygons)
+def export_poll(cls, context):  
+    # do not allow export if no objects are selected
+    if not context.selected_objects:
+        return False
 
-            elif active_object.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:   
-                #allow export for non mesh type objects
-                numFaces = True
-       
-        #check for faces in multiple objects, only if any face in object is found
-        else: 
-            for obj in context.selected_objects:                   
-                if obj.type in {'MESH'}:
-                    if not prefs().export_modifiers == 'IGNORE':                         
+    # if one object is selected, check amount of faces. 0 faces will crash zbrush!
+    elif len(context.selected_objects) == 1: 
+        if context.active_object:
+            obj = context.active_object 
+            export = check_export_candidates(obj)
+    
+    #check for faces in multiple objects, only if any face in object is found exporting should be allowed
+    else: 
+        exportCandidates=[]
+        for obj in context.selected_objects:  
+            candidate = check_export_candidates(obj)
+            exportCandidates.append(candidate)
+        #print("any export candidate: ", any(exportCandidates))
+        export = any(exportCandidates)
+    return export
+
+
+def check_export_candidates(obj):
+    if obj.type in {'MESH'}:
+        if not prefs().export_modifiers in {'IGNORE'}:
+            if obj.modifiers:
+                for modifier in obj.modifiers:
+                    if modifier.name in ['Skin'] and modifier.show_viewport:
+                        # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
+                        #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
+                        return modifier.name in ['Skin'] and modifier.show_viewport   
+                    else:
+                        # when the modifier is disabled
+                        # - it can result in 0 faces which makes it a invalid export candidate
+                        # - or in a mesh with more than 0 faces which makes it a valid export candidate
                         numFaces = len(obj.data.polygons)  
-                        for modifier in obj.modifiers:
-                            print(modifier.name)
-                            if modifier.name in ['Skin'] and modifier.show_viewport:
-                                numFaces = True   
-                            else:
-                                numFaces = len(obj.data.polygons) 
-                    else: 
-                        numFaces = len(obj.data.polygons)
-                elif obj.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:  
-                    #allow export for non mesh type objects
-                    numFaces = True
-                    
-        return numFaces
+                        #print("numfaces 1, no skin modifiers: ", numFaces) 
+            else: 
+                #when a object has no modifiers, enable export when it has polygons, else disable
+                numFaces = len(obj.data.polygons) 
+                #print("numfaces 2 modifier export: ", numFaces)
+        
+        else:
+            # if export modifers is Ignored check for polygons to identify export candidates
+            numFaces = len(obj.data.polygons)
+            #print("numfaces 3 no active modifiers: ", numFaces)
+
+    elif obj.type in {'SURFACE', 'FONT', 'META'}: 
+        #allow export for non mesh type objects 
+        return True
+
+    elif obj.type in {'CURVE'}:     
+        # curves will only get faces when they have a bevel or a extrude            
+        if bpy.data.curves[obj.name].bevel_depth or bpy.data.curves[obj.name].extrude:
+            #print(bpy.data.curves[obj.name].bevel_depth , bpy.data.curves[obj.name].extrude)
+            return True
+        else:
+            return False
+            
+    else:
+        print("GoB: unsupported object type:", obj.type)  
+        return False
+    
+    return numFaces
 
 
 def apply_modifiers(obj):  
     if prefs().performance_profiling: 
         print("\\_____")
-        start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
+        start_time = profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
         start_total_time = profiler(time.perf_counter(), "")
 
     depsgraph = bpy.context.evaluated_depsgraph_get()  
