@@ -84,11 +84,11 @@ gob_import_cache = []
 
 def draw_goz_buttons(self, context):
     global run_background_update, icons
-    icons = preview_collections["main"]
-
     if context.region.alignment == 'RIGHT':
         layout = self.layout
         row = layout.row(align=True)
+
+        icons = preview_collections["main"]
 
         if prefs().show_button_text:
             row.operator(operator="scene.gob_export_button", text="Export", emboss=True, icon_value=icons["GOZ_SEND"].icon_id)
@@ -644,16 +644,15 @@ class GoB_OT_import(Operator):
              
 
     def execute(self, context):   
-        global PATH_GOZ     
+        global PATH_GOZ
         if prefs().custom_pixologoc_path:
             PATH_GOZ =  prefs().pixologoc_path  
 
         global gob_import_cache
-        goz_obj_paths = []             
+        goz_obj_paths = []
         try:
             with open(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
-                for line in goz_objs_list:
-                    goz_obj_paths.append(line.strip() + '.GoZ')
+                goz_obj_paths.extend(f'{line.strip()}.GoZ' for line in goz_objs_list)
         except PermissionError:
             if prefs().debug_output:
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
@@ -666,7 +665,7 @@ class GoB_OT_import(Operator):
             if prefs().debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
-        
+
         currentContext = 'OBJECT'
         if context.object:
             if context.object.mode != 'EDIT':
@@ -677,7 +676,7 @@ class GoB_OT_import(Operator):
                 bpy.ops.object.mode_set(mode=currentContext) 
             else:
                 bpy.ops.object.mode_set(mode='OBJECT')
-        
+
 
         if prefs().performance_profiling: 
             print("\n", 100*"=")
@@ -685,20 +684,20 @@ class GoB_OT_import(Operator):
             print(100*"-") 
 
         wm = context.window_manager
-        wm.progress_begin(0,100)   
+        wm.progress_begin(0,100)
         step =  100  / len(goz_obj_paths)
-        for i, ztool_path in enumerate(goz_obj_paths):              
-            if not ztool_path in gob_import_cache:
+        for i, ztool_path in enumerate(goz_obj_paths):          
+            if ztool_path not in gob_import_cache:
                 gob_import_cache.append(ztool_path)
-                self.GoZit(ztool_path)            
-            wm.progress_update(step * i)               
+                self.GoZit(ztool_path)
+            wm.progress_update(step * i)
         wm.progress_end()
         if prefs().debug_output:
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
-            
+
         if prefs().performance_profiling:  
             start_time = profiler(start_time, "GoB: Total Import Time")            
-            print(100*"=")       
+            print(100*"=")
         return{'FINISHED'}
 
     
@@ -709,8 +708,8 @@ class GoB_OT_import(Operator):
         if self.action == 'MANUAL':
             run_import_manually()
             return{'FINISHED'}
-        
-        if self.action == 'AUTO':        
+
+        if self.action == 'AUTO':    
             if prefs().import_method == 'AUTOMATIC':
                 global run_background_update
                 if run_background_update:
@@ -727,12 +726,11 @@ class GoB_OT_import(Operator):
                         if prefs().debug_output:
                             print('Enabling GOZ background listener')
                     run_background_update = True
-            else:
-                if run_background_update:
-                    if bpy.app.timers.is_registered(run_import_periodically):
-                        bpy.app.timers.unregister(run_import_periodically)
-                        print('Disabling GOZ background listener')
-                    run_background_update = False
+            elif run_background_update:
+                if bpy.app.timers.is_registered(run_import_periodically):
+                    bpy.app.timers.unregister(run_import_periodically)
+                    print('Disabling GOZ background listener')
+                run_background_update = False
             return{'FINISHED'}
 
 
@@ -1790,52 +1788,76 @@ def clone_as_object(obj, link=True):
         bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
     return obj_clone
 
-def export_poll(cls, context):
-    if context.selected_objects: 
-        numFaces = 0     
-        # if one or less objects, check amount of faces. 0 faces will crash zbrush!
-        if len(context.selected_objects) <= 1: 
-            active_object = context.active_object 
-            if active_object.type in {'MESH'}:
-                if not prefs().export_modifiers == 'IGNORE':
-                    for modifier in active_object.modifiers:
-                        print(modifier.name)
-                        if modifier.name in ['Skin'] and modifier.show_viewport:
-                            numFaces = True   
-                        else:
-                            numFaces = len(active_object.data.polygons)               
-                else: 
-                    numFaces = len(active_object.data.polygons)
+def export_poll(cls, context):  
+    # do not allow export if no objects are selected
+    if not context.selected_objects:
+        return False
 
-            elif active_object.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:   
-                #allow export for non mesh type objects
-                numFaces = True
-       
-        #check for faces in multiple objects, only if any face in object is found
-        else: 
-            for obj in context.selected_objects:                   
-                if obj.type in {'MESH'}:
-                    if not prefs().export_modifiers == 'IGNORE':                         
+    # if one object is selected, check amount of faces. 0 faces will crash zbrush!
+    elif len(context.selected_objects) == 1: 
+        if context.active_object:
+            obj = context.active_object 
+            export = check_export_candidates(obj)
+    
+    #check for faces in multiple objects, only if any face in object is found exporting should be allowed
+    else: 
+        exportCandidates=[]
+        for obj in context.selected_objects:  
+            candidate = check_export_candidates(obj)
+            exportCandidates.append(candidate)
+        #print("any export candidate: ", any(exportCandidates))
+        export = any(exportCandidates)
+    return export
+
+
+def check_export_candidates(obj):
+    if obj.type in {'MESH'}:
+        if not prefs().export_modifiers in {'IGNORE'}:
+            if obj.modifiers:
+                for modifier in obj.modifiers:
+                    if modifier.name in ['Skin'] and modifier.show_viewport:
+                        # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
+                        #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
+                        return modifier.name in ['Skin'] and modifier.show_viewport   
+                    else:
+                        # when the modifier is disabled
+                        # - it can result in 0 faces which makes it a invalid export candidate
+                        # - or in a mesh with more than 0 faces which makes it a valid export candidate
                         numFaces = len(obj.data.polygons)  
-                        for modifier in obj.modifiers:
-                            print(modifier.name)
-                            if modifier.name in ['Skin'] and modifier.show_viewport:
-                                numFaces = True   
-                            else:
-                                numFaces = len(obj.data.polygons) 
-                    else: 
-                        numFaces = len(obj.data.polygons)
-                elif obj.type in {'CURVE', 'SURFACE', 'FONT', 'META'}:  
-                    #allow export for non mesh type objects
-                    numFaces = True
-                    
-        return numFaces
+                        #print("numfaces 1, no skin modifiers: ", numFaces) 
+            else: 
+                #when a object has no modifiers, enable export when it has polygons, else disable
+                numFaces = len(obj.data.polygons) 
+                #print("numfaces 2 modifier export: ", numFaces)
+        
+        else:
+            # if export modifers is Ignored check for polygons to identify export candidates
+            numFaces = len(obj.data.polygons)
+            #print("numfaces 3 no active modifiers: ", numFaces)
+
+    elif obj.type in {'SURFACE', 'FONT', 'META'}: 
+        #allow export for non mesh type objects 
+        return True
+
+    elif obj.type in {'CURVE'}:     
+        # curves will only get faces when they have a bevel or a extrude            
+        if bpy.data.curves[obj.name].bevel_depth or bpy.data.curves[obj.name].extrude:
+            #print(bpy.data.curves[obj.name].bevel_depth , bpy.data.curves[obj.name].extrude)
+            return True
+        else:
+            return False
+            
+    else:
+        print("GoB: unsupported object type:", obj.type)  
+        return False
+    
+    return numFaces
 
 
 def apply_modifiers(obj):  
     if prefs().performance_profiling: 
         print("\\_____")
-        start_time = profiler(time.perf_counter(), "Export Profiling: " + obj.name)
+        start_time = profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
         start_total_time = profiler(time.perf_counter(), "")
 
     depsgraph = bpy.context.evaluated_depsgraph_get()  
