@@ -1815,10 +1815,11 @@ def check_export_candidates(obj):
         if not prefs().export_modifiers in {'IGNORE'}:
             if obj.modifiers:
                 for modifier in obj.modifiers:
-                    if modifier.name in ['Skin'] and modifier.show_viewport:
+                    geometry_modifiers=['Skin', 'Screw']
+                    if modifier.name in geometry_modifiers and modifier.show_viewport:
                         # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
                         #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
-                        return modifier.name in ['Skin'] and modifier.show_viewport   
+                        return modifier.name in geometry_modifiers and modifier.show_viewport   
                     else:
                         # when the modifier is disabled
                         # - it can result in 0 faces which makes it a invalid export candidate
