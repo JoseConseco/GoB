@@ -48,7 +48,7 @@ classes = (
     GoB.GoB_OT_import,
     GoB.GoB_OT_export,
     GoB.GoB_OT_export_button,
-    GoB.GoB_OT_GoZ_Installer_WIN,
+    GoB.GoB_OT_GoZ_Installer,
     GoB.GOB_OT_Popup,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
