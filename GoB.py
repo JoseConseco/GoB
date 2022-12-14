@@ -1839,9 +1839,9 @@ def check_export_candidates(obj):
         #allow export for non mesh type objects 
         return True
 
-    elif obj.type in {'CURVE'}:     
+    elif obj.type in {'CURVE'}:  
         # curves will only get faces when they have a bevel or a extrude            
-        if bpy.data.curves[obj.name].bevel_depth or bpy.data.curves[obj.name].extrude:
+        if bpy.data.curves[obj.data.name].bevel_depth or bpy.data.curves[obj.data.name].extrude:
             #print(bpy.data.curves[obj.name].bevel_depth , bpy.data.curves[obj.name].extrude)
             return True
         else:
