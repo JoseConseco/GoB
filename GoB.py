@@ -1451,7 +1451,7 @@ def find_zbrush(self, context):
     return self.is_found
 
 
-class GoB_OT_GoZ_Installer_WIN(Operator):
+class GoB_OT_GoZ_Installer(Operator):
     ''' Run the Pixologic GoZ installer 
         /Troubleshoot Help/GoZ_for_ZBrush_Installer'''
     bl_idname = "gob.install_goz" 
@@ -1459,10 +1459,7 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
 
     def execute(self, context):
         """Install GoZ for Windows""" 
-        path_exists = find_zbrush(self, context)
-        if not path_exists:
-            bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
-        else: 
+        if path_exists := find_zbrush(self, context):
             if isMacOS:
                 path = prefs().zbrush_exec.strip("ZBrush.app")  
                 GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
@@ -1470,7 +1467,9 @@ class GoB_OT_GoZ_Installer_WIN(Operator):
             else: 
                 path = prefs().zbrush_exec.strip("ZBrush.exe")           
                 GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
-                Popen([GOZ_INSTALLER], shell=True)     
+                Popen([GOZ_INSTALLER], shell=True)
+        else:
+            bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
         return {'FINISHED'}
 
 
@@ -1840,16 +1839,17 @@ def check_export_candidates(obj):
         #allow export for non mesh type objects 
         return True
 
-    elif obj.type in {'CURVE'}:     
+    elif obj.type in {'CURVE'}:  
         # curves will only get faces when they have a bevel or a extrude            
-        if bpy.data.curves[obj.name].bevel_depth or bpy.data.curves[obj.name].extrude:
+        if bpy.data.curves[obj.data.name].bevel_depth or bpy.data.curves[obj.data.name].extrude:
             #print(bpy.data.curves[obj.name].bevel_depth , bpy.data.curves[obj.name].extrude)
             return True
         else:
             return False
             
     else:
-        print("GoB: unsupported object type:", obj.type)  
+        if prefs().debug_output:
+            print("GoB: unsupported object type:", obj.type)  
         return False
     
     return numFaces
