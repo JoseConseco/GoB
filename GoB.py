@@ -721,7 +721,10 @@ class GoB_OT_import(Operator):
                 else:
                     if not bpy.app.timers.is_registered(run_import_periodically):
                         global cached_last_edition_time
-                        cached_last_edition_time = os.path.getmtime(os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
+                        GoZ_ObjectList = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+                        f = open(GoZ_ObjectList, 'x')
+                        f.close()
+                        cached_last_edition_time = os.path.getmtime(GoZ_ObjectList)
                         bpy.app.timers.register(run_import_periodically, persistent=True)
                         if prefs().debug_output:
                             print('Enabling GOZ background listener')
