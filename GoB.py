@@ -1803,6 +1803,9 @@ def export_poll(cls, context):
         if context.active_object:
             obj = context.active_object 
             export = check_export_candidates(obj)
+        else:
+            for obj in context.selected_objects:  
+                export = check_export_candidates(obj)
     
     #check for faces in multiple objects, only if any face in object is found exporting should be allowed
     else: 
