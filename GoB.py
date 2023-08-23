@@ -893,19 +893,18 @@ class GoB_OT_export(Operator):
 
 
             # --Polypaint--
-            if me.vertex_colors.active:
-                vcoldata = me.vertex_colors.active.data # color[loop_id]
+            if me.color_attributes[prefs().import_polypaint_name]:
+                vcoldata = me.color_attributes[prefs().import_polypaint_name].data
                 vcolArray = bytearray([0] * numVertices * 3)
-                if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "    Polypaint: vcolArray")
                 #fill vcArray(vert_idx + rgb_offset) = color_xyz
-                for loop in me.loops: #in the end we will fill verts with last vert_loop color
-                    vert_idx = loop.vertex_index
-                    vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
-                    vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
-                    vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
+                for v in me.vertices:
+                    vcolArray[v.index*3] = int(255*vcoldata[v.index].color[0])
+                    vcolArray[v.index*3+1] = int(255*vcoldata[v.index].color[1])
+                    vcolArray[v.index*3+2] = int(255*vcoldata[v.index].color[2])
+
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    Polypaint:  loop")
+
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                 goz_file.write(pack('<I', numVertices*4+16))
