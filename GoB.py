@@ -341,45 +341,22 @@ class GoB_OT_import(Operator):
                     if prefs().debug_output:
                         print("Import Polypaint: ", prefs().import_polypaint)  
 
-                    if prefs().import_polypaint:
+                    if prefs().import_polypaint:                        
+                        if not me.color_attributes:
+                            me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
+
                         goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0]  
-                        polypaintData = []
+                        cnt = unpack('<Q', goz_file.read(8))[0] 
+                        alpha = 1   
                         for i in range(cnt): 
                             colordata = unpack('<3B', goz_file.read(3)) # Color
-                            unpack('<B', goz_file.read(1))  # Alpha
-                            alpha = 1                        
-
+                            unpack('<B', goz_file.read(1))  # Alpha 
                             #convert color to vector                         
-                            rgb = [x / 255.0 for x in colordata]    
-                            rgb.reverse()                    
-                            rgba = rgb + [alpha]                                          
-                            polypaintData.append(tuple(rgba))                      
-                        
-                        if prefs().performance_profiling: 
-                            start_time = profiler(start_time, "Polypaint Unpack")
-
-                        if colordata:                   
-                            bm = bmesh.new()
-                            bm.from_mesh(me)
-                            bm.faces.ensure_lookup_table()
-                            if me.vertex_colors:                            
-                                if prefs().import_polypaint_name in me.vertex_colors: 
-                                    color_layer = bm.loops.layers.color.get(prefs().import_polypaint_name)
-                                else:
-                                    color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                                    
-                            else:
-                                color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                
-                            
-                            for face in bm.faces:
-                                for loop in face.loops:
-                                    loop[color_layer] = polypaintData[loop.vert.index]
-
-                            bm.to_mesh(me)                        
-                            me.update(calc_edges=True, calc_edges_loose=True)  
-                            bm.free()                            
-                        polypaintData.clear()    
-                        
+                            rgb = [x / 255.0 for x in colordata]
+                            rgb.reverse()                   
+                            rgba = rgb + [alpha]                           
+                            me.attributes.active_color.data[i].color_srgb = rgba
+                                                    
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
 
@@ -403,7 +380,7 @@ class GoB_OT_import(Operator):
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Mask\n")
 
-                # Polyroups
+                # Polygroups
                 elif tag == b'\x41\x9c\x00\x00':   
                     if prefs().debug_output:
                         print("Import Polyroups: ", prefs().import_polygroups_to_vertexgroups, prefs().import_polygroups_to_facemaps)
