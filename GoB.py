@@ -1379,9 +1379,8 @@ def find_zbrush(self, context):
     if prefs().zbrush_exec:        
         #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
         if isMacOS:
-            if os.path.isdir(prefs().zbrush_exec): #search for zbrush package in this string       
-                if 'zbrush.app' in str.lower(prefs().zbrush_exec):
-                    self.is_found = True   
+            if os.path.isdir(prefs().zbrush_exec) and 'zbrush.app' in str.lower(prefs().zbrush_exec):
+                self.is_found = True   
 
         else: #is PC
             if os.path.isfile(prefs().zbrush_exec):  #validate if working file here    
