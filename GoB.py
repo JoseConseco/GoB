@@ -893,23 +893,17 @@ class GoB_OT_export(Operator):
 
 
             # --Polypaint--
-            if obj.data.color_attributes.active_color_name:
-                
-                vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data #replace this with the active vertex color
-                vcolArray = bytearray([0] * numVertices * 3)
-                """ for v in me.vertices:                    
-                    print(me.attributes[prefs().import_polypaint_name].data[v.index].color[:]) """
-
+            if obj.data.color_attributes.active_color_name:                
+                vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
                 #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-                for loop in me.loops: # TODO: in the end we will fill verts with last vert_loop color
-                    i = loop.vertex_index
-                    vcolArray[i*3] = int(255*vcoldata[loop.index].color_srgb[0])
-                    vcolArray[i*3+1] = int(255*vcoldata[loop.index].color_srgb[1])
-                    vcolArray[i*3+2] = int(255*vcoldata[loop.index].color_srgb[2])
+                vcolArray = bytearray([0] * numVertices * 3)
+                for v in me.vertices:                  
+                    vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
+                    vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
+                    vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
 
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    Polypaint:  loop")
-
 
                 goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                 goz_file.write(pack('<I', numVertices*4+16))
