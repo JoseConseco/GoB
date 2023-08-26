@@ -631,7 +631,7 @@ class GoB_OT_import(Operator):
 
             # #apply face maps to sculpt mode face sets
             if prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
+                bpy.ops.object.mode_set(mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
@@ -643,7 +643,7 @@ class GoB_OT_import(Operator):
                     start_time = profiler(start_time, "Init Face Sets")
 
                 # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT') 
+                bpy.ops.object.mode_set(mode='EDIT') 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
@@ -1272,7 +1272,7 @@ class GoB_OT_export(Operator):
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')       
+            bpy.ops.object.mode_set(mode='OBJECT')       
         
         wm = context.window_manager
         wm.progress_begin(0,100)
@@ -1373,7 +1373,7 @@ class GoB_OT_export(Operator):
                     print("Windows Popen: ", prefs().zbrush_exec)
                     Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
-                    bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
+                    bpy.ops.object.mode_set(mode=currentContext) 
         
         return {'FINISHED'}
 
@@ -1540,9 +1540,7 @@ class GOB_OT_Popup(Operator):
 def run_import_manually():     
     global gob_import_cache  
     gob_import_cache.clear() 
-    window = bpy.context.window_manager.windows[0]
-    context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)  
+    bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)  
     
 
 def run_import_periodically():
@@ -1561,8 +1559,7 @@ def run_import_periodically():
     
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time        
-        context = bpy.context.copy()
-        bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
+        bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)
     else:       
         global gob_import_cache  
         if gob_import_cache:  
@@ -2001,7 +1998,7 @@ def remove_internal_faces(obj):
         if prefs().debug_output:
             print("last_context: ", last_context, last_select_mode)
 
-        bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT')
+        bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_mode(use_extend=True, 
                                 use_expand=False,
                                 type='VERT', 
@@ -2017,5 +2014,5 @@ def remove_internal_faces(obj):
                                         use_verts=True)
                                         
         bpy.ops.mesh.delete(type='FACE')
-        bpy.ops.object.mode_set(bpy.context.copy(), mode=last_context)
+        bpy.ops.object.mode_set(mode=last_context)
         restore_selection(selected, active)
