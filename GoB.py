@@ -479,14 +479,14 @@ class GoB_OT_import(Operator):
                                 start_time = profiler(start_time, "____import_polygroups_to_vertexgroups")
                             
                         # import polygroups to face maps
-                        if prefs().import_polygroups_to_facemaps:                                
+                        """ if prefs().import_polygroups_to_facemaps:                                
                             #wipe face maps before importing new ones due to random naming           
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
                             for group in set(polyGroupData):
                                 obj.face_maps.new(name=str(group)) 
                             
                             if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "____import_polygroups_to_facemaps")
+                                start_time = profiler(start_time, "____import_polygroups_to_facemaps") """
                        
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
@@ -496,8 +496,8 @@ class GoB_OT_import(Operator):
                                 obj.data.polygons[i].material_index = slot     
                             
                             # add faces to facemap
-                            if prefs().import_polygroups_to_facemaps:
-                                obj.face_maps.get(str(pgmat)).add([i])
+                            """ if prefs().import_polygroups_to_facemaps:
+                                obj.face_maps.get(str(pgmat)).add([i]) """
                             
                             # add vertices to vertex groups  
                             if prefs().import_polygroups_to_vertexgroups: 
@@ -1003,6 +1003,7 @@ class GoB_OT_export(Operator):
                     print("Export Polygroups: ", prefs().export_polygroups)
 
                 #Polygroups from Face Maps
+                """ 
                 if prefs().export_polygroups == 'FACE_MAPS':
                     if prefs().debug_output:
                         print(obj.face_maps.items)
@@ -1036,7 +1037,8 @@ class GoB_OT_export(Operator):
                                 goz_file.write(pack('<H', 65504))
 
                     if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write Polygroup FaceMaps") 
+                        start_time = profiler(start_time, "Write Polygroup FaceMaps")  
+                    #"""
                 
 
                 # Polygroups from Vertex Groups
