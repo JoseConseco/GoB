@@ -548,14 +548,13 @@ class GoB_OT_import(Operator):
                 start_time = profiler(start_time, "Textures")
             
             # MATERIALS
-            if prefs().import_material == 'NONE':
+            if prefs().import_material:
                 if prefs().debug_output:
-                    print("Import Material: ", prefs().import_material) 
-            else:
+                    print("Import Material: ", prefs().import_material)
 
                 # POLYPAINT
                 if prefs().import_material == 'POLYPAINT':                    
-                    if prefs().import_polypaint_name in me.vertex_colors:                                                   
+                    if prefs().import_polypaint_name in me.color_attributes:                                                   
                         if len(obj.material_slots) > 0:
                             if obj.material_slots[0].material is not None:
                                 objMat = obj.material_slots[0].material
