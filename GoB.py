@@ -946,7 +946,8 @@ class GoB_OT_export(Operator):
                         vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
                         vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
             else:
-                if obj.data.color_attributes.active_color_name:                
+                # get active color attribut from obj (obj.data.color_attributes). The temp mesh has no active color
+                if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0:             
                     vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
                     #fill vcolArray(vert_idx + rgb_offset) = color_xyz
                     vcolArray = bytearray([0] * numVertices * 3)
@@ -954,15 +955,6 @@ class GoB_OT_export(Operator):
                         vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
                         vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
                         vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
-            #TODO: get active color attribut from obj since the temp mesh has no active color?
-            if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0:           
-                vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
-                #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-                vcolArray = bytearray([0] * numVertices * 3)
-                for v in me.vertices:                  
-                    vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
-                    vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
-                    vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
 
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    Polypaint:  loop")
