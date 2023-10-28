@@ -341,21 +341,64 @@ class GoB_OT_import(Operator):
                     if prefs().debug_output:
                         print("Import Polypaint: ", prefs().import_polypaint)  
 
-                    if prefs().import_polypaint:                        
-                        if not me.color_attributes:
-                            me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
+                    if prefs().import_polypaint:     
+                        
+                        if bpy.app.version < (3,4,0): 
 
-                        goz_file.seek(4, 1)
-                        cnt = unpack('<Q', goz_file.read(8))[0] 
-                        alpha = 1   
-                        for i in range(cnt): 
-                            colordata = unpack('<3B', goz_file.read(3)) # Color
-                            unpack('<B', goz_file.read(1))  # Alpha 
-                            #convert color to vector                         
-                            rgb = [x / 255.0 for x in colordata]
-                            rgb.reverse()                   
-                            rgba = rgb + [alpha]                           
-                            me.attributes.active_color.data[i].color_srgb = rgba
+                            goz_file.seek(4, 1)
+                            cnt = unpack('<Q', goz_file.read(8))[0] 
+                            polypaintData = []
+                            
+                            for i in range(cnt): 
+                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                unpack('<B', goz_file.read(1))  # Alpha
+                                alpha = 1  
+
+                                #convert color to vector                         
+                                rgb = [x / 255.0 for x in colordata]    
+                                rgb.reverse()                    
+                                rgba = rgb + [alpha]                                          
+                                polypaintData.append(tuple(rgba))                      
+                            
+                            if prefs().performance_profiling: 
+                                start_time = profiler(start_time, "Polypaint Unpack")
+
+                            if colordata:                   
+                                bm = bmesh.new()
+                                bm.from_mesh(me)
+                                bm.faces.ensure_lookup_table()
+                                if me.vertex_colors:                            
+                                    if prefs().import_polypaint_name in me.vertex_colors: 
+                                        color_layer = bm.loops.layers.color.get(prefs().import_polypaint_name)
+                                    else:
+                                        color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                                    
+                                else:
+                                    color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                
+                                
+                                for face in bm.faces:
+                                    for loop in face.loops:
+                                        loop[color_layer] = polypaintData[loop.vert.index]
+
+                                bm.to_mesh(me)                        
+                                me.update(calc_edges=True, calc_edges_loose=True)  
+                                bm.free()                            
+                            polypaintData.clear()
+                        
+                        else:      
+                            if not me.color_attributes:
+                                me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
+
+                            goz_file.seek(4, 1)
+                            cnt = unpack('<Q', goz_file.read(8))[0] 
+                            alpha = 1   
+                            for i in range(cnt): 
+                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                unpack('<B', goz_file.read(1))  # Alpha 
+                                #convert color to vector                         
+                                rgb = [x / 255.0 for x in colordata]
+                                rgb.reverse()                   
+                                rgba = rgb + [alpha]                           
+                                me.attributes.active_color.data[i].color_srgb = rgba
                                                     
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
@@ -892,14 +935,25 @@ class GoB_OT_export(Operator):
 
 
             # --Polypaint--
-            if obj.data.color_attributes.active_color_name:                
-                vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
-                #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-                vcolArray = bytearray([0] * numVertices * 3)
-                for v in me.vertices:                  
-                    vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
-                    vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
-                    vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
+            if bpy.app.version < (3,4,0): 
+                if me.vertex_colors.active:
+                    vcoldata = me.vertex_colors.active.data # color[loop_id]
+                    vcolArray = bytearray([0] * numVertices * 3)
+                    #fill vcArray(vert_idx + rgb_offset) = color_xyz
+                    for loop in me.loops: #in the end we will fill verts with last vert_loop color
+                        vert_idx = loop.vertex_index
+                        vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
+                        vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
+                        vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
+            else:
+                if obj.data.color_attributes.active_color_name:                
+                    vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
+                    #fill vcolArray(vert_idx + rgb_offset) = color_xyz
+                    vcolArray = bytearray([0] * numVertices * 3)
+                    for v in me.vertices:                  
+                        vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
+                        vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
+                        vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
 
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    Polypaint:  loop")
