@@ -479,14 +479,14 @@ class GoB_OT_import(Operator):
                                 start_time = profiler(start_time, "____import_polygroups_to_vertexgroups")
                             
                         # import polygroups to face maps
-                        if prefs().import_polygroups_to_facemaps:                                
+                        """ if prefs().import_polygroups_to_facemaps:                                
                             #wipe face maps before importing new ones due to random naming           
                             [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
                             for group in set(polyGroupData):
                                 obj.face_maps.new(name=str(group)) 
                             
                             if prefs().performance_profiling: 
-                                start_time = profiler(start_time, "____import_polygroups_to_facemaps")
+                                start_time = profiler(start_time, "____import_polygroups_to_facemaps") """
                        
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
@@ -496,8 +496,8 @@ class GoB_OT_import(Operator):
                                 obj.data.polygons[i].material_index = slot     
                             
                             # add faces to facemap
-                            if prefs().import_polygroups_to_facemaps:
-                                obj.face_maps.get(str(pgmat)).add([i])
+                            """ if prefs().import_polygroups_to_facemaps:
+                                obj.face_maps.get(str(pgmat)).add([i]) """
                             
                             # add vertices to vertex groups  
                             if prefs().import_polygroups_to_vertexgroups: 
@@ -631,7 +631,7 @@ class GoB_OT_import(Operator):
 
             # #apply face maps to sculpt mode face sets
             if prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='SCULPT')                 
+                bpy.ops.object.mode_set(mode='SCULPT')                 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
@@ -643,7 +643,7 @@ class GoB_OT_import(Operator):
                     start_time = profiler(start_time, "Init Face Sets")
 
                 # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
-                bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT') 
+                bpy.ops.object.mode_set(mode='EDIT') 
                 for window in bpy.context.window_manager.windows:
                     screen = window.screen
                     for area in screen.areas:
@@ -946,7 +946,8 @@ class GoB_OT_export(Operator):
                         vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
                         vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
             else:
-                if obj.data.color_attributes.active_color_name:                
+                # get active color attribut from obj (obj.data.color_attributes). The temp mesh has no active color
+                if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0:             
                     vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
                     #fill vcolArray(vert_idx + rgb_offset) = color_xyz
                     vcolArray = bytearray([0] * numVertices * 3)
@@ -1003,6 +1004,7 @@ class GoB_OT_export(Operator):
                     print("Export Polygroups: ", prefs().export_polygroups)
 
                 #Polygroups from Face Maps
+                """ 
                 if prefs().export_polygroups == 'FACE_MAPS':
                     if prefs().debug_output:
                         print(obj.face_maps.items)
@@ -1036,7 +1038,8 @@ class GoB_OT_export(Operator):
                                 goz_file.write(pack('<H', 65504))
 
                     if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write Polygroup FaceMaps") 
+                        start_time = profiler(start_time, "Write Polygroup FaceMaps")  
+                    #"""
                 
 
                 # Polygroups from Vertex Groups
@@ -1272,7 +1275,7 @@ class GoB_OT_export(Operator):
         currentContext = 'OBJECT'
         if context.object and context.object.mode != 'OBJECT':            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(context.copy(), mode='OBJECT')       
+            bpy.ops.object.mode_set(mode='OBJECT')       
         
         wm = context.window_manager
         wm.progress_begin(0,100)
@@ -1373,7 +1376,7 @@ class GoB_OT_export(Operator):
                     print("Windows Popen: ", prefs().zbrush_exec)
                     Popen([prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
-                    bpy.ops.object.mode_set(context.copy(), mode=currentContext) 
+                    bpy.ops.object.mode_set(mode=currentContext) 
         
         return {'FINISHED'}
 
@@ -1540,9 +1543,7 @@ class GOB_OT_Popup(Operator):
 def run_import_manually():     
     global gob_import_cache  
     gob_import_cache.clear() 
-    window = bpy.context.window_manager.windows[0]
-    context = {'window': window, 'screen': window.screen, 'workspace': window.workspace}
-    bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)  
+    bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)  
     
 
 def run_import_periodically():
@@ -1561,8 +1562,7 @@ def run_import_periodically():
     
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time        
-        context = bpy.context.copy()
-        bpy.ops.scene.gob_import(context) #only call operator update is found (executing operatros is slow)
+        bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)
     else:       
         global gob_import_cache  
         if gob_import_cache:  
@@ -2001,7 +2001,7 @@ def remove_internal_faces(obj):
         if prefs().debug_output:
             print("last_context: ", last_context, last_select_mode)
 
-        bpy.ops.object.mode_set(bpy.context.copy(), mode='EDIT')
+        bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_mode(use_extend=True, 
                                 use_expand=False,
                                 type='VERT', 
@@ -2017,5 +2017,5 @@ def remove_internal_faces(obj):
                                         use_verts=True)
                                         
         bpy.ops.mesh.delete(type='FACE')
-        bpy.ops.object.mode_set(bpy.context.copy(), mode=last_context)
+        bpy.ops.object.mode_set(mode=last_context)
         restore_selection(selected, active)
