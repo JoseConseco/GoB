@@ -945,6 +945,28 @@ class GoB_OT_export(Operator):
                         vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
                         vcolArray[vert_idx*3+1] = int(255*vcoldata[loop.index].color[1])
                         vcolArray[vert_idx*3+2] = int(255*vcoldata[loop.index].color[2])
+                    
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  loop")
+                        
+                    goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
+                    goz_file.write(pack('<I', numVertices*4+16))
+                    goz_file.write(pack('<Q', numVertices))
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  write numVertices")
+
+                    for i in range(0, len(vcolArray), 3):
+                        goz_file.write(pack('<B', vcolArray[i+2]))
+                        goz_file.write(pack('<B', vcolArray[i+1]))
+                        goz_file.write(pack('<B', vcolArray[i]))
+                        goz_file.write(pack('<B', 0))
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint: write color")
+
+                    vcolArray.clear()
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
+
             else:
                 # get active color attribut from obj (obj.data.color_attributes). The temp mesh has no active color
                 if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0:             
@@ -955,30 +977,30 @@ class GoB_OT_export(Operator):
                         vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
                         vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
                         vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
+                    
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  loop")
 
-                if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "    Polypaint:  loop")
+                    goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
+                    goz_file.write(pack('<I', numVertices*4+16))
+                    goz_file.write(pack('<Q', numVertices))
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  write numVertices")
 
-                goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
-                goz_file.write(pack('<I', numVertices*4+16))
-                goz_file.write(pack('<Q', numVertices))
-                if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "    Polypaint:  write numVertices")
+                    for i in range(0, len(vcolArray), 3):
+                        goz_file.write(pack('<B', vcolArray[i+2]))
+                        goz_file.write(pack('<B', vcolArray[i+1]))
+                        goz_file.write(pack('<B', vcolArray[i]))
+                        goz_file.write(pack('<B', 0))
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint: write color")
 
-                for i in range(0, len(vcolArray), 3):
-                    goz_file.write(pack('<B', vcolArray[i+2]))
-                    goz_file.write(pack('<B', vcolArray[i+1]))
-                    goz_file.write(pack('<B', vcolArray[i]))
-                    goz_file.write(pack('<B', 0))
-                if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "    Polypaint: write color")
-
-                vcolArray.clear()
-                if prefs().performance_profiling: 
-                    start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
-            
-            if prefs().performance_profiling: 
-                start_time = profiler(start_time, "Write Polypaint")
+                    vcolArray.clear()
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
+                    
+                    if prefs().performance_profiling: 
+                        start_time = profiler(start_time, "Write Polypaint")
 
             # --Mask--
             if not prefs().export_clear_mask:
