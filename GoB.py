@@ -955,6 +955,15 @@ class GoB_OT_export(Operator):
                         vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
                         vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
                         vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
+                else: # add color attribute. else will report error in 4.0
+                    vcoldata = me.color_attributes.new('Color','FLOAT_COLOR','POINT')
+                    # use numpy to fill the array with 1.0 (white color)
+                    vcoldata.data.foreach_set("color", numpy.ones(len(vcoldata.data)*4))
+                    vcolArray = bytearray([0] * numVertices * 3)
+                    for v in me.vertices:
+                        vcolArray[v.index * 3] = 255
+                        vcolArray[v.index * 3+1] = 255
+                        vcolArray[v.index * 3+2] = 255
 
                 if prefs().performance_profiling: 
                     start_time = profiler(start_time, "    Polypaint:  loop")
