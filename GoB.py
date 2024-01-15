@@ -153,7 +153,7 @@ class GoB_OT_import(Operator):
                 if tag == b'\x89\x13\x00\x00':
                     if prefs().debug_output:
                         print("name:", tag)
-                    cnt = unpack('<L', goz_file.read(4))[0] - 8
+                    cnt = unpack('', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                     if prefs().performance_profiling:  
                         start_time = profiler(start_time, "____Unpack Mesh Name")
@@ -180,10 +180,10 @@ class GoB_OT_import(Operator):
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
-                        v1 = unpack('<L', goz_file.read(4))[0]
-                        v2 = unpack('<L', goz_file.read(4))[0]
-                        v3 = unpack('<L', goz_file.read(4))[0]
-                        v4 = unpack('<L', goz_file.read(4))[0]
+                        v1 = unpack('', goz_file.read(4))[0]
+                        v2 = unpack('', goz_file.read(4))[0]
+                        v3 = unpack('', goz_file.read(4))[0]
+                        v4 = unpack('', goz_file.read(4))[0]
                         if v4 == 0xffffffff:
                             facesData.append((v1, v2, v3))
                         elif v4 == 0:
@@ -347,7 +347,7 @@ class GoB_OT_import(Operator):
 
                             #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<L', goz_file.read(4))[0]
+                            cnt = unpack('<I', goz_file.read(4))[0]
                             #skip modifier
                             goz_file.seek(4, 1)
                             polypaintData = []
@@ -393,7 +393,7 @@ class GoB_OT_import(Operator):
 
                             #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<L', goz_file.read(4))[0]
+                            cnt = unpack('<I', goz_file.read(4))[0]
                             #skip modifier
                             goz_file.seek(4, 1)
                             
