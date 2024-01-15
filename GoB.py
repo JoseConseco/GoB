@@ -345,8 +345,11 @@ class GoB_OT_import(Operator):
                         
                         if bpy.app.version < (3,4,0): 
 
+                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<Q', goz_file.read(8))[0] 
+                            cnt = unpack('<L', goz_file.read(4))[0]
+                            #skip modifier
+                            goz_file.seek(4, 1)
                             polypaintData = []
                             
                             for i in range(cnt): 
@@ -388,8 +391,12 @@ class GoB_OT_import(Operator):
                             if not me.color_attributes:
                                 me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
 
+                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<Q', goz_file.read(8))[0] 
+                            cnt = unpack('<L', goz_file.read(4))[0]
+                            #skip modifier
+                            goz_file.seek(4, 1)
+                            
                             alpha = 1   
                             for i in range(cnt): 
                                 colordata = unpack('<3B', goz_file.read(3)) # Color
@@ -951,7 +958,8 @@ class GoB_OT_export(Operator):
                         
                     goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                     goz_file.write(pack('<I', numVertices*4+16))
-                    goz_file.write(pack('<Q', numVertices))
+                    goz_file.write(pack('<I', numVertices))
+                    goz_file.write(pack("<f", 0))
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint:  write numVertices")
 
@@ -983,7 +991,8 @@ class GoB_OT_export(Operator):
 
                     goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                     goz_file.write(pack('<I', numVertices*4+16))
-                    goz_file.write(pack('<Q', numVertices))
+                    goz_file.write(pack('<I', numVertices))
+                    goz_file.write(pack("<f", 0))
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint:  write numVertices")
 
