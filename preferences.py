@@ -195,7 +195,7 @@ class GoB_Preferences(AddonPreferences):
         subtype='FACTOR') 
     export_clear_mask: BoolProperty(
         name="Clear Mask",
-        description="When enabled Masks will not be exported an cleared in ZBrush",
+        description="When enabled Masks will not be exported and cleared in ZBrush",
         default=False) # Default: False
         
     export_remove_internal_faces: BoolProperty(
