@@ -1107,31 +1107,32 @@ class GoB_OT_export(Operator):
                     # create a list of each vertex group assignement so one vertex can be in x amount of groups 
                     # then check for each face to which groups their vertices are MOST assigned to 
                     # and choose that group for the polygroup color if its on all vertices of the face
-                    '''
-                    vgData = []  
-                    for face in me.polygons:
-                        vgData.append([])
-                        for vert in face.vertices:
-                            for vg in me.vertices[vert].groups:
-                                if vg.weight >= prefs().export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
-                                    vgData[face.index].append(vg.group)
-                        
-                        if vgData[face.index]:                            
-                            group =  max(vgData[face.index], key = vgData[face.index].count)
-                            count = vgData[face.index].count(group)
-                            #print(vgData[face.index])
-                            #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
-                            #"\ngroup:", group, "color:", groupColor[group] )                            
-                            if len(face.vertices) == count:
-                                #print(face.index, group, groupColor[group], count)
-                                goz_file.write(pack('<H', groupColor[group]))
+                    '''                    
+                    if len(obj.vertex_groups) > 0:  
+                        vgData = []  
+                        for face in me.polygons:
+                            vgData.append([])
+                            for vert in face.vertices:
+                                for vg in me.vertices[vert].groups:
+                                    if vg.weight >= prefs().export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
+                                        vgData[face.index].append(vg.group)
+                            
+                            if vgData[face.index]:                            
+                                group =  max(vgData[face.index], key = vgData[face.index].count)
+                                count = vgData[face.index].count(group)
+                                #print(vgData[face.index])
+                                #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
+                                #"\ngroup:", group, "color:", groupColor[group] )                            
+                                if len(face.vertices) == count:
+                                    #print(face.index, group, groupColor[group], count)
+                                    goz_file.write(pack('<H', groupColor[group]))
+                                else:
+                                    goz_file.write(pack('<H', 65504))
                             else:
                                 goz_file.write(pack('<H', 65504))
-                        else:
-                            goz_file.write(pack('<H', 65504))
-                            
-                    if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write Polygroup Vertex groups")
+                                
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "Write Polygroup Vertex groups")
 
 
                 # Polygroups from materials
