@@ -342,31 +342,32 @@ class GoB_OT_import(Operator):
                         print("Import Polypaint: ", prefs().import_polypaint)  
 
                     if prefs().import_polypaint:     
-                        
                         if bpy.app.version < (3,4,0): 
-
-                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<I', goz_file.read(4))[0]
-                            #skip modifier
-                            goz_file.seek(4, 1)
+                            cnt = unpack('<Q', goz_file.read(8))[0] 
                             polypaintData = []
-                            
-                            for i in range(cnt): 
-                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                            
+                            for i in range(cnt):                                 
+                                # Avoid error if buffer length is less than 3
+                                vertex_data = goz_file.read(3)
+                                if len(vertex_data) < 3:
+                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    break
+
+                                colordata = unpack('<3B', vertex_data) # Color
                                 unpack('<B', goz_file.read(1))  # Alpha
                                 alpha = 1  
 
-                                #convert color to vector                         
+                                # convert color to vector                         
                                 rgb = [x / 255.0 for x in colordata]    
                                 rgb.reverse()                    
                                 rgba = rgb + [alpha]                                          
                                 polypaintData.append(tuple(rgba))                      
-                            
+                                            
                             if prefs().performance_profiling: 
                                 start_time = profiler(start_time, "Polypaint Unpack")
 
-                            if colordata:                   
+                            if polypaintData:                   
                                 bm = bmesh.new()
                                 bm.from_mesh(me)
                                 bm.faces.ensure_lookup_table()
@@ -377,38 +378,46 @@ class GoB_OT_import(Operator):
                                         color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                                    
                                 else:
                                     color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                
-                                
+                                                
                                 for face in bm.faces:
                                     for loop in face.loops:
-                                        loop[color_layer] = polypaintData[loop.vert.index]
+                                        # Check that the index is within the range before assigning
+                                        if loop.vert.index < len(polypaintData):
+                                            loop[color_layer] = polypaintData[loop.vert.index]
 
                                 bm.to_mesh(me)                        
                                 me.update(calc_edges=True, calc_edges_loose=True)  
                                 bm.free()                            
                             polypaintData.clear()
                         
-                        else:      
+                        else:  # bpy.app.version >= (3,4,0):      
                             if not me.color_attributes:
                                 me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
 
-                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<I', goz_file.read(4))[0]
-                            #skip modifier
-                            goz_file.seek(4, 1)
-                            
+                            cnt = unpack('<Q', goz_file.read(8))[0]
                             alpha = 1   
                             for i in range(cnt): 
-                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                # Avoid error if buffer length is less than 3
+                                vertex_data = goz_file.read(3)
+                                if len(vertex_data) < 3:
+                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    break
+                                colordata = unpack('<3B', vertex_data) # Color
                                 unpack('<B', goz_file.read(1))  # Alpha 
-                                #convert color to vector                         
+                                
+                                # convert color to vector                         
                                 rgb = [x / 255.0 for x in colordata]
                                 rgb.reverse()                   
-                                rgba = rgb + [alpha]                           
-                                me.attributes.active_color.data[i].color_srgb = rgba
-                                                    
+                                rgba = rgb + [alpha]   
+
+                                # Check that the index is within the range before assigning
+                                if i < len(me.attributes.active_color.data):
+                                    me.attributes.active_color.data[i].color_srgb = rgba
+                                                                    
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
+
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
@@ -976,15 +985,21 @@ class GoB_OT_export(Operator):
                         start_time = profiler(start_time, "    Polypaint:  vcolArray.clear")
 
             else:
-                # get active color attribut from obj (obj.data.color_attributes). The temp mesh has no active color
-                if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0:             
-                    vcoldata = me.color_attributes[obj.data.color_attributes.active_color_name].data 
+                # get active color attribut from obj (obj.data.color_attributes). 
+                # The temp mesh (me.) has no active color (use obj.data. instead of me.!)
+                if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0: 
+                     
+                    active_color = obj.data.color_attributes.active_color                      
+                    vcoldata = obj.data.color_attributes[obj.data.color_attributes.active_color_name].data 
                     #fill vcolArray(vert_idx + rgb_offset) = color_xyz
                     vcolArray = bytearray([0] * numVertices * 3)
-                    for v in me.vertices:                  
-                        vcolArray[v.index * 3] = int(255*vcoldata[v.index].color_srgb[0])
-                        vcolArray[v.index * 3+1] = int(255*vcoldata[v.index].color_srgb[1])
-                        vcolArray[v.index * 3+2] = int(255*vcoldata[v.index].color_srgb[2])
+                    
+                    for loop in obj.data.loops:
+                        color = active_color.data[loop.index].color_srgb
+                        #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))
+                        vcolArray[loop.vertex_index * 3] = int(255*color[0])
+                        vcolArray[loop.vertex_index * 3+1] = int(255*color[1])
+                        vcolArray[loop.vertex_index * 3+2] = int(255*color[2])
                     
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint:  loop")
@@ -1001,6 +1016,7 @@ class GoB_OT_export(Operator):
                         goz_file.write(pack('<B', vcolArray[i+1]))
                         goz_file.write(pack('<B', vcolArray[i]))
                         goz_file.write(pack('<B', 0))
+                        
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint: write color")
 
@@ -1092,31 +1108,32 @@ class GoB_OT_export(Operator):
                     # create a list of each vertex group assignement so one vertex can be in x amount of groups 
                     # then check for each face to which groups their vertices are MOST assigned to 
                     # and choose that group for the polygroup color if its on all vertices of the face
-                    '''
-                    vgData = []  
-                    for face in me.polygons:
-                        vgData.append([])
-                        for vert in face.vertices:
-                            for vg in me.vertices[vert].groups:
-                                if vg.weight >= prefs().export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
-                                    vgData[face.index].append(vg.group)
-                        
-                        if vgData[face.index]:                            
-                            group =  max(vgData[face.index], key = vgData[face.index].count)
-                            count = vgData[face.index].count(group)
-                            #print(vgData[face.index])
-                            #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
-                            #"\ngroup:", group, "color:", groupColor[group] )                            
-                            if len(face.vertices) == count:
-                                #print(face.index, group, groupColor[group], count)
-                                goz_file.write(pack('<H', groupColor[group]))
+                    '''                    
+                    if len(obj.vertex_groups) > 0:  
+                        vgData = []  
+                        for face in me.polygons:
+                            vgData.append([])
+                            for vert in face.vertices:
+                                for vg in me.vertices[vert].groups:
+                                    if vg.weight >= prefs().export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':         
+                                        vgData[face.index].append(vg.group)
+                            
+                            if vgData[face.index]:                            
+                                group =  max(vgData[face.index], key = vgData[face.index].count)
+                                count = vgData[face.index].count(group)
+                                #print(vgData[face.index])
+                                #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
+                                #"\ngroup:", group, "color:", groupColor[group] )                            
+                                if len(face.vertices) == count:
+                                    #print(face.index, group, groupColor[group], count)
+                                    goz_file.write(pack('<H', groupColor[group]))
+                                else:
+                                    goz_file.write(pack('<H', 65504))
                             else:
                                 goz_file.write(pack('<H', 65504))
-                        else:
-                            goz_file.write(pack('<H', 65504))
-                            
-                    if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "Write Polygroup Vertex groups")
+                                
+                        if prefs().performance_profiling: 
+                            start_time = profiler(start_time, "Write Polygroup Vertex groups")
 
 
                 # Polygroups from materials
