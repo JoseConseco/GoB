@@ -993,12 +993,13 @@ class GoB_OT_export(Operator):
                     vcoldata = obj.data.color_attributes[obj.data.color_attributes.active_color_name].data 
                     #fill vcolArray(vert_idx + rgb_offset) = color_xyz
                     vcolArray = bytearray([0] * numVertices * 3)
-
-                    for v in obj.data.loops:
-                        color = active_color.data[v.index].color_srgb
-                        vcolArray[v.vertex_index * 3] = int(255*color[0])
-                        vcolArray[v.vertex_index * 3+1] = int(255*color[1])
-                        vcolArray[v.vertex_index * 3+2] = int(255*color[2])
+                    
+                    for loop in obj.data.loops:
+                        color = active_color.data[loop.index].color_srgb
+                        #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))
+                        vcolArray[loop.vertex_index * 3] = int(255*color[0])
+                        vcolArray[loop.vertex_index * 3+1] = int(255*color[1])
+                        vcolArray[loop.vertex_index * 3+2] = int(255*color[2])
                     
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint:  loop")
