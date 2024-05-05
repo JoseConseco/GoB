@@ -342,31 +342,32 @@ class GoB_OT_import(Operator):
                         print("Import Polypaint: ", prefs().import_polypaint)  
 
                     if prefs().import_polypaint:     
-                        
                         if bpy.app.version < (3,4,0): 
-
-                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<I', goz_file.read(4))[0]
-                            #skip modifier
-                            goz_file.seek(4, 1)
+                            cnt = unpack('<Q', goz_file.read(8))[0] 
                             polypaintData = []
-                            
-                            for i in range(cnt): 
-                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                            
+                            for i in range(cnt):                                 
+                                # Avoid error if buffer length is less than 3
+                                vertex_data = goz_file.read(3)
+                                if len(vertex_data) < 3:
+                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    break
+
+                                colordata = unpack('<3B', vertex_data) # Color
                                 unpack('<B', goz_file.read(1))  # Alpha
                                 alpha = 1  
 
-                                #convert color to vector                         
+                                # convert color to vector                         
                                 rgb = [x / 255.0 for x in colordata]    
                                 rgb.reverse()                    
                                 rgba = rgb + [alpha]                                          
                                 polypaintData.append(tuple(rgba))                      
-                            
+                                            
                             if prefs().performance_profiling: 
                                 start_time = profiler(start_time, "Polypaint Unpack")
 
-                            if colordata:                   
+                            if polypaintData:                   
                                 bm = bmesh.new()
                                 bm.from_mesh(me)
                                 bm.faces.ensure_lookup_table()
@@ -377,38 +378,46 @@ class GoB_OT_import(Operator):
                                         color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                                    
                                 else:
                                     color_layer = bm.loops.layers.color.new(prefs().import_polypaint_name)                
-                                
+                                                
                                 for face in bm.faces:
                                     for loop in face.loops:
-                                        loop[color_layer] = polypaintData[loop.vert.index]
+                                        # Check that the index is within the range before assigning
+                                        if loop.vert.index < len(polypaintData):
+                                            loop[color_layer] = polypaintData[loop.vert.index]
 
                                 bm.to_mesh(me)                        
                                 me.update(calc_edges=True, calc_edges_loose=True)  
                                 bm.free()                            
                             polypaintData.clear()
                         
-                        else:      
+                        else:  # bpy.app.version >= (3,4,0):      
                             if not me.color_attributes:
                                 me.color_attributes.new(prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
 
-                            #skip size because we are using the data count instead
                             goz_file.seek(4, 1)
-                            cnt = unpack('<I', goz_file.read(4))[0]
-                            #skip modifier
-                            goz_file.seek(4, 1)
-                            
+                            cnt = unpack('<Q', goz_file.read(8))[0]
                             alpha = 1   
                             for i in range(cnt): 
-                                colordata = unpack('<3B', goz_file.read(3)) # Color
+                                # Avoid error if buffer length is less than 3
+                                vertex_data = goz_file.read(3)
+                                if len(vertex_data) < 3:
+                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    break
+                                colordata = unpack('<3B', vertex_data) # Color
                                 unpack('<B', goz_file.read(1))  # Alpha 
-                                #convert color to vector                         
+                                
+                                # convert color to vector                         
                                 rgb = [x / 255.0 for x in colordata]
                                 rgb.reverse()                   
-                                rgba = rgb + [alpha]                           
-                                me.attributes.active_color.data[i].color_srgb = rgba
-                                                    
+                                rgba = rgb + [alpha]   
+
+                                # Check that the index is within the range before assigning
+                                if i < len(me.attributes.active_color.data):
+                                    me.attributes.active_color.data[i].color_srgb = rgba
+                                                                    
                         if prefs().performance_profiling: 
                             start_time = profiler(start_time, "Polypaint Assign")
+
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
