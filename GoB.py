@@ -994,12 +994,16 @@ class GoB_OT_export(Operator):
                     #fill vcolArray(vert_idx + rgb_offset) = color_xyz
                     vcolArray = bytearray([0] * numVertices * 3)
                     
-                    for loop in obj.data.loops:
-                        color = active_color.data[loop.index].color_srgb
-                        #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))
-                        vcolArray[loop.vertex_index * 3] = int(255*color[0])
-                        vcolArray[loop.vertex_index * 3+1] = int(255*color[1])
-                        vcolArray[loop.vertex_index * 3+2] = int(255*color[2])
+                    for poly in obj.data.polygons:    
+                        # get the polygon index
+                        print(poly.vertices)
+                        for poly_vert_i, mesh_vert_i in enumerate(poly.vertices):  
+                            print(poly.index, mesh_vert_i)                            
+                            color = active_color.data[mesh_vert_i].color_srgb   
+                            #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))                         
+                            vcolArray[mesh_vert_i * 3] = int(255*color[0])
+                            vcolArray[mesh_vert_i * 3+1] = int(255*color[1])
+                            vcolArray[mesh_vert_i * 3+2] = int(255*color[2])
                     
                     if prefs().performance_profiling: 
                         start_time = profiler(start_time, "    Polypaint:  loop")
