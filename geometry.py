@@ -19,14 +19,5 @@ def get_vertex_colors(obj: Object, numVertices):
     vcolArray[vertex_index] = int(255 * color[0])
     vcolArray[vertex_index + 1] = int(255 * color[1])
     vcolArray[vertex_index + 2] = int(255 * color[2])
-
-  """ for vert in mesh.vertices:
-    # Access color data using color_attribute     
-    color_data = color_attribute.data[vert.index]
-    color = color_data.color_srgb  
-    #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))      
-    vcolArray[vert.index * 3] = int(255*color[0])
-    vcolArray[vert.index * 3+1] = int(255*color[1])
-    vcolArray[vert.index * 3+2] = int(255*color[2]) """
   
   return vcolArray
