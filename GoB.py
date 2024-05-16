@@ -33,6 +33,8 @@ from bpy.types import Operator
 from bpy.props import EnumProperty
 from bpy.app.translations import pgettext_iface as iface_
 
+from . import geometry
+
 gob_version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
 
 def prefs():
@@ -988,25 +990,10 @@ class GoB_OT_export(Operator):
                 # get active color attribut from obj (obj.data.color_attributes). 
                 # The temp mesh (me.) has no active color (use obj.data. instead of me.!)
                 if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0: 
-                     
-                    active_color = obj.data.color_attributes.active_color                      
-                    vcoldata = obj.data.color_attributes[obj.data.color_attributes.active_color_name].data 
-                    #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-                    vcolArray = bytearray([0] * numVertices * 3)
-                    
-                    for poly in obj.data.polygons:    
-                        # get the polygon index
-                        print(poly.vertices)
-                        for poly_vert_i, mesh_vert_i in enumerate(poly.vertices):  
-                            print(poly.index, mesh_vert_i)                            
-                            color = active_color.data[mesh_vert_i].color_srgb   
-                            #print(vloop.vertex_index, int(255*color[0]), int(255*color[1]), int(255*color[2]))                         
-                            vcolArray[mesh_vert_i * 3] = int(255*color[0])
-                            vcolArray[mesh_vert_i * 3+1] = int(255*color[1])
-                            vcolArray[mesh_vert_i * 3+2] = int(255*color[2])
-                    
+
+                    vcolArray = geometry.get_vertex_colors(obj, numVertices) 
                     if prefs().performance_profiling: 
-                        start_time = profiler(start_time, "    Polypaint:  loop")
+                        start_time = profiler(start_time, "    Polypaint:  vcolArray")
 
                     goz_file.write(pack('<4B', 0xb9, 0x88, 0x00, 0x00))
                     goz_file.write(pack('<I', numVertices*4+16))
@@ -1042,7 +1029,7 @@ class GoB_OT_export(Operator):
                             try:
                                 goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
                             except Exception as e:
-                                print(e)
+                                #print("no vertex group: ", e)
                                 goz_file.write(pack('<H', 65535))                                
                 
             if prefs().performance_profiling: 
