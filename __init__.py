@@ -19,11 +19,11 @@
 
 if "bpy" in locals():
     import importlib
-    importlib.reload(GoB)
+    importlib.reload(gob)
     importlib.reload(preferences)
     importlib.reload(addon_updater)
 else:
-    from . import GoB
+    from . import gob
     from . import preferences
     from . import addon_updater
 
@@ -45,11 +45,11 @@ bl_info = {
 
 
 classes = (
-    GoB.GoB_OT_import,
-    GoB.GoB_OT_export,
-    GoB.GoB_OT_export_button,
-    GoB.GoB_OT_GoZ_Installer,
-    GoB.GOB_OT_Popup,
+    gob.GoB_OT_import,
+    gob.GoB_OT_export,
+    gob.GoB_OT_export_button,
+    gob.GoB_OT_GoZ_Installer,
+    gob.GOB_OT_Popup,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
     )
@@ -64,19 +64,19 @@ def register():
     icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
     icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    GoB.preview_collections["main"] = icons 
-    bpy.types.TOPBAR_HT_upper_bar.prepend(GoB.draw_goz_buttons)
+    gob.preview_collections["main"] = icons 
+    bpy.types.TOPBAR_HT_upper_bar.prepend(gob.draw_goz_buttons)
 
 
 def unregister():
 
-    for preferences.custom_icons in GoB.preview_collections.values():
+    for preferences.custom_icons in gob.preview_collections.values():
         bpy.utils.previews.remove(icons)
-    GoB.preview_collections.clear()
+    gob.preview_collections.clear()
 
-    bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz_buttons)
+    bpy.types.TOPBAR_HT_upper_bar.remove(gob.draw_goz_buttons)
 
     [bpy.utils.unregister_class(c) for c in classes]
 
-    if bpy.app.timers.is_registered(GoB.run_import_periodically):
-        bpy.app.timers.unregister(GoB.run_import_periodically)
+    if bpy.app.timers.is_registered(gob.run_import_periodically):
+        bpy.app.timers.unregister(gob.run_import_periodically)

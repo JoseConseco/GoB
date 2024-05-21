@@ -28,12 +28,11 @@ import random
 import time
 from struct import pack, unpack
 import string
-import numpy
 from bpy.types import Operator
 from bpy.props import EnumProperty
 from bpy.app.translations import pgettext_iface as iface_
+from . import geometry, paths, reports
 
-from . import geometry
 
 gob_version = str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
 
@@ -41,43 +40,8 @@ def prefs():
     user_preferences = bpy.context.preferences
     return user_preferences.addons[__package__].preferences 
 
-def gob_init_os_paths():   
-    isMacOS = False
-    useZSH = False
-    import platform
-    if platform.system() == 'Windows':  
-        print("GoB Found System: ", platform.system())
-        isMacOS = False
-        PATH_GOZ_PIXOLOGIC = os.path.join(os.environ['PUBLIC'] , "Pixologic")
-        PATH_GOZ_MAXON = os.path.join(os.environ['PUBLIC'] , "Maxon")
-
-    elif platform.system() == 'Darwin': #osx
-        print("GoB Found System: ", platform.system())
-
-        # with macOS Catalina (10.15) apple switched from bash to zsh as default shell
-        if platform.mac_ver()[0] < str(10.15):
-            print("use bash")
-            useZSH = False
-        else: 
-            print("use zsh")
-            useZSH = True
-
-        isMacOS = True        
-        #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ_PIXOLOGIC = os.path.join("/Users/Shared/Pixologic")
-        PATH_GOZ_MAXON = os.path.join("/Users/Shared/Maxon")
-    else:
-        print("GoB Unkonwn System: ", platform.system())
-        PATH_GOZ_PIXOLOGIC = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
-        PATH_GOZ_MAXON = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
-    
-    PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
-    PATH_BLENDER = os.path.join(bpy.app.binary_path)
-    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON
-
-
 #create GoB paths when loading the addon
-isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON = gob_init_os_paths()
+isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON = paths.gob_init_os_paths()
 print("PATH_GOZ_PIXOLOGIC: ", PATH_GOZ_PIXOLOGIC)
 print("PATH_GOZ_MAXON: ", PATH_GOZ_MAXON)
 
@@ -271,7 +235,7 @@ class GoB_OT_import(Operator):
             if prefs().performance_profiling:  
                 start_time = profiler(start_time, "____create mesh") 
            
-            me,_ = apply_transformation(me, is_import=True)
+            me,_ = geometry.apply_transformation(me, is_import=True)
             # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
             me.transform(obj.matrix_world.inverted())   
             if prefs().performance_profiling:  
@@ -811,7 +775,7 @@ class GoB_OT_export(Operator):
         if prefs().performance_profiling: 
             start_time = profiler(start_time, "Make Mesh calc_loop_triangles")
 
-        me, mat_transform = apply_transformation(me, is_import=False)
+        me, mat_transform = geometry.apply_transformation(me, is_import=False)
         if prefs().performance_profiling: 
             start_time = profiler(start_time, "Make Mesh apply_transformation")
 
@@ -1388,10 +1352,10 @@ class GoB_OT_export(Operator):
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
                     else:
-                        ShowReport(self, ["Object: ", obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
+                        reports.ShowReport(self, ["Object: ", obj.name], "GoB: ZBrush can not import objects without faces", 'COLORSET_01_VEC') 
                     
                 else:
-                    ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
+                    reports.ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
                     #print("GoB: unsupported obj.type found:", obj.type, obj.name)
 
                 wm.progress_update(step * i)                
@@ -1408,7 +1372,7 @@ class GoB_OT_export(Operator):
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
         if not is_file_empty(PATH_OBJLIST) and not prefs().debug_dry_export: 
-            path_exists = find_zbrush(self, context)
+            path_exists = paths.find_zbrush(self, context, isMacOS)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
             else:
@@ -1472,61 +1436,7 @@ class GoB_OT_export_button(Operator):
         bpy.ops.scene.gob_export(as_tool=as_tool)
         return {'FINISHED'}
 
-def find_zbrush(self, context):
-    #get the highest version of zbrush and use it as default zbrush to send to
-    self.is_found = False 
-    if prefs().zbrush_exec:        
-        #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
-        if isMacOS:
-            if os.path.isdir(prefs().zbrush_exec) and 'zbrush.app' in str.lower(prefs().zbrush_exec):
-                self.is_found = True   
 
-        else: #is PC
-            if os.path.isfile(prefs().zbrush_exec):  #validate if working file here    
-                #check if path contains zbrush, that should identify a zbrush executable
-                if 'zbrush.exe' in str.lower(prefs().zbrush_exec): 
-                    self.is_found = True
-
-            elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfolders 
-                for folder in os.listdir(prefs().zbrush_exec): 
-                    if "zbrush" in str.lower(folder):     #search for content inside folder that contains zbrush
-                        #search subfolders for executables
-                        if os.path.isdir(os.path.join(prefs().zbrush_exec, folder)): 
-                            i,zfolder = max_list_value(os.listdir(os.path.join(prefs().zbrush_exec)))
-                            for file in os.listdir(os.path.join(prefs().zbrush_exec, zfolder)):
-                                if ('zbrush.exe' in str.lower(file) in str.lower(file)):            
-                                    prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, file)           
-                                    self.is_found = True   
-
-                        #find executable
-                        if os.path.isfile(os.path.join(prefs().zbrush_exec,folder)) and ('zbrush.exe' in str.lower(folder) in str.lower(folder)):            
-                            prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, folder)           
-                            self.is_found = True  
-
-    else:    # the  applications default path can try if zbrush is installed in its defaut location  
-        #look for zbrush in default installation path 
-        if isMacOS:
-            folder_List = []                 
-            filepath = os.path.join(f"/Applications")
-            if os.path.isdir(filepath):
-                [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
-                i, zfolder = max_list_value(folder_List)
-                prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
-                self.is_found = True            
-        else:  
-            filepath = os.path.join(f"C:/Program Files/Pixologic")
-            #find non version paths
-            if os.path.isdir(filepath):
-                i,zfolder = max_list_value(os.listdir(filepath))
-                prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
-                self.is_found = True  
-
-    if not self.is_found:
-        print('GoB: Zbrush executable not found')
-
-    return self.is_found
 
 
 class GoB_OT_GoZ_Installer(Operator):
@@ -1537,7 +1447,7 @@ class GoB_OT_GoZ_Installer(Operator):
 
     def execute(self, context):
         """Install GoZ for Windows""" 
-        path_exists = find_zbrush(self, context)
+        path_exists = paths.find_zbrush(self, context, isMacOS)
         if path_exists:
             if isMacOS:
                 path = prefs().zbrush_exec.strip("ZBrush.app")  
@@ -1552,11 +1462,6 @@ class GoB_OT_GoZ_Installer(Operator):
         return {'FINISHED'}
 
 
-def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
-    def draw(self, context):
-        for i in message:
-            self.layout.label(text=i)
-    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 
 class GOB_OT_Popup(Operator):
@@ -1714,92 +1619,7 @@ def create_material_node(mat, diff_texture=None, norm_texture=None, disp_texture
 
 
 
-def apply_transformation(me, is_import=True): 
-    mat_transform = None
-    scale = 1.0
-    
-    if prefs().use_scale == 'BUNITS':
-        scale = 1 / bpy.context.scene.unit_settings.scale_length
 
-    if prefs().use_scale == 'MANUAL':        
-        scale =  1 / prefs().manual_scale
-
-    if prefs().use_scale == 'ZUNITS':
-        if bpy.context.active_object:
-            obj = bpy.context.active_object
-            i, max = max_list_value(obj.dimensions)
-            scale =  1 / prefs().zbrush_scale * max
-            if prefs().debug_output:
-                print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
-            
-    #import
-    if prefs().flip_up_axis:  # fixes bad mesh orientation for some people
-        if prefs().flip_forward_axis:
-            if is_import:
-                me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-        else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    else:
-        if prefs().flip_forward_axis:            
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-                #me.flip_normals()
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-        else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    return me, mat_transform
 
 
 def profiler(start_time=False, string=None):    
@@ -1814,23 +1634,6 @@ def profiler(start_time=False, string=None):
              
     start_time = time.perf_counter()
     return start_time  
-
-
-def max_list_value(list):
-    """ retrun biggest value of a list"""
-    i = numpy.argmax(list)
-    v = list[i]
-    return (i, v)
-
-
-def avg_list_value(list):
-    """ retrun average value of a list"""
-    avgData=[]
-    for obj in list:
-        i = numpy.argmax(obj)
-        avgData.append(obj[i])
-    avg = numpy.average(avgData)
-    return (avg)
 
 
 def is_file_empty(file_path):
@@ -1862,6 +1665,7 @@ def clone_as_object(obj, link=True):
     if link:
         bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
     return obj_clone
+
 
 def export_poll(cls, context):  
     # do not allow export if no objects are selected

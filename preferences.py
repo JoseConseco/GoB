@@ -18,10 +18,10 @@
 
 if "bpy" in locals():
     import importlib
-    importlib.reload(GoB)
+    importlib.reload(gob)
     importlib.reload(addon_updater)
 else:
-    from . import GoB
+    from . import gob
     from . import addon_updater
     
 """Addon preferences"""
@@ -103,7 +103,7 @@ class GoB_Preferences(AddonPreferences):
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{GoB.PATH_GOZ_PIXOLOGIC}/GoZProjects/Default/"))
+        default=os.path.join(f"{gob.PATH_GOZ_PIXOLOGIC}/GoZProjects/Default/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
@@ -513,7 +513,7 @@ class GoB_Preferences(AddonPreferences):
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
         if platform.system() == 'Windows':
-            icons = GoB.preview_collections["main"]  
+            icons = gob.preview_collections["main"]  
             box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
             
         
