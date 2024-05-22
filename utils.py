@@ -16,8 +16,20 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import bpy
 import numpy
+import random
+import addon_utils
 
+def prefs():
+    user_preferences = bpy.context.preferences
+    return user_preferences.addons[__package__].preferences 
+
+
+def gob_version():
+    return str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
+     
+    
 def max_list_value(list):
     """ retrun biggest value of a list"""
     i = numpy.argmax(list)
@@ -33,3 +45,10 @@ def avg_list_value(list):
         avgData.append(obj[i])
     avg = numpy.average(avgData)
     return (avg)
+
+
+def random_color(base=16):    
+    randcolor = "%5x" % random.randint(0x1111, 0xFFFF)
+    return int(randcolor, base)
+
+

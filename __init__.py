@@ -20,10 +20,12 @@
 if "bpy" in locals():
     import importlib
     importlib.reload(gob)
+    importlib.reload(gob_import)
     importlib.reload(preferences)
     importlib.reload(addon_updater)
 else:
     from . import gob
+    from . import gob_import
     from . import preferences
     from . import addon_updater
 

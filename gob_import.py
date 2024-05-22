@@ -17,9 +17,15 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import os
 
-def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
-    def draw(self, context):
-        for i in message:
-            self.layout.label(text=i)
-    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+from . import gob
+
+
+
+def run_import_manually():  
+    gob.gob_import_cache.clear() 
+    bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)  
+    
+
+

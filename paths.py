@@ -19,11 +19,8 @@
 import bpy
 import os
 
-from . import utils, reports
+from . import output, utils
 
-def prefs():
-    user_preferences = bpy.context.preferences
-    return user_preferences.addons[__package__].preferences 
 
 def gob_init_os_paths():   
     isMacOS = False
@@ -64,32 +61,32 @@ def gob_init_os_paths():
 def find_zbrush(self, context, isMacOS):
     #get the highest version of zbrush and use it as default zbrush to send to
     self.is_found = False 
-    if prefs().zbrush_exec:        
+    if utils.prefs().zbrush_exec:        
         #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
         if isMacOS:
-            if os.path.isdir(prefs().zbrush_exec) and 'zbrush.app' in str.lower(prefs().zbrush_exec):
+            if os.path.isdir(utils.prefs().zbrush_exec) and 'zbrush.app' in str.lower(utils.prefs().zbrush_exec):
                 self.is_found = True   
 
         else: #is PC
-            if os.path.isfile(prefs().zbrush_exec):  #validate if working file here    
+            if os.path.isfile(utils.prefs().zbrush_exec):  #validate if working file here    
                 #check if path contains zbrush, that should identify a zbrush executable
-                if 'zbrush.exe' in str.lower(prefs().zbrush_exec): 
+                if 'zbrush.exe' in str.lower(utils.prefs().zbrush_exec): 
                     self.is_found = True
 
-            elif os.path.isdir(prefs().zbrush_exec): #search for zbrush files in this folder and its subfolders 
-                for folder in os.listdir(prefs().zbrush_exec): 
+            elif os.path.isdir(utils.prefs().zbrush_exec): #search for zbrush files in this folder and its subfolders 
+                for folder in os.listdir(utils.prefs().zbrush_exec): 
                     if "zbrush" in str.lower(folder):     #search for content inside folder that contains zbrush
                         #search subfolders for executables
-                        if os.path.isdir(os.path.join(prefs().zbrush_exec, folder)): 
-                            i,zfolder = utils.max_list_value(os.listdir(os.path.join(prefs().zbrush_exec)))
-                            for file in os.listdir(os.path.join(prefs().zbrush_exec, zfolder)):
+                        if os.path.isdir(os.path.join(utils.prefs().zbrush_exec, folder)): 
+                            i,zfolder = utils.max_list_value(os.listdir(os.path.join(utils.prefs().zbrush_exec)))
+                            for file in os.listdir(os.path.join(utils.prefs().zbrush_exec, zfolder)):
                                 if ('zbrush.exe' in str.lower(file) in str.lower(file)):            
-                                    prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, zfolder, file)           
+                                    utils.prefs().zbrush_exec = os.path.join(utils.prefs().zbrush_exec, zfolder, file)           
                                     self.is_found = True   
 
                         #find executable
-                        if os.path.isfile(os.path.join(prefs().zbrush_exec,folder)) and ('zbrush.exe' in str.lower(folder) in str.lower(folder)):            
-                            prefs().zbrush_exec = os.path.join(prefs().zbrush_exec, folder)           
+                        if os.path.isfile(os.path.join(utils.prefs().zbrush_exec,folder)) and ('zbrush.exe' in str.lower(folder) in str.lower(folder)):            
+                            utils.prefs().zbrush_exec = os.path.join(utils.prefs().zbrush_exec, folder)           
                             self.is_found = True  
 
     else:    # the  applications default path can try if zbrush is installed in its defaut location  
@@ -100,19 +97,24 @@ def find_zbrush(self, context, isMacOS):
             if os.path.isdir(filepath):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = utils.max_list_value(folder_List)
-                prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                reports.ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
+                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
+                output.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
             filepath = os.path.join(f"C:/Program Files/Pixologic")
             #find non version paths
             if os.path.isdir(filepath):
                 i,zfolder = utils.max_list_value(os.listdir(filepath))
-                prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                reports.ShowReport(self, [prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
+                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
+                output.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
 
     if not self.is_found:
         print('GoB: Zbrush executable not found')
 
     return self.is_found
+
+
+def is_file_empty(file_path):
+    """ Check if file is empty by confirming if its size is 0 bytes"""
+    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
