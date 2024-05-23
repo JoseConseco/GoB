@@ -18,19 +18,22 @@
 
 import bpy
 import os
+import platform
+from subprocess import Popen
+from bpy.types import Operator
 
-from . import output, utils
+from . import output, utils, paths, gob_import
+
+
 
 
 def gob_init_os_paths():   
     isMacOS = False
     useZSH = False
-    import platform
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        PATH_GOZ_PIXOLOGIC = os.path.join(os.environ['PUBLIC'] , "Pixologic")
-        PATH_GOZ_MAXON = os.path.join(os.environ['PUBLIC'] , "Maxon")
+        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
@@ -45,17 +48,21 @@ def gob_init_os_paths():
 
         isMacOS = True        
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ_PIXOLOGIC = os.path.join("/Users/Shared/Pixologic")
-        PATH_GOZ_MAXON = os.path.join("/Users/Shared/Maxon")
+        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
     else:
         print("GoB Unkonwn System: ", platform.system())
-        PATH_GOZ_PIXOLOGIC = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
-        PATH_GOZ_MAXON = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
+        PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = os.path.join(bpy.app.binary_path)
     
-    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ_PIXOLOGIC, PATH_GOZ_MAXON
+    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ
+
+
+#create GoB paths when loading the addon
+isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ = gob_init_os_paths()
+print("PATH_GOZ: ", PATH_GOZ)
+
 
 
 def find_zbrush(self, context, isMacOS):
@@ -115,6 +122,31 @@ def find_zbrush(self, context, isMacOS):
     return self.is_found
 
 
+
 def is_file_empty(file_path):
     """ Check if file is empty by confirming if its size is 0 bytes"""
     return os.path.exists(file_path) and os.stat(file_path).st_size == 0
+
+
+
+class GoB_OT_GoZ_Installer(Operator):
+    ''' Run the Pixologic GoZ installer 
+        /Troubleshoot Help/GoZ_for_ZBrush_Installer'''
+    bl_idname = "gob.install_goz" 
+    bl_label = "Run GoZ Installer"
+
+    def execute(self, context):
+        """Install GoZ for Windows""" 
+        path_exists = paths.find_zbrush(self, context, gob_import.isMacOS)
+        if path_exists:
+            if gob_import.isMacOS:
+                path = utils.prefs().zbrush_exec.strip("ZBrush.app")  
+                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
+                Popen(['open', '-a', GOZ_INSTALLER])  
+            else: 
+                path = utils.prefs().zbrush_exec.strip("ZBrush.exe")           
+                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
+                Popen([GOZ_INSTALLER], shell=True)
+        else:
+            bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+        return {'FINISHED'}

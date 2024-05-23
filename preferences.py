@@ -16,22 +16,16 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-if "bpy" in locals():
-    import importlib
-    importlib.reload(gob)
-    importlib.reload(addon_updater)
-else:
-    from . import gob
-    from . import addon_updater
     
 """Addon preferences"""
-import bpy
 import os
 from bpy.types import AddonPreferences
 from bpy.props import ( StringProperty, 
                         BoolProperty, 
                         FloatProperty,
                         EnumProperty)
+
+from . import gob_import,  addon_updater, paths
 
 
 preferences_tabs = [
@@ -86,24 +80,24 @@ class GoB_Preferences(AddonPreferences):
 
     import platform
     if platform.system() == 'Windows':
-        PATH_GOZ_PIXOLOGIC = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
+        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
     elif platform.system() == 'Darwin': #osx
-        PATH_GOZ_PIXOLOGIC = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
     else:
-        PATH_GOZ_PIXOLOGIC = False
+        PATH_GOZ = False
 
     pixologoc_path: StringProperty(
         name="Pixologic Public Path", 
         description="Set public pixologic path, this needs to be a valid folder which zbrush accesses." 
                     "By default this folder is on the windows system drive under C:\\Users\\Public\\Pixologic", 
         subtype='DIR_PATH',
-        default=PATH_GOZ_PIXOLOGIC)  # Default: PATH_GOZ_PIXOLOGIC  
+        default=PATH_GOZ)  # Default: PATH_GOZ  
 
     project_path: StringProperty(
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{gob.PATH_GOZ_PIXOLOGIC}/GoZProjects/Default/"))
+        default=os.path.join(f"{paths.PATH_GOZ}/GoZProjects/Default/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
@@ -513,7 +507,7 @@ class GoB_Preferences(AddonPreferences):
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
         if platform.system() == 'Windows':
-            icons = gob.preview_collections["main"]  
+            icons = gob_import.preview_collections["main"]  
             box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
             
         
