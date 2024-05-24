@@ -22,10 +22,8 @@ import time
 import shutil
 from struct import pack
 from subprocess import Popen
-
 from bpy.types import Operator
 from bpy.props import BoolProperty
-
 from . import paths, output, utils, geometry
 
 
@@ -489,6 +487,7 @@ class GoB_OT_export(Operator):
         return
 
     def execute(self, context): 
+       
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
         PATH_PROJECT = os.path.join(utils.prefs().project_path)

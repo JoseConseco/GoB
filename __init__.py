@@ -16,12 +16,16 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-   
 
 import bpy
 import os
 import bpy.utils.previews
-from . import gob_import, paths, gob_export, preferences, addon_updater
+from . import (gob_import, 
+               paths, 
+               gob_export, 
+               preferences, 
+               addon_updater, 
+               ui)
 
 bl_info = {
     "name": "GoB",
@@ -38,8 +42,8 @@ bl_info = {
 classes = (
     gob_import.GoB_OT_import,
     gob_export.GoB_OT_export,
-    gob_import.GoB_OT_export_button,
-    gob_import.GOB_OT_Popup,
+    ui.GoB_OT_export_button,
+    ui.GOB_OT_Popup,
     paths.GoB_OT_GoZ_Installer,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
@@ -55,17 +59,17 @@ def register():
     icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
     icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    gob_import.preview_collections["main"] = icons 
-    bpy.types.TOPBAR_HT_upper_bar.prepend(gob_import.draw_goz_buttons)
+    ui.preview_collections["main"] = icons 
+    bpy.types.TOPBAR_HT_upper_bar.prepend(ui.draw_goz_buttons)
 
 
 def unregister():
 
-    for preferences.custom_icons in gob_import.preview_collections.values():
+    for preferences.custom_icons in ui.preview_collections.values():
         bpy.utils.previews.remove(icons)
-    gob_import.preview_collections.clear()
+    ui.preview_collections.clear()
 
-    bpy.types.TOPBAR_HT_upper_bar.remove(gob_import.draw_goz_buttons)
+    bpy.types.TOPBAR_HT_upper_bar.remove(ui.draw_goz_buttons)
 
     [bpy.utils.unregister_class(c) for c in classes]
 

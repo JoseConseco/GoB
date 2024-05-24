@@ -21,7 +21,6 @@ import bmesh
 import mathutils
 import time
 import math
-
 from bpy.types import Object
 from . import utils, output
 

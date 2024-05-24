@@ -3,6 +3,7 @@ import numpy
 import addon_utils
 import requests
 from bpy.types import Operator 
+from bpy.props import IntProperty
 
 def prefs():
     user_preferences = bpy.context.preferences
@@ -15,7 +16,7 @@ class AU_OT_SearchUpdates(Operator):
     bl_idname = "au.check_updates"
     bl_label = "Check for Updates" 
     
-    button_input: bpy.props.IntProperty()
+    button_input: IntProperty()
 
     def max_tag(self, list):
         i = numpy.argmax(list)

@@ -19,6 +19,7 @@
     
 """Addon preferences"""
 import os
+import platform
 from bpy.types import AddonPreferences
 from bpy.props import ( StringProperty, 
                         BoolProperty, 
@@ -78,7 +79,6 @@ class GoB_Preferences(AddonPreferences):
         description="This will allow you to set a custom Public Pixologic Path, this is where ZBrush stores GoZ configurations",
         default=False) # Default: False
 
-    import platform
     if platform.system() == 'Windows':
         PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
     elif platform.system() == 'Darwin': #osx
