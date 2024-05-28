@@ -127,4 +127,10 @@ class GOB_OT_Popup(Operator):
         return {'FINISHED'}
 
 
+def ShowReport(self, message = [], title = "Message Box", icon = 'INFO'):
+    def draw(self, context):
+        for i in message:
+            self.layout.label(text=i)
+    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
 

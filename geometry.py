@@ -22,7 +22,7 @@ import mathutils
 import time
 import math
 from bpy.types import Object
-from . import utils, output
+from . import utils
 
 
 def get_vertex_colors(obj: Object, numVertices):
@@ -194,16 +194,16 @@ def apply_modifiers(obj):
 
     if utils.prefs().performance_profiling: 
         print("\\_____")
-        start_time = output.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
-        start_total_time = output.profiler(time.perf_counter(), "")
+        start_time = utils.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
+        start_total_time = utils.profiler(time.perf_counter(), "")
 
     depsgraph = bpy.context.evaluated_depsgraph_get()  
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh depsgraph")
+        start_time = utils.profiler(start_time, "Make Mesh depsgraph")
         
     object_eval = obj.evaluated_get(depsgraph)   
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh object_eval")
+        start_time = utils.profiler(start_time, "Make Mesh object_eval")
 
     if utils.prefs().export_modifiers == 'APPLY_EXPORT':      
         mesh_tmp = bpy.data.meshes.new_from_object(object_eval) 
@@ -213,7 +213,7 @@ def apply_modifiers(obj):
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
         mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
         if utils.prefs().performance_profiling: 
-            start_time = output.profiler(start_time, "Make Mesh to_mesh") 
+            start_time = utils.profiler(start_time, "Make Mesh to_mesh") 
 
     else:
         mesh_tmp = obj.data
@@ -221,11 +221,11 @@ def apply_modifiers(obj):
     #DO the triangulation of Ngons only, but do not write it to original object.    
     bm = bmesh.new()
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh bmesh new")
+        start_time = utils.profiler(start_time, "Make Mesh bmesh new")
 
     bm.from_mesh(mesh_tmp)    
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh bmesh")
+        start_time = utils.profiler(start_time, "Make Mesh bmesh")
 
     #join traingles only that are result of ngon triangulation 
     facesTotTriangulate = [f for f in bm.faces if len(f.edges) > 4]   
@@ -239,29 +239,29 @@ def apply_modifiers(obj):
 
 
         if utils.prefs().performance_profiling: 
-            start_time = output.profiler(start_time, "Make Mesh triangulate1")
+            start_time = utils.profiler(start_time, "Make Mesh triangulate1")
     
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh triangulate2")
+        start_time = utils.profiler(start_time, "Make Mesh triangulate2")
 
     export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh export_mesh")
+        start_time = utils.profiler(start_time, "Make Mesh export_mesh")
 
     bm.to_mesh(export_mesh)
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh to_mesh")
+        start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
     bm.free()     
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh bm free")  
+        start_time = utils.profiler(start_time, "Make Mesh bm free")  
 
     obj.to_mesh_clear()
     if utils.prefs().performance_profiling: 
-        start_time = output.profiler(start_time, "Make Mesh to_mesh_clear")  
+        start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")  
     
     if utils.prefs().performance_profiling:         
-        output.profiler(start_total_time, "Make Mesh return\n _____/") 
+        utils.profiler(start_total_time, "Make Mesh return\n _____/") 
    
     return export_mesh    
 

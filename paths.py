@@ -22,7 +22,7 @@ import platform
 from subprocess import Popen
 from bpy.types import Operator
 
-from . import output, utils, paths, gob_import
+from . import ui, utils, gob_import
 
 
 
@@ -105,7 +105,7 @@ def find_zbrush(self, context, isMacOS):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = utils.max_list_value(folder_List)
                 utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
-                output.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
+                ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
             filepath = os.path.join(f"C:/Program Files/Pixologic")
@@ -113,7 +113,7 @@ def find_zbrush(self, context, isMacOS):
             if os.path.isdir(filepath):
                 i,zfolder = utils.max_list_value(os.listdir(filepath))
                 utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
-                output.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
+                ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
 
     if not self.is_found:
@@ -137,7 +137,7 @@ class GoB_OT_GoZ_Installer(Operator):
 
     def execute(self, context):
         """Install GoZ for Windows""" 
-        path_exists = paths.find_zbrush(self, context, gob_import.isMacOS)
+        path_exists = find_zbrush(self, context, gob_import.isMacOS)
         if path_exists:
             if gob_import.isMacOS:
                 path = utils.prefs().zbrush_exec.strip("ZBrush.app")  

@@ -26,7 +26,7 @@ from struct import unpack
 import string
 from bpy.types import Operator
 from bpy.props import EnumProperty
-from . import geometry, output, paths, utils, nodes
+from . import geometry, paths, utils, nodes
 
 
 run_background_update = False
@@ -50,8 +50,8 @@ class GoB_OT_import(Operator):
     def GoZit(self, pathFile): 
         if utils.prefs().performance_profiling: 
             print("\n")
-            start_time = output.profiler(time.perf_counter(), "Start Object Profiling")
-            start_total_time = output.profiler(time.perf_counter(), "...")
+            start_time = utils.profiler(time.perf_counter(), "Start Object Profiling")
+            start_total_time = utils.profiler(time.perf_counter(), "...")
 
         utag = 0
         vertsData = []
@@ -85,7 +85,7 @@ class GoB_OT_import(Operator):
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                     if utils.prefs().performance_profiling:  
-                        start_time = output.profiler(start_time, "____Unpack Mesh Name")
+                        start_time = utils.profiler(start_time, "____Unpack Mesh Name")
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
@@ -100,7 +100,7 @@ class GoB_OT_import(Operator):
                         vertsData.append((co1, co2, co3))
 
                     if utils.prefs().performance_profiling:  
-                        start_time = output.profiler(start_time, "____Unpack Mesh Vertices")
+                        start_time = utils.profiler(start_time, "____Unpack Mesh Vertices")
                 
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
@@ -120,7 +120,7 @@ class GoB_OT_import(Operator):
                         else:
                             facesData.append((v1, v2, v3, v4))
                     if utils.prefs().performance_profiling:  
-                        start_time = output.profiler(start_time, "____Unpack Mesh Faces")
+                        start_time = utils.profiler(start_time, "____Unpack Mesh Faces")
 
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
@@ -160,7 +160,7 @@ class GoB_OT_import(Operator):
                 tag = goz_file.read(4)
                 
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "Unpack Mesh Data\n")
+                start_time = utils.profiler(start_time, "Unpack Mesh Data\n")
 
             # create new object
             if not objName in bpy.data.objects.keys():
@@ -192,35 +192,35 @@ class GoB_OT_import(Operator):
                     me.from_pydata(vertsData, [], facesData)
                     #obj.data = me
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "____create mesh") 
+                start_time = utils.profiler(start_time, "____create mesh") 
            
             me,_ = geometry.apply_transformation(me, is_import=True)
             # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
             me.transform(obj.matrix_world.inverted())   
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "____transform mesh")      
+                start_time = utils.profiler(start_time, "____transform mesh")      
            
             # update mesh data after transformations to fix normals 
             if utils.prefs().debug_output:
                 me.validate(verbose=False) # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=validate#bpy.types.Mesh.validate
                 if utils.prefs().performance_profiling:  
-                    start_time = output.profiler(start_time, "____validate mesh")
+                    start_time = utils.profiler(start_time, "____validate mesh")
             
             me.update(calc_edges=True, calc_edges_loose=True)  # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=update#bpy.types.Mesh.update
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "____update mesh")
+                start_time = utils.profiler(start_time, "____update mesh")
             
             # make object active
             obj.select_set(state=True) 
             bpy.context.view_layer.objects.active = obj
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "____make object active")
+                start_time = utils.profiler(start_time, "____make object active")
 
             vertsData.clear()
             facesData.clear()
 
             if utils.prefs().performance_profiling:  
-                start_time = output.profiler(start_time, "Make Mesh import\n")
+                start_time = utils.profiler(start_time, "Make Mesh import\n")
                 
             
             utag = 0
@@ -262,7 +262,7 @@ class GoB_OT_import(Operator):
                         me.update(calc_edges=True, calc_edges_loose=True)  
                         
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "UV Map") 
+                            start_time = utils.profiler(start_time, "UV Map") 
                         
 
                 # Polypainting
@@ -294,7 +294,7 @@ class GoB_OT_import(Operator):
                                 polypaintData.append(tuple(rgba))                      
                                             
                             if utils.prefs().performance_profiling: 
-                                start_time = output.profiler(start_time, "Polypaint Unpack")
+                                start_time = utils.profiler(start_time, "Polypaint Unpack")
 
                             if polypaintData:                   
                                 bm = bmesh.new()
@@ -345,7 +345,7 @@ class GoB_OT_import(Operator):
                                     me.attributes.active_color.data[i].color_srgb = rgba
                                                                     
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "Polypaint Assign")
+                            start_time = utils.profiler(start_time, "Polypaint Assign")
 
 
                 # Mask
@@ -366,7 +366,7 @@ class GoB_OT_import(Operator):
                             groupMask.add([faceIndex], 1.0-weight, 'ADD')  
 
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "Mask\n")
+                            start_time = utils.profiler(start_time, "Mask\n")
 
                 # Polygroups
                 elif tag == b'\x41\x9c\x00\x00':   
@@ -385,7 +385,7 @@ class GoB_OT_import(Operator):
                         #[polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
                                                     
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "____create polyGroupData")
+                            start_time = utils.profiler(start_time, "____create polyGroupData")
 
                         # import polygroups to materials
                         if utils.prefs().import_material == 'POLYGROUPS':                                
@@ -411,7 +411,7 @@ class GoB_OT_import(Operator):
                                     objMat.node_tree.nodes["Principled BSDF"].inputs[0].default_value = rgba
 
                             if utils.prefs().performance_profiling: 
-                                start_time = output.profiler(start_time, "____import_material POLYGROUPS")
+                                start_time = utils.profiler(start_time, "____import_material POLYGROUPS")
 
                         # import polygroups to vertex groups
                         if utils.prefs().import_polygroups_to_vertexgroups:
@@ -421,7 +421,7 @@ class GoB_OT_import(Operator):
                                 obj.vertex_groups.new(name=str(group))  
                             
                             if utils.prefs().performance_profiling: 
-                                start_time = output.profiler(start_time, "____import_polygroups_to_vertexgroups")
+                                start_time = utils.profiler(start_time, "____import_polygroups_to_vertexgroups")
                             
                         # import polygroups to face maps
                         """ if utils.prefs().import_polygroups_to_facemaps:                                
@@ -431,7 +431,7 @@ class GoB_OT_import(Operator):
                                 obj.face_maps.new(name=str(group)) 
                             
                             if utils.prefs().performance_profiling: 
-                                start_time = output.profiler(start_time, "____import_polygroups_to_facemaps") """
+                                start_time = utils.profiler(start_time, "____import_polygroups_to_facemaps") """
                        
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
@@ -450,12 +450,12 @@ class GoB_OT_import(Operator):
                                 vertexGroup.add(list(me.polygons[i].vertices), 1.0, 'ADD')
                         
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "____add data to polygones") 
+                            start_time = utils.profiler(start_time, "____add data to polygones") 
 
                         polyGroupData.clear()
 
                         if utils.prefs().performance_profiling: 
-                            start_time = output.profiler(start_time, "Polyroups\n")
+                            start_time = utils.profiler(start_time, "Polyroups\n")
 
                 # End
                 elif tag == b'\x00\x00\x00\x00': 
@@ -533,7 +533,7 @@ class GoB_OT_import(Operator):
                 tag = goz_file.read(4)
                 
             if utils.prefs().performance_profiling:                
-                start_time = output.profiler(start_time, "Textures")
+                start_time = utils.profiler(start_time, "Textures")
             
             # MATERIALS
             if utils.prefs().import_material:
@@ -572,7 +572,7 @@ class GoB_OT_import(Operator):
 
 
             if utils.prefs().performance_profiling: 
-                start_time = output.profiler(start_time, "Material Node")                
+                start_time = utils.profiler(start_time, "Material Node")                
 
             # #apply face maps to sculpt mode face sets
             if utils.prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
@@ -585,7 +585,7 @@ class GoB_OT_import(Operator):
                             bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
                             break                   
                 if utils.prefs().performance_profiling:                
-                    start_time = output.profiler(start_time, "Init Face Sets")
+                    start_time = utils.profiler(start_time, "Init Face Sets")
 
                 # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
                 bpy.ops.object.mode_set(mode='EDIT') 
@@ -598,11 +598,11 @@ class GoB_OT_import(Operator):
                             break  
 
                 if utils.prefs().performance_profiling:                
-                    start_time = output.profiler(start_time, "Reveal Mesh Elements")
+                    start_time = utils.profiler(start_time, "Reveal Mesh Elements")
                                            
             if utils.prefs().performance_profiling: 
                 print(30*"-") 
-                output.profiler(start_total_time, "Object Import Time")  
+                utils.profiler(start_total_time, "Object Import Time")  
                 print(30*"-")                
         return
              
@@ -644,7 +644,7 @@ class GoB_OT_import(Operator):
 
         if utils.prefs().performance_profiling: 
             print("\n", 100*"=")
-            start_time = output.profiler(time.perf_counter(), "GoB: Start Import Profiling")             
+            start_time = utils.profiler(time.perf_counter(), "GoB: Start Import Profiling")             
             print(100*"-") 
 
         wm = context.window_manager
@@ -660,7 +660,7 @@ class GoB_OT_import(Operator):
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
 
         if utils.prefs().performance_profiling:  
-            start_time = output.profiler(start_time, "GoB: Total Import Time")            
+            start_time = utils.profiler(start_time, "GoB: Total Import Time")            
             print(100*"=")
         return{'FINISHED'}
 

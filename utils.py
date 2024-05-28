@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
+import time
 import numpy
 import random
 import addon_utils
@@ -53,3 +54,15 @@ def random_color(base=16):
     return int(randcolor, base)
 
 
+
+def profiler(start_time=False, string=None):    
+
+    elapsed = time.perf_counter()
+    measured_time = elapsed-start_time
+    if start_time:
+        print("{:.6f}(ms) <<".format(measured_time*1000), string)  
+    else:
+        print("debug_profiling: ", string)          
+             
+    start_time = time.perf_counter()
+    return start_time  
