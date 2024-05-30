@@ -21,10 +21,7 @@ import os
 import platform
 from subprocess import Popen
 from bpy.types import Operator
-
 from . import ui, utils, gob_import
-
-
 
 
 def gob_init_os_paths():   
@@ -54,15 +51,18 @@ def gob_init_os_paths():
         PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
-    PATH_BLENDER = os.path.join(bpy.app.binary_path)
-    
-    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ
+    PATH_BLENDER = os.path.join(bpy.app.binary_path)    
+    PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+    PATH_CONFIG = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") 
+    PATH_SCRIPT = os.path.join(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
+    PATH_VARS = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")  
+
+    return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIPT, PATH_VARS
 
 
 #create GoB paths when loading the addon
-isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ = gob_init_os_paths()
-print("PATH_GOZ: ", PATH_GOZ)
-
+isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIPT, PATH_VARS = gob_init_os_paths()
+print("GoZ Paths: ", gob_init_os_paths)
 
 
 def find_zbrush(self, context, isMacOS):
@@ -108,7 +108,9 @@ def find_zbrush(self, context, isMacOS):
                 ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
-            filepath = os.path.join(f"C:/Program Files/Pixologic")
+            filepath = os.path.join(f"C:/Program Files/Pixologic")            
+            #TODO: add maxon path detection here
+            #filepath = os.path.join(f"C:/Program Files/Maxon")
             #find non version paths
             if os.path.isdir(filepath):
                 i,zfolder = utils.max_list_value(os.listdir(filepath))

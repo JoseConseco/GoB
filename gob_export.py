@@ -24,7 +24,7 @@ from struct import pack
 from subprocess import Popen
 from bpy.types import Operator
 from bpy.props import BoolProperty
-from . import paths, utils, geometry
+from . import paths, utils, geometry, ui
 
 
 class GoB_OT_export(Operator):
@@ -42,7 +42,7 @@ class GoB_OT_export(Operator):
     def poll(cls, context):              
         return geometry.export_poll(cls, context)    
 
-    def exportGoZ(self, path, scn, obj, pathImport):      
+    def exportGoZ(self, scn, obj, path_export):      
         PATH_PROJECT = os.path.join(utils.prefs().project_path).replace("\\", "/")
         if utils.prefs().performance_profiling: 
             print("\n", 100*"=")
@@ -66,9 +66,8 @@ class GoB_OT_export(Operator):
 
         fileExt = '.bmp'
         
-        # write GoB ZScript variables
-        variablesFile = os.path.join(f"{paths.paths.PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")      
-        with open(variablesFile, 'wb') as GoBVars:            
+        # write GoB ZScript variables   
+        with open(paths.PATH_VARS , 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
             #list size
             GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
@@ -127,7 +126,7 @@ class GoB_OT_export(Operator):
             start_time = utils.profiler(start_time, "variablesFile: Write GoB_variables")
 
 
-        with open(os.path.join(pathImport + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:            
+        with open(os.path.join(path_export + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:            
             numFaces = len(me.polygons)
             numVertices = len(me.vertices)
 
@@ -491,7 +490,7 @@ class GoB_OT_export(Operator):
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
         PATH_PROJECT = os.path.join(utils.prefs().project_path)
-        PATH_OBJLIST = os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+        
         #setup GoZ configuration
         #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
@@ -539,9 +538,10 @@ class GoB_OT_export(Operator):
                 SHOW_HELP_WINDOW = TRUE 
         """         
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
-        import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'   
+        import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'  
+        
         try:
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_Config.txt")) as r:
+            with open(paths.PATH_CONFIG) as r:
                 # IMPORT AS SUBTOOL
                 r = r.read().replace('\t', ' ') #fix indentations in source data
                 if self.as_tool:
@@ -550,10 +550,11 @@ class GoB_OT_export(Operator):
                 else:
                     new_config = r.replace(import_as_tool, import_as_subtool)
             
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_Config.txt"), "w") as w:
+            with open(paths.PATH_CONFIG, "w") as w:
                 w.write(new_config)
+
         except Exception as e:
-            print(e)         
+            print("Goz config missing, writing file ", e)         
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
             with open(os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
@@ -570,7 +571,7 @@ class GoB_OT_export(Operator):
         step =  100  / len(context.selected_objects)
         surface_types = ['SURFACE', 'CURVE', 'FONT', 'META']
         
-        with open(PATH_OBJLIST, 'wt') as GoZ_ObjectList:
+        with open(paths.PATH_OBJLIST, 'wt') as GoZ_ObjectList:
             for i, obj in enumerate(context.selected_objects):
                 if obj.type in surface_types:
 
@@ -601,13 +602,14 @@ class GoB_OT_export(Operator):
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
                     obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
+                    
                     if utils.prefs().export_merge:
                         geometry.mesh_welder(obj_tmp)
                     
                     if len(mesh_tmp.polygons):
                         print("GoB: ", obj_tmp.name, mesh_tmp.name, len(mesh_tmp.polygons), sep=' / ')
                         self.escape_object_name(obj_tmp)
-                        self.exportGoZ(paths.PATH_GOZ, context.scene, obj_tmp, f'{PATH_PROJECT}')
+                        self.exportGoZ(context.scene, obj_tmp, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj_tmp.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')                        
@@ -628,7 +630,7 @@ class GoB_OT_export(Operator):
                         geometry.process_linked_objects(obj) 
                         geometry.remove_internal_faces(obj)
                         self.escape_object_name(obj)
-                        self.exportGoZ(paths.PATH_GOZ, context.scene, obj, f'{PATH_PROJECT}')
+                        self.exportGoZ(context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj.name}\n')
@@ -644,25 +646,22 @@ class GoB_OT_export(Operator):
             
         global cached_last_edition_time
         try:
-            cached_last_edition_time = os.path.getmtime(PATH_OBJLIST)
+            cached_last_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
         except Exception as e:
             print(e)
-
-        PATH_SCRIPT = os.path.join(f"{paths.PATH_GOB}/ZScripts/GoB_Import.zsc")
-
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not paths.is_file_empty(PATH_OBJLIST) and not utils.prefs().debug_dry_export: 
-            path_exists = paths.find_zbrush(self, context, paths.paths.isMacOS)
+        if not paths.is_file_empty(paths.PATH_OBJLIST) and not utils.prefs().debug_dry_export: 
+            path_exists = paths.find_zbrush(self, context, paths.isMacOS)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
             else:
                 if paths.isMacOS:   
                     print("OSX Popen: ", utils.prefs().zbrush_exec)
-                    Popen(['open', '-a', utils.prefs().zbrush_exec, PATH_SCRIPT])   
+                    Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])   
                 else: #windows   
                     print("Windows Popen: ", utils.prefs().zbrush_exec)
-                    Popen([utils.prefs().zbrush_exec, PATH_SCRIPT], shell=True)  
+                    Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
                     bpy.ops.object.mode_set(mode=currentContext) 
         
