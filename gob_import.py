@@ -374,15 +374,10 @@ class GoB_OT_import(Operator):
                         print("Import Polyroups: ", utils.prefs().import_polygroups_to_vertexgroups, utils.prefs().import_polygroups_to_facemaps)
                     
                     if utils.prefs().import_polygroups:
-                        polyGroupData = []
                         goz_file.seek(4, 1)
                         cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces  
-                        #""" 
-                        for i in range(cnt):    # faces of each polygroup      
-                            #group = unpack('<H', goz_file.read(2))[0]   
-                            polyGroupData.append(unpack('<H', goz_file.read(2))[0]) 
-                        #"""
-                        #[polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                        
+                        polyGroupData = [polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
                                                     
                         if utils.prefs().performance_profiling: 
                             start_time = utils.profiler(start_time, "____create polyGroupData")
