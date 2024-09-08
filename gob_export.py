@@ -250,11 +250,11 @@ class GoB_OT_export(Operator):
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint:  write numVertices")
 
+                    vcol_data = bytearray()
                     for i in range(0, len(vcolArray), 3):
-                        goz_file.write(pack('<B', vcolArray[i+2]))
-                        goz_file.write(pack('<B', vcolArray[i+1]))
-                        goz_file.write(pack('<B', vcolArray[i]))
-                        goz_file.write(pack('<B', 0))
+                        vcol_data.extend(pack('<4B', vcolArray[i+2], vcolArray[i+1], vcolArray[i], 0))
+
+                    goz_file.write(vcol_data)
                         
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint: write color")

@@ -62,7 +62,7 @@ def gob_init_os_paths():
 
 #create GoB paths when loading the addon
 isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIPT, PATH_VARS = gob_init_os_paths()
-print("GoZ Paths: ", gob_init_os_paths)
+print("GoZ Paths: ", gob_init_os_paths())
 
 
 def find_zbrush(self, context, isMacOS):
