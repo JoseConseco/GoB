@@ -156,6 +156,7 @@ class GoB_OT_export(Operator):
                 modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
                 modif_coo = mat_transform @ modif_coo
                 goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))                
+            
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Vertices")            
 
@@ -186,11 +187,13 @@ class GoB_OT_export(Operator):
                 
                 if utils.prefs().performance_profiling: 
                     start_time = utils.profiler(start_time, "    UV: polygones")
-                    
+               
                 for face in me.polygons:
-                    for i, loop_index in enumerate(face.loop_indices):
-                        goz_file.write(pack('<2f', uv_layer.data[loop_index].uv.x, 1.0 - uv_layer.data[loop_index].uv.y))
-                    if i == 2:
+                    for loop_index in face.loop_indices:
+                        uv = uv_layer.data[loop_index].uv
+                        goz_file.write(pack('<2f', uv.x, 1.0 - uv.y))
+
+                    if len(face.loop_indices) == 3:
                         goz_file.write(pack('<2f', 0.0, 1.0))
                         
                 if utils.prefs().performance_profiling: 
