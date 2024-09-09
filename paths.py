@@ -62,7 +62,7 @@ def gob_init_os_paths():
 
 #create GoB paths when loading the addon
 isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIPT, PATH_VARS = gob_init_os_paths()
-print("GoZ Paths: ", gob_init_os_paths())
+#print("GoZ Paths: ", gob_init_os_paths())
 
 
 def find_zbrush(self, context, isMacOS):
@@ -139,9 +139,9 @@ class GoB_OT_GoZ_Installer(Operator):
 
     def execute(self, context):
         """Install GoZ for Windows""" 
-        path_exists = find_zbrush(self, context, gob_import.isMacOS)
+        path_exists = find_zbrush(self, context, isMacOS)
         if path_exists:
-            if gob_import.isMacOS:
+            if isMacOS:
                 path = utils.prefs().zbrush_exec.strip("ZBrush.app")  
                 GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
                 Popen(['open', '-a', GOZ_INSTALLER])  

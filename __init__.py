@@ -24,7 +24,6 @@ from . import (gob_import,
                paths, 
                gob_export, 
                preferences, 
-               addon_updater, 
                ui)
 
 bl_info = {
@@ -46,7 +45,6 @@ classes = (
     ui.GOB_OT_Popup,
     paths.GoB_OT_GoZ_Installer,
     preferences.GoB_Preferences,
-    addon_updater.AU_OT_SearchUpdates,
     )
 
 
