@@ -31,7 +31,7 @@ bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (4, 0, 4),
+    "version": (4, 1, 0),
     "blender": (4, 00, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                

@@ -280,7 +280,8 @@ class GoB_OT_import(Operator):
                                 # Avoid error if buffer length is less than 3
                                 vertex_data = goz_file.read(3)
                                 if len(vertex_data) < 3:
-                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    if utils.prefs().debug_output:
+                                        print("error if buffer length is less than 3: ", i, vertex_data)
                                     break
 
                                 colordata = unpack('<3B', vertex_data) # Color
@@ -330,7 +331,8 @@ class GoB_OT_import(Operator):
                                 # Avoid error if buffer length is less than 3
                                 vertex_data = goz_file.read(3)
                                 if len(vertex_data) < 3:
-                                    print("error if buffer length is less than 3: ", v, vertex_data)
+                                    if utils.prefs().debug_output:
+                                        print("error if buffer length is less than 3: ", i, vertex_data)
                                     break
                                 colordata = unpack('<3B', vertex_data) # Color
                                 unpack('<B', goz_file.read(1))  # Alpha 
