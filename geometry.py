@@ -25,33 +25,32 @@ from bpy.types import Object
 from . import utils
 
 
-def get_vertex_colors(obj: Object, numVertices):
-           
-    mesh = obj.data
-    if mesh.color_attributes:
-        bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
-        
-        #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-        vcolArray = bytearray([0] * numVertices * 3) 
-        active_color = mesh.color_attributes.active_color  
-        color_attribute = mesh.attributes.get(active_color.name, None)
-        # Pre-calculate vertex base indices for faster access
-        vertex_indices = [i * 3 for i in range(numVertices)]
+import numpy as np
 
-        for vert, vertex_index in zip(mesh.vertices, vertex_indices):
-            color_data = color_attribute.data[vert.index]
-            color = color_data.color_srgb        
-            
-            vcolArray[vertex_index] = int(255 * color[0])
-            vcolArray[vertex_index +1] = int(255 * color[1])
-            vcolArray[vertex_index +2] = int(255 * color[2])     
+def get_vertex_colors(obj: Object):
+
+    mesh = obj.data
+    numVertices = len(mesh.vertices) # Get the actual number of vertices
+
+    if mesh.color_attributes:
+        bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')  
+
+        active_color = mesh.color_attributes.active_color    
+        color_attribute = mesh.attributes.get(active_color.name)
+
+        # Use NumPy for efficient array operations
+        colors = np.array([color_attribute.data[i].color_srgb for i in range(numVertices)]) * 255
+        colors = colors.astype(np.uint8)  # Convert to bytes
+
+        # Create the bytearray directly from NumPy array
+        vcolArray = colors.flatten().tobytes()
+
     else:
         print('No vertex colors found') 
-        
-    # Ensure vcolArray is correctly populated
-    assert len(vcolArray) == numVertices * 3, "GoB vcolArray length mismatch" 
+        vcolArray = bytearray() # Return an empty bytearray if no colors found
 
     return vcolArray
+
 
 
 def apply_transformation(me, is_import=True): 
