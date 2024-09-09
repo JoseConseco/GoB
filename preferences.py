@@ -16,22 +16,17 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-if "bpy" in locals():
-    import importlib
-    importlib.reload(GoB)
-    importlib.reload(addon_updater)
-else:
-    from . import GoB
-    from . import addon_updater
     
 """Addon preferences"""
-import bpy
 import os
+import platform
 from bpy.types import AddonPreferences
 from bpy.props import ( StringProperty, 
                         BoolProperty, 
                         FloatProperty,
                         EnumProperty)
+
+from . import gob_import,  addon_updater, paths
 
 
 preferences_tabs = [
@@ -84,7 +79,6 @@ class GoB_Preferences(AddonPreferences):
         description="This will allow you to set a custom Public Pixologic Path, this is where ZBrush stores GoZ configurations",
         default=False) # Default: False
 
-    import platform
     if platform.system() == 'Windows':
         PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
     elif platform.system() == 'Darwin': #osx
@@ -103,7 +97,7 @@ class GoB_Preferences(AddonPreferences):
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{GoB.PATH_GOZ}/GoZProjects/Default/"))
+        default=os.path.join(f"{paths.PATH_GOZ}/GoZProjects/Default/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
@@ -513,7 +507,7 @@ class GoB_Preferences(AddonPreferences):
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
         if platform.system() == 'Windows':
-            icons = GoB.preview_collections["main"]  
+            icons = gob_import.preview_collections["main"]  
             box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
             
         

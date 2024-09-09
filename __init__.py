@@ -17,26 +17,21 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-if "bpy" in locals():
-    import importlib
-    importlib.reload(GoB)
-    importlib.reload(preferences)
-    importlib.reload(addon_updater)
-else:
-    from . import GoB
-    from . import preferences
-    from . import addon_updater
-
 import bpy
 import os
 import bpy.utils.previews
-
+from . import (gob_import, 
+               paths, 
+               gob_export, 
+               preferences, 
+               addon_updater, 
+               ui)
 
 bl_info = {
     "name": "GoB",
     "description": "An unofficial GOZ-like addon for Blender",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (4, 0, 4),
+    "version": (4, 1, 0),
     "blender": (4, 00, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -45,11 +40,11 @@ bl_info = {
 
 
 classes = (
-    GoB.GoB_OT_import,
-    GoB.GoB_OT_export,
-    GoB.GoB_OT_export_button,
-    GoB.GoB_OT_GoZ_Installer,
-    GoB.GOB_OT_Popup,
+    gob_import.GoB_OT_import,
+    gob_export.GoB_OT_export,
+    ui.GoB_OT_export_button,
+    ui.GOB_OT_Popup,
+    paths.GoB_OT_GoZ_Installer,
     preferences.GoB_Preferences,
     addon_updater.AU_OT_SearchUpdates,
     )
@@ -64,19 +59,19 @@ def register():
     icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
     icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    GoB.preview_collections["main"] = icons 
-    bpy.types.TOPBAR_HT_upper_bar.prepend(GoB.draw_goz_buttons)
+    ui.preview_collections["main"] = icons 
+    bpy.types.TOPBAR_HT_upper_bar.prepend(ui.draw_goz_buttons)
 
 
 def unregister():
 
-    for preferences.custom_icons in GoB.preview_collections.values():
+    for preferences.custom_icons in ui.preview_collections.values():
         bpy.utils.previews.remove(icons)
-    GoB.preview_collections.clear()
+    ui.preview_collections.clear()
 
-    bpy.types.TOPBAR_HT_upper_bar.remove(GoB.draw_goz_buttons)
+    bpy.types.TOPBAR_HT_upper_bar.remove(ui.draw_goz_buttons)
 
     [bpy.utils.unregister_class(c) for c in classes]
 
-    if bpy.app.timers.is_registered(GoB.run_import_periodically):
-        bpy.app.timers.unregister(GoB.run_import_periodically)
+    if bpy.app.timers.is_registered(gob_import.run_import_periodically):
+        bpy.app.timers.unregister(gob_import.run_import_periodically)
