@@ -239,7 +239,7 @@ class GoB_OT_export(Operator):
                 # The temp mesh (me.) has no active color (use obj.data. instead of me.!)
                 if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0: 
 
-                    vcolArray = geometry.get_vertex_colors(obj) 
+                    vcolArray = geometry.get_vertex_colors(obj, numVertices) 
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint:  vcolArray")
 
@@ -259,7 +259,7 @@ class GoB_OT_export(Operator):
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint: write color")
 
-                    #vcolArray.clear()
+                    vcolArray.clear()
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint:  vcolArray.clear")
                     
