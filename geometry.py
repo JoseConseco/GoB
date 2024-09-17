@@ -21,20 +21,21 @@ import bmesh
 import mathutils
 import time
 import math
-from bpy.types import Object
+from bpy.types import Object, Mesh
 from . import utils
 
 
-def get_vertex_colors(obj: Object, numVertices):
+def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
            
-    mesh = obj.data
-    if mesh.color_attributes:
+          
+    if obj.data.color_attributes:
         bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
         
         #fill vcolArray(vert_idx + rgb_offset) = color_xyz
         vcolArray = bytearray([0] * numVertices * 3) 
-        active_color = mesh.color_attributes.active_color  
+        active_color = obj.data.color_attributes.active_color  
         color_attribute = mesh.attributes.get(active_color.name, None)
+        
         # Pre-calculate vertex base indices for faster access
         vertex_indices = [i * 3 for i in range(numVertices)]
 
@@ -161,7 +162,7 @@ def restore_selection(selected, active):
     bpy.context.view_layer.objects.active = active
 
 
-def remove_internal_faces(obj): 
+def remove_internal_faces(obj:Object): 
 
     "remove internal non-manifold faces where all edges have more than 2 face users https://github.com/JoseConseco/GoB/issues/210"  
     if utils.prefs().export_remove_internal_faces:     
@@ -197,7 +198,7 @@ def remove_internal_faces(obj):
         restore_selection(selected, active)
 
 
-def apply_modifiers(obj):  
+def apply_modifiers(obj:Object) -> Mesh:  
 
     if utils.prefs().performance_profiling: 
         print("\\_____")
@@ -251,11 +252,11 @@ def apply_modifiers(obj):
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh triangulate2")
 
-    export_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
+    mesh_tmp = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh export_mesh")
 
-    bm.to_mesh(export_mesh)
+    bm.to_mesh(mesh_tmp)
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
@@ -270,7 +271,7 @@ def apply_modifiers(obj):
     if utils.prefs().performance_profiling:         
         utils.profiler(start_total_time, "Make Mesh return\n _____/") 
    
-    return export_mesh    
+    return mesh_tmp    
 
 
 def process_linked_objects(obj):  
