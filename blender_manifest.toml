@@ -3,8 +3,7 @@ schema_version = "1.0.0"
 id = "gob"
 name = "GoB"
 version = "4.1.1"
-tagline = """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender. 
-          Effortlessly transfer your models between ZBrush and Blender with a single click, streamlining your workflow and maximizing efficiency."""
+tagline = "GoB providing a bridge between ZBrush and Blender"
 maintainer = "Daniel Grauer (kromar)"
 type = "add-on"
 tags = ["Import-Export"]
