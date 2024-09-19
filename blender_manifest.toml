@@ -13,6 +13,13 @@ website = "https://github.com/JoseConseco/GoB/wiki"
 copyright = ["2024 Jose Conseco", "2024 Daniel Grauer (kromar)"]
 platforms = ["windows-x64", "macos-arm64"]
 [permissions]
-  files = "Requires access to deploy Zbrush configuration files, export models and send them to Zbrush"
+  files = "Requires access to deploy Zbrush configuration files"
 [build] 
-  paths_exclude_pattern = ["/.git/", "__pycache__/"]
+  paths_exclude_pattern = [
+  ".git", 
+  "__pycache__/", 
+  ".gitignore", 
+  "README.md", 
+  "LICENSE.md",
+  "*.psd", "*.kra"
+  ]
