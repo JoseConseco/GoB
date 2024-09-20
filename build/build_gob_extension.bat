@@ -2,11 +2,12 @@
 
 rem Python
 SET PYTHON_DIR=C:\Python310
-set /p PYTHON_PATH="Enter your Python Path or press [ENTER] for default [%PYTHON_PATH%]: "
+set /p PYTHON_PATH="Enter your Python Path or press [ENTER] for default [%PYTHON_DIR%]:
 SET PATH=%PYTHON_PATH%;%PATH%
 
 rem Blender
-SET BLENDER_DIR=C:\SteamLibrary\steamapps\common\Blender\blender.exe
+rem BLENDER_DIR="C:\SteamLibrary\steamapps\common\Blender\blender.exe"
+SET BLENDER_DIR="C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe"
 
 rem build folders
 SET BUILD_DIR=Blender
