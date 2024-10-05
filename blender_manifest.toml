@@ -2,7 +2,7 @@
 schema_version = "1.0.0"
 id = "gob"
 name = "GoB"
-version = "4.1.1"
+version = "4.1.2"
 tagline = "GoB providing a bridge between ZBrush and Blender"
 maintainer = "Daniel Grauer (kromar)"
 type = "add-on"
