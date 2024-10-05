@@ -26,14 +26,13 @@ from bpy.props import ( StringProperty,
                         FloatProperty,
                         EnumProperty)
 
-from . import gob_import,  addon_updater, paths
+from . import paths, ui
 
 
 preferences_tabs = [
                     ("OPTIONS", "Options", ""),
                     ("IMPORT", "Import", ""),
                     ("EXPORT", "Export", ""),
-                    ("UPDATE", "Update", ""),
                     ("DEBUG", "Debug", ""),
                     ("HELP", "Troubleshooting", "")
                     ]
@@ -41,30 +40,6 @@ preferences_tabs = [
 class GoB_Preferences(AddonPreferences):
     bl_idname = __package__    
     tabs: EnumProperty(name="Tabs", items=preferences_tabs, default="OPTIONS")  
-
-    #ADDON UPDATER    
-    repository_path: StringProperty(
-        name="Project", 
-        description="Github Project url example: https://github.com/JoseConseco/GoB", 
-        subtype='DIR_PATH',
-        default="https://github.com/JoseConseco/GoB") 
-    
-    zip_filename: StringProperty(
-        name="zip_filename", 
-        description="zip_filename", 
-        subtype='FILE_PATH',
-        default="blender_addon_updater.zip") 
-
-    auto_update_check: BoolProperty(
-        name="Check for updates automatically",
-        description="auto_update_check",
-        default=False) # Default: False
-
-    experimental_versions: BoolProperty(
-        name="Experimental Versions",
-        description="Check for experimental versions",
-        default=False) # Default: False
-
 
     #GLOBAL
     zbrush_exec: StringProperty(
@@ -419,7 +394,7 @@ class GoB_Preferences(AddonPreferences):
         #box = layout.box() 
         box.label(text='GoB Import Options', icon='IMPORT')
         col = box.column(align=False)
-        #box.prop(self, 'import_method')         #TODO: disabled: some bugs when switching import method
+        #box.prop(self, 'import_method') #TODO: disabled: some bugs when switching import method
         col.prop(self, 'import_timer')
         col.prop(self, 'import_material')
         col.prop(self, 'import_mask')
@@ -467,30 +442,7 @@ class GoB_Preferences(AddonPreferences):
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces') 
-        
 
-    def draw_update(self, box):
-        box.use_property_split = True
-        box.label(text='Addon Updater', icon='PREFERENCES')
-        col  = box.column(align=False)
-        row  = col.row(align=False)         
-
-        row.operator("au.check_updates", text="Check for Updates", icon='ERROR', depress=False).button_input = 0
-        if addon_updater.update_available == 'TIME':
-            row.operator("au.check_updates", text="Limit exceeded! Try again later", icon='COLORSET_01_VEC', emboss=False, depress=True).button_input = -1
-        elif addon_updater.update_available == False:
-            row.operator("au.check_updates", text="Addon is up to date", icon='IMPORT', emboss=True, depress=True).button_input = -1
-        elif addon_updater.update_available is None:
-            row.operator("au.check_updates", text="nothing to show", icon='ERROR', emboss=False, depress=True).button_input = -1
-        else:
-            row.operator("au.check_updates", text=f"Download: {addon_updater.update_available}", icon='COLORSET_03_VEC').button_input = 1
-
-
-        col  = box.column(align=False)
-        col.prop(self, 'repository_path')
-        #col.prop(self, 'zip_filename')
-        col.prop(self, 'experimental_versions') 
-        #col.prop(self, 'auto_update_check')
 
     def draw_debug(self,box):
         box.use_property_split = True
@@ -507,11 +459,10 @@ class GoB_Preferences(AddonPreferences):
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
         import platform
         if platform.system() == 'Windows':
-            icons = gob_import.preview_collections["main"]  
+            icons = ui.preview_collections["main"]  
             box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
             
         
-
     def draw(self, context):
         
         layout = self.layout
@@ -531,8 +482,6 @@ class GoB_Preferences(AddonPreferences):
             self.draw_help(box)
         elif self.tabs == "DEBUG":
             self.draw_debug(box)
-        elif self.tabs == "UPDATE":
-            self.draw_update(box)
 
         
 

@@ -149,7 +149,8 @@ class GoB_OT_import(Operator):
                     break
                 # Unknown tags
                 else:
-                    print("Unknown tag:{0}".format(tag))
+                    if utils.prefs().debug_output:
+                        print("Unknown tag:{0}".format(tag))
                     if utag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many mesh tags unknown...\n")

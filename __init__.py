@@ -24,14 +24,14 @@ from . import (gob_import,
                paths, 
                gob_export, 
                preferences, 
-               addon_updater, 
                ui)
 
 bl_info = {
     "name": "GoB",
-    "description": "An unofficial GOZ-like addon for Blender",
+    "description": """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender. 
+          Effortlessly transfer your models between ZBrush and Blender with a single click, streamlining your workflow and maximizing efficiency.""",
     "author": "ODe, JoseConseco, Daniel Grauer",
-    "version": (4, 1, 0),
+    "version": (4, 1, 1),
     "blender": (4, 00, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -46,7 +46,6 @@ classes = (
     ui.GOB_OT_Popup,
     paths.GoB_OT_GoZ_Installer,
     preferences.GoB_Preferences,
-    addon_updater.AU_OT_SearchUpdates,
     )
 
 
