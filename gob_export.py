@@ -390,7 +390,7 @@ class GoB_OT_export(Operator):
                         #create a color for each material slot (0xffff)
                         for mat in obj.material_slots:
                             if mat:
-                                color = geometry.random_color()
+                                color = utils.random_color()
                                 groupColor.append(color)
                             else:
                                 groupColor.append(65504)
