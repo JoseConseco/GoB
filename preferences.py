@@ -118,7 +118,10 @@ class GoB_Preferences(AddonPreferences):
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
-        default=True) # Default: True          
+        default=True) # Default: True     
+    
+    export_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
+    export_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True      
 
     """      
     texture_format: EnumProperty(
