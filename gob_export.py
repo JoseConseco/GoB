@@ -191,7 +191,12 @@ class GoB_OT_export(Operator):
                 for face in mesh_tmp.polygons:
                     for loop_index in face.loop_indices:
                         uv = uv_layer.data[loop_index].uv
-                        goz_file.write(pack('<2f', uv.x, 1.0 - uv.y))
+                        if utils.prefs().export_uv_flip_x:
+                            uv.x = 1.0 - uv.x
+                        if utils.prefs().export_uv_flip_y:
+                            uv.y = 1.0 - uv.y
+
+                        goz_file.write(pack('<2f', uv.x, uv.y))
 
                     if len(face.loop_indices) == 3:
                         goz_file.write(pack('<2f', 0.0, 1.0))

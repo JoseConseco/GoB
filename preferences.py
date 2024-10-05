@@ -255,6 +255,9 @@ class GoB_Preferences(AddonPreferences):
         name="UV Map", 
         description="Set name for the UV Map", 
         default="UVMap") # Default: UVMap
+    
+    import_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
+    import_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True 
 
     import_diffuse_suffix: StringProperty(
         name="Base Color", 
@@ -398,10 +401,14 @@ class GoB_Preferences(AddonPreferences):
         col.prop(self, 'import_timer')
         col.prop(self, 'import_material')
         col.prop(self, 'import_mask')
+        
         uv_row = col.row()
         uv_row.prop(self, 'import_uv')
         if self.import_uv:
-            uv_row.prop(self, 'import_uv_name', text='') 
+            uv_row.prop(self, 'import_uv_name', text='')
+            col.prop(self, 'import_uv_flip_x') 
+            col.prop(self, 'import_uv_flip_y') 
+            col.separator()
 
         pp_row = col.row()
         pp_row.prop(self, 'import_polypaint')
@@ -412,7 +419,7 @@ class GoB_Preferences(AddonPreferences):
         pg_col = col.column()
         pg_col.active = bool(self.import_polygroups)
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
-        pg_col.prop(self, 'import_polygroups_to_facemaps')
+        #pg_col.prop(self, 'import_polygroups_to_facemaps')
         #pg_col.prop(self, 'apply_facemaps_to_facesets')
 
         if self.import_material == 'TEXTURES':
@@ -437,6 +444,8 @@ class GoB_Preferences(AddonPreferences):
         if self.export_polygroups == 'VERTEX_GROUPS':  
             col.prop(self, 'export_weight_threshold')
         col.prop(self, 'export_clear_mask') 
+        col.prop(self, 'export_uv_flip_x')
+        col.prop(self, 'export_uv_flip_y')
         
         col.prop(self, 'export_merge') 
         if self.export_merge:

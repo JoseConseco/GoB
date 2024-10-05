@@ -250,8 +250,15 @@ class GoB_OT_import(Operator):
 
                         for face in bm.faces:
                             for index, loop in enumerate(face.loops):            
-                                x, y = unpack('<2f', goz_file.read(8)) 
-                                loop[uv_layer].uv = x, 1.0-y
+                                x, y = unpack('<2f', goz_file.read(8))
+                                if utils.prefs().import_uv_flip_x:
+                                    x = 1.0 - x
+                                if utils.prefs().import_uv_flip_y:
+                                    y = 1.0 - y
+
+                                loop[uv_layer].uv = x, y
+
+
                             #uv's always have 4 coords so its required to read one more if a trinalge is in the mesh
                             # zbrush seems to always write out 4 coords            
                             if index < 3:       
