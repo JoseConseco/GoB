@@ -388,7 +388,16 @@ class GoB_OT_import(Operator):
                         cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces  
                         
                         polyGroupData = []
-                        [polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                        #[polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                        bytes_read = 0
+                        while bytes_read < cnt * 2:  # 2 bytes per '<H'
+                            data = goz_file.read(2)
+                            if len(data) != 2:
+                                print("Error: Reached end of file unexpectedly.")
+                                break
+                            polyGroupData.append(unpack('<H', data)[0])
+                            bytes_read += 2
+                        
                                                     
                         if utils.prefs().performance_profiling: 
                             start_time = utils.profiler(start_time, "____create polyGroupData")
