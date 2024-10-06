@@ -21,5 +21,6 @@ platforms = ["windows-x64", "macos-arm64"]
   ".gitignore", 
   "README.md", 
   "LICENSE.md",
-  "*.psd", "*.kra"
+  "*.psd", "*.kra", "*.xpm",
+  "build", 
   ]
