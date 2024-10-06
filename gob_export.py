@@ -24,7 +24,7 @@ from struct import pack
 from subprocess import Popen
 from bpy.types import Operator
 from bpy.props import BoolProperty
-from . import paths, utils, geometry, ui
+from . import paths, utils, geometry, ui, gob_import
 
 
 class GoB_OT_export(Operator):
@@ -679,10 +679,9 @@ class GoB_OT_export(Operator):
 
                 wm.progress_update(step * i)                
             wm.progress_end()
-            
-        global cached_last_edition_time
+           
         try:
-            cached_last_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
+            gob_import.cached_last_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
         except Exception as e:
             print(e)
         
