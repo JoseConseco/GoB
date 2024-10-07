@@ -20,6 +20,6 @@ copyright = ["2024 Jose Conseco", "2024 Daniel Grauer (kromar)"]
   ".gitignore", 
   "README.md", 
   "LICENSE.md",
-  "*.psd", "*.kra", "*.xpm",
+  "*.psd", "*.kra", "*.xpm", "*.blend",
   "build", 
   ]
