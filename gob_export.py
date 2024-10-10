@@ -43,7 +43,7 @@ class GoB_OT_export(Operator):
         return geometry.export_poll(cls, context)    
 
     def exportGoZ(self, scn, obj, path_export):      
-        PATH_PROJECT = os.path.join(utils.prefs().project_path).replace("\\", "/")
+        PATH_PROJECT = utils.prefs().project_path
         if utils.prefs().performance_profiling: 
             print("\n", 100*"=")
             start_time = utils.profiler(time.perf_counter(), "Export Profiling: " + obj.name)
@@ -525,7 +525,7 @@ class GoB_OT_export(Operator):
        
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
-        PATH_PROJECT = os.path.join(utils.prefs().project_path)
+        PATH_PROJECT = utils.prefs().project_path
         
         #setup GoZ configuration
         #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
