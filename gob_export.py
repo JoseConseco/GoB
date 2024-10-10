@@ -246,7 +246,7 @@ class GoB_OT_export(Operator):
                 # get active color attribut from obj (obj.data.color_attributes). 
                 # The temp mesh (mesh_tmp.) has no active color (use obj.data. instead of mesh_tmp.!)
                 if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0: 
-
+                    
                     vcolArray = geometry.get_vertex_colors(mesh_tmp, obj, numVertices) 
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint:  vcolArray")
@@ -525,6 +525,7 @@ class GoB_OT_export(Operator):
        
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
+        
         PATH_PROJECT = utils.prefs().project_path
         
         #setup GoZ configuration
@@ -665,6 +666,11 @@ class GoB_OT_export(Operator):
                     if numFaces > 0: 
                         geometry.process_linked_objects(obj) 
                         geometry.remove_internal_faces(obj)
+                        
+                        if bpy.ops.geometry.color_attribute_convert.poll():
+                            bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
+                            obj.data.update()  # Force mesh data update
+                        
                         self.escape_object_name(obj)
                         self.exportGoZ(context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
