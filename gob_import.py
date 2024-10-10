@@ -647,7 +647,7 @@ class GoB_OT_import(Operator):
         global gob_import_cache
         goz_obj_paths = []
         try:
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
+            with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
         except PermissionError:
@@ -717,7 +717,7 @@ class GoB_OT_import(Operator):
                 else:
                     if not bpy.app.timers.is_registered(run_import_periodically):
                         global cached_last_edition_time
-                        GoZ_ObjectList = os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+                        GoZ_ObjectList = os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt")
                         try:
                             cached_last_edition_time = os.path.getmtime(GoZ_ObjectList)
                         except Exception:
@@ -740,7 +740,7 @@ def run_import_periodically():
     global cached_last_edition_time, run_background_update
 
     try:
-        file_edition_time = os.path.getmtime(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
+        file_edition_time = os.path.getmtime(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"))
         #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)

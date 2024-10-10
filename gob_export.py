@@ -530,22 +530,22 @@ class GoB_OT_export(Operator):
         #setup GoZ configuration
         #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
-            source_GoZ_Info = os.path.join(f"{paths.PATH_GOB}/Blender/")
-            target_GoZ_Info = os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/")
+            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
+            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
             print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
-            source_GoZ_Info = os.path.join(f"{paths.PATH_GOB}/Blender/GoZ_Info.txt")
-            target_GoZ_Info = os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt")
+            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender", "GoZ_Info.txt")
+            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
 
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
-                blender_path = os.path.join(f"{paths.PATH_BLENDER}").replace('\\', '/')
+            with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
+                blender_path = os.path.join(paths.PATH_BLENDER).replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
+            with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")   
 
         except Exception as e:
@@ -553,16 +553,16 @@ class GoB_OT_export(Operator):
 
         #update project path
         #print("Project file path: ", f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
-        with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
+        with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
         if utils.prefs().clean_project_path:
             for file_name in os.listdir(PATH_PROJECT):
                 #print(file_name)
-                if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
-                    #print('cleaning file:', file_name)
-                    os.remove(PATH_PROJECT + file_name)
+                if file_name.lower().endswith(('.goz', '.ztn', '.ztl')):
+                    print('cleaning file:', file_name)
+                    os.remove(os.path.join(PATH_PROJECT, file_name))
         
         """
         # a object can either be imported as tool or as subtool in zbrush
@@ -593,7 +593,7 @@ class GoB_OT_export(Operator):
             print("Goz config missing, writing file ", e)         
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+            with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")   
 
             
