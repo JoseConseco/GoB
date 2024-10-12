@@ -692,7 +692,7 @@ class GoB_OT_export(Operator):
             print(e)
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not paths.is_file_empty(paths.PATH_OBJLIST) and not utils.prefs().debug_dry_export: 
+        if not paths.is_file_empty(paths.PATH_OBJLIST) and utils.prefs().export_run_zbrush: 
             path_exists = paths.find_zbrush(self, context, paths.isMacOS)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')

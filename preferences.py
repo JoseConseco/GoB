@@ -191,6 +191,11 @@ class GoB_Preferences(AddonPreferences):
         step=0.0001,
         precision=4,
         subtype='DISTANCE') 
+    
+    export_run_zbrush: BoolProperty(
+        name="Run Zbrush",
+        description="Launch Zbrush after exporting from blender",
+        default=True) # Default:True      
 
 
     # IMPORT
@@ -360,11 +365,7 @@ class GoB_Preferences(AddonPreferences):
                 ],
         default='Non-Color') # Default: Non-Color      
     
-    # DEBUG
-    debug_dry_export: BoolProperty(
-        name="Debug: Dry Export",
-        description="Run export without launching Zbrush",
-        default=False) # Default:False          
+    # DEBUG    
     performance_profiling: BoolProperty(
         name="Debug: Performance profiling",
         description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
@@ -460,12 +461,12 @@ class GoB_Preferences(AddonPreferences):
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces') 
+        col.prop(self, 'export_run_zbrush')
 
 
     def draw_debug(self,box):
         box.use_property_split = True
         col = box.column(align=True) 
-        col.prop(self, 'debug_dry_export')
         col.prop(self, 'performance_profiling')
         col.prop(self, 'debug_output')
 
