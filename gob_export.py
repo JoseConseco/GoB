@@ -335,6 +335,34 @@ class GoB_OT_export(Operator):
                         start_time = utils.profiler(start_time, "Write Polygroup FaceMaps")  
                     #"""
                 
+                #Polygroups from Face Sets
+                if utils.prefs().export_polygroups == 'FACE_SETS':
+                                       
+                    goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
+                    goz_file.write(pack('<I', numFaces*2+16))
+                    goz_file.write(pack('<Q', numFaces))  
+
+                    if '.sculpt_face_set' in obj.data.attributes:
+                        for index, attr_data in enumerate(obj.data.attributes['.sculpt_face_set'].data):
+                            if attr_data.value < 0: #write default polygroup color
+                                goz_file.write(pack('<H', 65504))                                                                     
+                            else:
+                                if utils.prefs().debug_output:
+                                    print("face_sets PG color: ", attr_data.value)
+                                try:
+                                    goz_file.write(pack('<H', attr_data.value))
+                                except IndexError:
+                                    print(f"Index error on face sets index {index}")
+                                    goz_file.write(pack('<H', 65504))
+
+                    else:   #assign empty when no face sets are found        
+                        for face in mesh_tmp.polygons:   
+                            if utils.prefs().debug_output:
+                                print("write empty color for PG face", face.index)     
+                            goz_file.write(pack('<H', 65504))
+
+                    if utils.prefs().performance_profiling: 
+                        start_time = utils.profiler(start_time, "Write Polygroup FaceSets") 
 
                 # Polygroups from Vertex Groups
                 if utils.prefs().export_polygroups == 'VERTEX_GROUPS':
