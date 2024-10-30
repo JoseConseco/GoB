@@ -149,12 +149,11 @@ class GoB_Preferences(AddonPreferences):
         name="Polygroups",
         description="Create Polygroups",
         items=[ ('FACE_SETS', 'from Face Sets', 'Create Polygroups from Face Sets'),
-                #('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
                 ('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')  # Default: VERTEX_GROUPS
+        default='FACE_SETS')  # Default: FACE_SETS
 
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",

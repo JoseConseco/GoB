@@ -605,32 +605,7 @@ class GoB_OT_import(Operator):
 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Material Node")                
-
-            # #apply face maps to sculpt mode face sets
-            if utils.prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
-                bpy.ops.object.mode_set(mode='SCULPT')                 
-                for window in bpy.context.window_manager.windows:
-                    screen = window.screen
-                    for area in screen.areas:
-                        if area.type in {'VIEW_3D'}: 
-                            override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
-                            break                   
-                if utils.prefs().performance_profiling:                
-                    start_time = utils.profiler(start_time, "Init Face Sets")
-
-                # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
-                bpy.ops.object.mode_set(mode='EDIT') 
-                for window in bpy.context.window_manager.windows:
-                    screen = window.screen
-                    for area in screen.areas:
-                        if area.type in {'VIEW_3D'}:
-                            override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.mesh.reveal(override)
-                            break  
-
-                if utils.prefs().performance_profiling:                
-                    start_time = utils.profiler(start_time, "Reveal Mesh Elements")
+            
                                            
             if utils.prefs().performance_profiling: 
                 print(30*"-") 

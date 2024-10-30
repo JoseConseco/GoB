@@ -297,44 +297,6 @@ class GoB_OT_export(Operator):
                 if utils.prefs().debug_output:
                     print("Export Polygroups: ", utils.prefs().export_polygroups)
 
-                #Polygroups from Face Maps
-                """ 
-                if utils.prefs().export_polygroups == 'FACE_MAPS':
-                    if utils.prefs().debug_output:
-                        print(obj.face_maps.items)
-                    if obj.face_maps.items:                   
-                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-                        goz_file.write(pack('<I', numFaces*2+16))
-                        goz_file.write(pack('<Q', numFaces))  
-                                                
-                        groupColor=[]                        
-                        #create a color for each facemap (0xffff)
-                        for faceMap in obj.face_maps:
-                            if faceMap:
-                                color = geom.random_color()
-                                groupColor.append(color)
-                            else:
-                                groupColor.append(65504)
-
-                        if mesh_tmp.face_maps and len(obj.face_maps) > 0: 
-                            for index, map in enumerate(mesh_tmp.face_maps[0].data):
-                                if map.value < 0: #write default polygroup color
-                                    goz_file.write(pack('<H', 65504))                                                                     
-                                else:
-                                    if utils.prefs().debug_output:
-                                        print("face_maps PG color: ", map.value, groupColor[map.value], numFaces)
-                                    goz_file.write(pack('<H', groupColor[map.value]))
-
-                        else:   #assign empty when no face maps are found        
-                            for face in mesh_tmp.polygons:   
-                                if utils.prefs().debug_output:
-                                    print("write empty color for PG face", face.index)     
-                                goz_file.write(pack('<H', 65504))
-
-                    if utils.prefs().performance_profiling: 
-                        start_time = utils.profiler(start_time, "Write Polygroup FaceMaps")  
-                    #"""
-                
                 #Polygroups from Face Sets
                 if utils.prefs().export_polygroups == 'FACE_SETS':
                                        
