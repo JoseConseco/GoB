@@ -119,7 +119,11 @@ class GOB_OT_Popup(Operator):
 
     def invoke(self, context, event):       
         wm = context.window_manager
-        font_size_correction = bpy.context.preferences.ui_styles[0].widget_label.points / 10
+        if bpy.app.version < (4,3,0): 
+            font_size_correction = bpy.context.preferences.ui_styles[0].widget_label.points / 10
+        else:
+            font_size_correction = bpy.context.preferences.ui_styles[0].tooltip.points / 10
+
         return wm.invoke_props_dialog(self, width = int(200 * font_size_correction))
 
     def execute(self, context):

@@ -55,9 +55,9 @@ class GoB_Preferences(AddonPreferences):
         default=False) # Default: False
 
     if platform.system() == 'Windows':
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic\\")
+        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
     elif platform.system() == 'Darwin': #osx
-        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ = os.path.join("Users", "Shared", "Pixologic")
     else:
         PATH_GOZ = False
 
@@ -72,7 +72,7 @@ class GoB_Preferences(AddonPreferences):
         name="Project Path", 
         description="Folder where Zbrush and Blender will store the exported content", 
         subtype='DIR_PATH',
-        default=os.path.join(f"{paths.PATH_GOZ}/GoZProjects/Default/"))
+        default=os.path.join(paths.PATH_GOZ, "GoZProjects", "Default/").replace("\\", "/"))
     
     clean_project_path: BoolProperty(
         name="Clean Project Files",
@@ -149,12 +149,11 @@ class GoB_Preferences(AddonPreferences):
         name="Polygroups",
         description="Create Polygroups",
         items=[ ('FACE_SETS', 'from Face Sets', 'Create Polygroups from Face Sets'),
-                #('FACE_MAPS', 'from Face Maps', 'Create Polygroups from Face Maps'), 
                 ('MATERIALS', 'from Materials', 'Create Polygroups from Materials'),
                 ('VERTEX_GROUPS', 'from Vertex Groups', 'Create Polygroups from Vertex Groups'),
                 ('NONE', 'None', 'Do not Create Polygroups'),
                ],
-        default='VERTEX_GROUPS')  # Default: VERTEX_GROUPS
+        default='FACE_SETS')  # Default: FACE_SETS
 
     export_weight_threshold: FloatProperty(
         name="Weight Threshold",
@@ -191,6 +190,11 @@ class GoB_Preferences(AddonPreferences):
         step=0.0001,
         precision=4,
         subtype='DISTANCE') 
+    
+    export_run_zbrush: BoolProperty(
+        name="Run Zbrush",
+        description="Launch Zbrush after exporting from blender",
+        default=True) # Default:True      
 
 
     # IMPORT
@@ -360,11 +364,7 @@ class GoB_Preferences(AddonPreferences):
                 ],
         default='Non-Color') # Default: Non-Color      
     
-    # DEBUG
-    debug_dry_export: BoolProperty(
-        name="Debug: Dry Export",
-        description="Run export without launching Zbrush",
-        default=False) # Default:False          
+    # DEBUG    
     performance_profiling: BoolProperty(
         name="Debug: Performance profiling",
         description="Show timing output in console, note this will slow down the GoZ transfer if enabled!",
@@ -460,12 +460,12 @@ class GoB_Preferences(AddonPreferences):
         if self.export_merge:
             col.prop(self, 'export_merge_distance') 
         col.prop(self, 'export_remove_internal_faces') 
+        col.prop(self, 'export_run_zbrush')
 
 
     def draw_debug(self,box):
         box.use_property_split = True
         col = box.column(align=True) 
-        col.prop(self, 'debug_dry_export')
         col.prop(self, 'performance_profiling')
         col.prop(self, 'debug_output')
 

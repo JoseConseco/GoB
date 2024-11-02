@@ -24,7 +24,7 @@ from struct import pack
 from subprocess import Popen
 from bpy.types import Operator
 from bpy.props import BoolProperty
-from . import paths, utils, geometry, ui
+from . import paths, utils, geometry, ui, gob_import
 
 
 class GoB_OT_export(Operator):
@@ -43,7 +43,7 @@ class GoB_OT_export(Operator):
         return geometry.export_poll(cls, context)    
 
     def exportGoZ(self, scn, obj, path_export):      
-        PATH_PROJECT = os.path.join(utils.prefs().project_path).replace("\\", "/")
+        PATH_PROJECT = utils.prefs().project_path
         if utils.prefs().performance_profiling: 
             print("\n", 100*"=")
             start_time = utils.profiler(time.perf_counter(), "Export Profiling: " + obj.name)
@@ -246,7 +246,7 @@ class GoB_OT_export(Operator):
                 # get active color attribut from obj (obj.data.color_attributes). 
                 # The temp mesh (mesh_tmp.) has no active color (use obj.data. instead of mesh_tmp.!)
                 if obj.data.color_attributes.active_color_name and obj.data.color_attributes.active_color_index >= 0: 
-
+                    
                     vcolArray = geometry.get_vertex_colors(mesh_tmp, obj, numVertices) 
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "    Polypaint:  vcolArray")
@@ -297,44 +297,6 @@ class GoB_OT_export(Operator):
                 if utils.prefs().debug_output:
                     print("Export Polygroups: ", utils.prefs().export_polygroups)
 
-                #Polygroups from Face Maps
-                """ 
-                if utils.prefs().export_polygroups == 'FACE_MAPS':
-                    if utils.prefs().debug_output:
-                        print(obj.face_maps.items)
-                    if obj.face_maps.items:                   
-                        goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
-                        goz_file.write(pack('<I', numFaces*2+16))
-                        goz_file.write(pack('<Q', numFaces))  
-                                                
-                        groupColor=[]                        
-                        #create a color for each facemap (0xffff)
-                        for faceMap in obj.face_maps:
-                            if faceMap:
-                                color = geom.random_color()
-                                groupColor.append(color)
-                            else:
-                                groupColor.append(65504)
-
-                        if mesh_tmp.face_maps and len(obj.face_maps) > 0: 
-                            for index, map in enumerate(mesh_tmp.face_maps[0].data):
-                                if map.value < 0: #write default polygroup color
-                                    goz_file.write(pack('<H', 65504))                                                                     
-                                else:
-                                    if utils.prefs().debug_output:
-                                        print("face_maps PG color: ", map.value, groupColor[map.value], numFaces)
-                                    goz_file.write(pack('<H', groupColor[map.value]))
-
-                        else:   #assign empty when no face maps are found        
-                            for face in mesh_tmp.polygons:   
-                                if utils.prefs().debug_output:
-                                    print("write empty color for PG face", face.index)     
-                                goz_file.write(pack('<H', 65504))
-
-                    if utils.prefs().performance_profiling: 
-                        start_time = utils.profiler(start_time, "Write Polygroup FaceMaps")  
-                    #"""
-                
                 #Polygroups from Face Sets
                 if utils.prefs().export_polygroups == 'FACE_SETS':
                                        
@@ -525,27 +487,28 @@ class GoB_OT_export(Operator):
        
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
-        PATH_PROJECT = os.path.join(utils.prefs().project_path)
+        
+        PATH_PROJECT = utils.prefs().project_path
         
         #setup GoZ configuration
         #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
         try:    #install in GoZApps if missing     
-            source_GoZ_Info = os.path.join(f"{paths.PATH_GOB}/Blender/")
-            target_GoZ_Info = os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/")
+            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
+            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
             print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
         except FileExistsError: #if blender folder is found update the info file
-            source_GoZ_Info = os.path.join(f"{paths.PATH_GOB}/Blender/GoZ_Info.txt")
-            target_GoZ_Info = os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt")
+            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender", "GoZ_Info.txt")
+            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
 
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
-                blender_path = os.path.join(f"{paths.PATH_BLENDER}").replace('\\', '/')
+            with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
+                blender_path = os.path.join(paths.PATH_BLENDER).replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
             #specify GoZ application
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_Application.txt"), 'wt') as GoZ_Application:
+            with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")   
 
         except Exception as e:
@@ -553,16 +516,16 @@ class GoB_OT_export(Operator):
 
         #update project path
         #print("Project file path: ", f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
-        with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
+        with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
         if utils.prefs().clean_project_path:
             for file_name in os.listdir(PATH_PROJECT):
                 #print(file_name)
-                if file_name.endswith(('GoZ', '.ztn', '.ZTL')):
-                    #print('cleaning file:', file_name)
-                    os.remove(PATH_PROJECT + file_name)
+                if file_name.lower().endswith(('.goz', '.ztn', '.ztl')):
+                    print('cleaning file:', file_name)
+                    os.remove(os.path.join(PATH_PROJECT, file_name))
         
         """
         # a object can either be imported as tool or as subtool in zbrush
@@ -593,7 +556,7 @@ class GoB_OT_export(Operator):
             print("Goz config missing, writing file ", e)         
             #write blender path to GoZ configuration
             #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"), 'wt') as GoB_Config:
+            with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")   
 
             
@@ -665,6 +628,11 @@ class GoB_OT_export(Operator):
                     if numFaces > 0: 
                         geometry.process_linked_objects(obj) 
                         geometry.remove_internal_faces(obj)
+                        
+                        if bpy.ops.geometry.color_attribute_convert.poll():
+                            bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
+                            obj.data.update()  # Force mesh data update
+                        
                         self.escape_object_name(obj)
                         self.exportGoZ(context.scene, obj, f'{PATH_PROJECT}')
                         with open( f"{PATH_PROJECT}{obj.name}.ztn", 'wt') as ztn:
@@ -679,15 +647,14 @@ class GoB_OT_export(Operator):
 
                 wm.progress_update(step * i)                
             wm.progress_end()
-            
-        global cached_last_edition_time
+           
         try:
-            cached_last_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
+            gob_import.cached_last_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
         except Exception as e:
             print(e)
         
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not paths.is_file_empty(paths.PATH_OBJLIST) and not utils.prefs().debug_dry_export: 
+        if not paths.is_file_empty(paths.PATH_OBJLIST) and utils.prefs().export_run_zbrush: 
             path_exists = paths.find_zbrush(self, context, paths.isMacOS)
             if not path_exists:
                 bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')

@@ -45,17 +45,17 @@ def gob_init_os_paths():
 
         isMacOS = True        
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ = os.path.join("/Users/Shared/Pixologic")
+        PATH_GOZ = os.path.join("Users", "Shared", "Pixologic")
     else:
         print("GoB Unkonwn System: ", platform.system())
         PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
     
     PATH_GOB =  os.path.abspath(os.path.dirname(__file__))
     PATH_BLENDER = os.path.join(bpy.app.binary_path)    
-    PATH_OBJLIST = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
-    PATH_CONFIG = os.path.join(f"{PATH_GOZ}/GoZBrush/GoZ_Config.txt") 
-    PATH_SCRIPT = os.path.join(f"{PATH_GOB}/ZScripts/GoB_Import.zsc")
-    PATH_VARS = os.path.join(f"{PATH_GOZ}/GoZProjects/Default/GoB_variables.zvr")  
+    PATH_OBJLIST = os.path.join(PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt")
+    PATH_CONFIG = os.path.join(PATH_GOZ, "GoZBrush", "GoZ_Config.txt") 
+    PATH_SCRIPT = os.path.join(PATH_GOB, "ZScripts", "GoB_Import.zsc")
+    PATH_VARS = os.path.join(PATH_GOZ, "GoZProjects", "Default", "GoB_variables.zvr")  
 
     return isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIPT, PATH_VARS
 
@@ -100,21 +100,21 @@ def find_zbrush(self, context, isMacOS):
         #look for zbrush in default installation path 
         if isMacOS:
             folder_List = []                 
-            filepath = os.path.join(f"/Applications")
+            filepath = os.path.join("Applications")
             if os.path.isdir(filepath):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
                 i, zfolder = utils.max_list_value(folder_List)
-                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.app')
+                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, "ZBrush.app")
                 ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:  
-            filepath = os.path.join(f"C:/Program Files/Pixologic")            
+            filepath = os.path.join("C:\\", "Program Files", "Pixologic")    
             #TODO: add maxon path detection here
             #filepath = os.path.join(f"C:/Program Files/Maxon")
             #find non version paths
             if os.path.isdir(filepath):
-                i,zfolder = utils.max_list_value(os.listdir(filepath))
-                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, 'ZBrush.exe')
+                i,zfolder = utils.max_list_value(os.listdir(filepath))                
+                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, "ZBrush.exe")
                 ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
                 self.is_found = True  
 
@@ -141,13 +141,12 @@ class GoB_OT_GoZ_Installer(Operator):
         """Install GoZ for Windows""" 
         path_exists = find_zbrush(self, context, isMacOS)
         if path_exists:
+            path = os.path.dirname(utils.prefs().zbrush_exec)
             if isMacOS:
-                path = utils.prefs().zbrush_exec.strip("ZBrush.app")  
-                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_OSX.app")
+                GOZ_INSTALLER = os.path.join(path, "Troubleshoot Help", "GoZ_for_ZBrush_Installer_OSX.app")
                 Popen(['open', '-a', GOZ_INSTALLER])  
-            else: 
-                path = utils.prefs().zbrush_exec.strip("ZBrush.exe")           
-                GOZ_INSTALLER = os.path.join(f"{path}Troubleshoot Help/GoZ_for_ZBrush_Installer_WIN.exe")
+            else:    
+                GOZ_INSTALLER = os.path.join(path, "Troubleshoot Help", "GoZ_for_ZBrush_Installer_WIN.exe")
                 Popen([GOZ_INSTALLER], shell=True)
         else:
             bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')

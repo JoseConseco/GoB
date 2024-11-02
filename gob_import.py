@@ -388,7 +388,16 @@ class GoB_OT_import(Operator):
                         cnt = unpack('<Q', goz_file.read(8))[0]     # get polygroup faces  
                         
                         polyGroupData = []
-                        [polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                        #[polyGroupData.append(unpack('<H', goz_file.read(2))[0]) for i in range(cnt)]
+                        bytes_read = 0
+                        while bytes_read < cnt * 2:  # 2 bytes per '<H'
+                            data = goz_file.read(2)
+                            if len(data) != 2:
+                                print("Error: Reached end of file unexpectedly.")
+                                break
+                            polyGroupData.append(unpack('<H', data)[0])
+                            bytes_read += 2
+                        
                                                     
                         if utils.prefs().performance_profiling: 
                             start_time = utils.profiler(start_time, "____create polyGroupData")
@@ -596,32 +605,7 @@ class GoB_OT_import(Operator):
 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Material Node")                
-
-            # #apply face maps to sculpt mode face sets
-            if utils.prefs().apply_facemaps_to_facesets and  bpy.app.version > (2, 82, 7):                
-                bpy.ops.object.mode_set(mode='SCULPT')                 
-                for window in bpy.context.window_manager.windows:
-                    screen = window.screen
-                    for area in screen.areas:
-                        if area.type in {'VIEW_3D'}: 
-                            override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.sculpt.face_sets_init(override, mode='FACE_MAPS')   
-                            break                   
-                if utils.prefs().performance_profiling:                
-                    start_time = utils.profiler(start_time, "Init Face Sets")
-
-                # reveal all mesh elements (after the override for the face maps the elements without faces are hidden)                                 
-                bpy.ops.object.mode_set(mode='EDIT') 
-                for window in bpy.context.window_manager.windows:
-                    screen = window.screen
-                    for area in screen.areas:
-                        if area.type in {'VIEW_3D'}:
-                            override = {'window': window, 'screen': screen, 'area': area}
-                            bpy.ops.mesh.reveal(override)
-                            break  
-
-                if utils.prefs().performance_profiling:                
-                    start_time = utils.profiler(start_time, "Reveal Mesh Elements")
+            
                                            
             if utils.prefs().performance_profiling: 
                 print(30*"-") 
@@ -638,7 +622,7 @@ class GoB_OT_import(Operator):
         global gob_import_cache
         goz_obj_paths = []
         try:
-            with open(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
+            with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
                 for line in goz_objs_list:
                     goz_obj_paths.append(line.strip() + '.GoZ')
         except PermissionError:
@@ -708,7 +692,7 @@ class GoB_OT_import(Operator):
                 else:
                     if not bpy.app.timers.is_registered(run_import_periodically):
                         global cached_last_edition_time
-                        GoZ_ObjectList = os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt")
+                        GoZ_ObjectList = os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt")
                         try:
                             cached_last_edition_time = os.path.getmtime(GoZ_ObjectList)
                         except Exception:
@@ -731,7 +715,7 @@ def run_import_periodically():
     global cached_last_edition_time, run_background_update
 
     try:
-        file_edition_time = os.path.getmtime(os.path.join(f"{paths.PATH_GOZ}/GoZBrush/GoZ_ObjectList.txt"))
+        file_edition_time = os.path.getmtime(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"))
         #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)

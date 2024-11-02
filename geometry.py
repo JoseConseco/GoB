@@ -25,12 +25,9 @@ from bpy.types import Object, Mesh
 from . import utils
 
 
-def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
-           
+def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):           
           
-    if obj.data.color_attributes:
-        bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
-        
+    if obj.data.color_attributes:   
         #fill vcolArray(vert_idx + rgb_offset) = color_xyz
         vcolArray = bytearray([0] * numVertices * 3) 
         active_color = obj.data.color_attributes.active_color  
