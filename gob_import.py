@@ -439,6 +439,15 @@ class GoB_OT_import(Operator):
                             if utils.prefs().performance_profiling: 
                                 start_time = utils.profiler(start_time, "____import_polygroups_to_facemaps") """
                        
+                       # import polygroups to face sets
+                        if utils.prefs().import_polygroups_to_facesets:
+                            # create .sculpt_face_set attribute if not present
+                            if '.sculpt_face_set' not in obj.data.attributes:
+                                obj.data.attributes.new('.sculpt_face_set', 'INT', 'FACE')                   
+                            
+                            # create storage to use more efficient foreach_set instead of slower .value assignment
+                            face_set_index_storage = [0] * len(obj.data.polygons)
+
                         #add data to polygones
                         for i, pgmat in enumerate(polyGroupData):
                             # add materials to faces
@@ -450,10 +459,18 @@ class GoB_OT_import(Operator):
                             """ if utils.prefs().import_polygroups_to_facemaps:
                                 obj.face_maps.get(str(pgmat)).add([i]) """
                             
+                            # store polygroup index in storage
+                            if utils.prefs().import_polygroups_to_facesets:
+                                face_set_index_storage[i] = int(pgmat)
+                            
                             # add vertices to vertex groups  
                             if utils.prefs().import_polygroups_to_vertexgroups: 
                                 vertexGroup = obj.vertex_groups.get(str(pgmat))
                                 vertexGroup.add(list(me.polygons[i].vertices), 1.0, 'ADD')
+                        
+                        # (face sets) assign polygroup index to .sculpt_face_set attribute 
+                        if utils.prefs().import_polygroups_to_facesets:
+                            obj.data.attributes['.sculpt_face_set'].data.foreach_set('value', face_set_index_storage)
                         
                         if utils.prefs().performance_profiling: 
                             start_time = utils.profiler(start_time, "____add data to polygones") 
