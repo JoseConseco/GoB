@@ -118,7 +118,12 @@ class GoB_Preferences(AddonPreferences):
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
-        default=True) # Default: True     
+        default=True) # Default: True        
+    flat_icons: BoolProperty(
+        name="Use flat icons",
+        description="Use flat icons without color",
+        default=False) # Default: False   
+    
     
     export_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
     export_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True      
@@ -395,7 +400,8 @@ class GoB_Preferences(AddonPreferences):
             col.prop(self, 'manual_scale')
         if self.use_scale == 'ZUNITS':                   
             col.prop(self, 'zbrush_scale')
-        col.prop(self, 'show_button_text')  
+        col.prop(self, 'show_button_text') 
+        col.prop(self, 'flat_icons')          
         #col.prop(self, 'texture_format')
         
 

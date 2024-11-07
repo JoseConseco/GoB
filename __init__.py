@@ -31,7 +31,7 @@ bl_info = {
     "description": """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender. 
           Effortlessly transfer your models between ZBrush and Blender with a single click, streamlining your workflow and maximizing efficiency.""",
     "author": "ODe, JoseConseco, Daniel Grauer (kromar)",
-    "version": (4, 1, 6),
+    "version": (4, 1, 7),
     "blender": (4, 00, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
@@ -58,6 +58,10 @@ def register():
     icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
     icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
     icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
+    
+    icons.load("GOZ_SEND_FLAT", os.path.join(icons_dir, "goz_send_flat.png"), 'IMAGE')
+    icons.load("GOZ_SYNC_FLAT", os.path.join(icons_dir, "goz_sync_flat.png"), 'IMAGE')
+
     ui.preview_collections["main"] = icons 
     bpy.types.TOPBAR_HT_upper_bar.prepend(ui.draw_goz_buttons)
 
