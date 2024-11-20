@@ -281,7 +281,8 @@ class GoB_OT_import(Operator):
                     if utils.prefs().import_polypaint:     
                         if bpy.app.version < (3,4,0): 
                             goz_file.seek(4, 1)
-                            cnt = unpack('<Q', goz_file.read(8))[0] 
+                            cnt = unpack('<I', goz_file.read(4))[0]
+                            goz_file.seek(4, 1)
                             polypaintData = []
                                             
                             for i in range(cnt):                                 
@@ -333,7 +334,8 @@ class GoB_OT_import(Operator):
                                 me.color_attributes.new(utils.prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
 
                             goz_file.seek(4, 1)
-                            cnt = unpack('<Q', goz_file.read(8))[0]
+                            cnt = unpack('<I', goz_file.read(4))[0]
+                            goz_file.seek(4, 1)
                             alpha = 1   
                             for i in range(cnt): 
                                 # Avoid error if buffer length is less than 3
