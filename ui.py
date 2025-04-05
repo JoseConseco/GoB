@@ -27,71 +27,72 @@ preview_collections = {}
 
 def draw_goz_buttons(self, context):
 
-    if context.region.alignment == 'RIGHT':
-        layout = self.layout
-        row = layout.row(align=True)
+    if context.region.alignment != 'RIGHT':
+        return
+    layout = self.layout
+    row = layout.row(align=True)
 
-        icons = preview_collections["main"]
-        if utils.prefs().flat_icons:
-            icon_goz_send = 'GOZ_SEND_FLAT'
-            icon_goz_disabled = 'GOZ_SYNC_FLAT'
-            icon_goz_enabled = 'GOZ_SYNC_FLAT'
-        else:
-            icon_goz_send = 'GOZ_SEND'
-            icon_goz_disabled = 'GOZ_SYNC_DISABLED'
-            icon_goz_enabled = 'GOZ_SYNC_ENABLED'
+    icons = preview_collections["main"]
+    if utils.prefs().flat_icons:
+        icon_goz_send = 'GOZ_SEND_FLAT'
+        icon_goz_disabled = 'GOZ_SYNC_FLAT'
+        icon_goz_enabled = 'GOZ_SYNC_FLAT'
+    else:
+        icon_goz_send = 'GOZ_SEND'
+        icon_goz_disabled = 'GOZ_SYNC_DISABLED'
+        icon_goz_enabled = 'GOZ_SYNC_ENABLED'
 
 
 
-        if utils.prefs().show_button_text:
-            row.operator(operator="scene.gob_export_button", 
-                         text="Export", 
-                         emboss=True, 
-                         icon_value=icons[icon_goz_send].icon_id)
-            
-            if gob_import.run_background_update:
-                row.operator(operator="scene.gob_import", 
-                             text=iface_("Import", None), 
-                             emboss=True, 
-                             depress=True, 
-                             icon_value=icons[icon_goz_enabled].icon_id).action = 'AUTO'
-            else:
-                row.operator(operator="scene.gob_import", 
-                             text=iface_("Import", None), 
-                             emboss=True, 
-                             depress=False, 
-                             icon_value=icons[icon_goz_disabled].icon_id).action = 'AUTO'
-            
+    if utils.prefs().show_button_text:
+        row.operator(operator="scene.gob_export_button", 
+                     text="Export", 
+                     emboss=True, 
+                     icon_value=icons[icon_goz_send].icon_id)
+
+        if gob_import.run_background_update:
             row.operator(operator="scene.gob_import", 
-                         text="Manual", 
+                         text=iface_("Import", None), 
+                         emboss=True, 
+                         depress=True, 
+                         icon_value=icons[icon_goz_enabled].icon_id).action = 'AUTO'
+        else:
+            row.operator(operator="scene.gob_import", 
+                         text=iface_("Import", None), 
                          emboss=True, 
                          depress=False, 
-                         icon='IMPORT').action = 'MANUAL'
-       
-        else:
-            row.operator(operator="scene.gob_export_button",
+                         icon_value=icons[icon_goz_disabled].icon_id).action = 'AUTO'
+
+        row.operator(operator="scene.gob_import", 
+                     text="Manual", 
+                     emboss=True, 
+                     depress=False, 
+                     icon='IMPORT').action = 'MANUAL'
+
+    else:
+        row.operator(operator="scene.gob_export_button",
+                     text="", 
+                     emboss=True, 
+                     icon_value=icons[icon_goz_send].icon_id)
+
+        if gob_import.run_background_update:
+            row.operator(operator="scene.gob_import", 
                          text="", 
                          emboss=True, 
-                         icon_value=icons[icon_goz_send].icon_id)
-            
-            if gob_import.run_background_update:
-                row.operator(operator="scene.gob_import", 
-                             text="", 
-                             emboss=True, 
-                             depress=True, 
-                             icon_value=icons[icon_goz_enabled].icon_id).action = 'AUTO'
-            else:
-                row.operator(operator="scene.gob_import", 
-                             text="", 
-                             emboss=True, 
-                             depress=False, 
-                             icon_value=icons[icon_goz_disabled].icon_id).action = 'AUTO'
-           
+                         depress=True, 
+                         icon_value=icons[icon_goz_enabled].icon_id).action = 'AUTO'
+        else:
             row.operator(operator="scene.gob_import", 
                          text="", 
                          emboss=True, 
                          depress=False, 
-                         icon='IMPORT').action = 'MANUAL'
+                         icon_value=icons[icon_goz_disabled].icon_id).action = 'AUTO'
+
+        row.operator(operator="scene.gob_import", 
+                     text="", 
+                     emboss=True, 
+                     depress=False, 
+                     icon='IMPORT').action = 'MANUAL'
 
 
 class GoB_OT_export_button(Operator):

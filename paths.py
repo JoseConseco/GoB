@@ -139,8 +139,7 @@ class GoB_OT_GoZ_Installer(Operator):
 
     def execute(self, context):
         """Install GoZ for Windows""" 
-        path_exists = find_zbrush(self, context, isMacOS)
-        if path_exists:
+        if path_exists := find_zbrush(self, context, isMacOS):
             path = os.path.dirname(utils.prefs().zbrush_exec)
             if isMacOS:
                 GOZ_INSTALLER = os.path.join(path, "Troubleshoot Help", "GoZ_for_ZBrush_Installer_OSX.app")

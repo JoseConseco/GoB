@@ -623,8 +623,7 @@ class GoB_OT_import(Operator):
         goz_obj_paths = []
         try:
             with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
-                for line in goz_objs_list:
-                    goz_obj_paths.append(line.strip() + '.GoZ')
+                goz_obj_paths.extend(f'{line.strip()}.GoZ' for line in goz_objs_list)
         except PermissionError:
             if utils.prefs().debug_output:
                 print("GoB: GoZ_ObjectList already in use! Try again Later")
@@ -723,26 +722,23 @@ def run_import_periodically():
         if bpy.app.timers.is_registered(run_import_periodically):
             bpy.app.timers.unregister(run_import_periodically)
         return utils.prefs().import_timer
-    
+
     if file_edition_time > cached_last_edition_time:
         cached_last_edition_time = file_edition_time        
         bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)
-    else:       
-        global gob_import_cache  
+    else:   
+        global gob_import_cache
         if gob_import_cache:  
             if utils.prefs().debug_output:   
                 print("GOZ: clear import cache", file_edition_time - cached_last_edition_time)
             gob_import_cache.clear()   #reset import cache
-        else:
-            if utils.prefs().debug_output:
-                print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
-            else:
-                pass    
+        elif utils.prefs().debug_output:
+            print("GOZ: Nothing to update", file_edition_time - cached_last_edition_time)
         return utils.prefs().import_timer       
-    
+
     if not run_background_update and bpy.app.timers.is_registered(run_import_periodically):
         bpy.app.timers.unregister(run_import_periodically)
-        
+
     return utils.prefs().import_timer
 
 
