@@ -288,9 +288,10 @@ class GoB_OT_export(Operator):
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Mask")
 
-
-            # --Polygroups--
-            if utils.prefs().export_polygroups != 'NONE':  
+        
+           
+            # --Polygroups--     
+            if not utils.prefs().export_polygroups == 'NONE':  
                 if utils.prefs().debug_output:
                     print("Export Polygroups: ", utils.prefs().export_polygroups)
 
@@ -329,9 +330,9 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces)) 
 
-                    groupColor=[]
+                    groupColor=[]                        
                     #create a color for each facemap (0xffff)
-                    for _ in obj.vertex_groups:
+                    for vg in obj.vertex_groups:
                         color = utils.random_color()
                         groupColor.append(color)
                     #add a color for elements that are not part of a vertex group
@@ -597,8 +598,8 @@ class GoB_OT_export(Operator):
                     #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
-                    obj_tmp = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_tmp)
-
+                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
+                    
                     if utils.prefs().export_merge:
                         geometry.mesh_welder(obj_tmp)
 
@@ -616,7 +617,7 @@ class GoB_OT_export(Operator):
                     depsgraph = bpy.context.evaluated_depsgraph_get() 
 
                     # if one or less objects check amount of faces, 0 faces will crash zbrush
-                    if utils.prefs().export_modifiers != 'IGNORE':
+                    if not utils.prefs().export_modifiers == 'IGNORE':
                         object_eval = obj.evaluated_get(depsgraph)
                         numFaces = len(object_eval.data.polygons)
                     else: 
@@ -652,18 +653,19 @@ class GoB_OT_export(Operator):
 
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
         if not paths.is_file_empty(paths.PATH_OBJLIST) and utils.prefs().export_run_zbrush: 
-            if path_exists := paths.find_zbrush(self, context, paths.isMacOS):
+            path_exists = paths.find_zbrush(self, context, paths.isMacOS)
+            if not path_exists:
+                bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+            else:
                 if paths.isMacOS:   
                     print("OSX Popen: ", utils.prefs().zbrush_exec)
                     Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])   
                 else: #windows   
                     print("Windows Popen: ", utils.prefs().zbrush_exec)
-                    Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)
+                    Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
                 if context.object: #restore object context
                     bpy.ops.object.mode_set(mode=currentContext) 
-
-            else:
-                bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+        
         return {'FINISHED'}
 
 
