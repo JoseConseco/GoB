@@ -122,7 +122,7 @@ class GoB_Preferences(AddonPreferences):
     flat_icons: BoolProperty(
         name="Use flat icons",
         description="Use flat icons without color",
-        default=False) # Default: False   
+        default=True) # Default: True   
     
     
     export_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 

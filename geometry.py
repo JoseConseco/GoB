@@ -55,21 +55,19 @@ def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
 def apply_transformation(me, is_import=True): 
     mat_transform = None
     scale = 1.0
-    
+
     if utils.prefs().use_scale == 'BUNITS':
         scale = 1 / bpy.context.scene.unit_settings.scale_length
 
     if utils.prefs().use_scale == 'MANUAL':        
         scale =  1 / utils.prefs().manual_scale
 
-    if utils.prefs().use_scale == 'ZUNITS':
-        if bpy.context.active_object:
-            obj = bpy.context.active_object
-            i, max = utils.max_list_value(obj.dimensions)
-            scale =  1 / utils.prefs().zbrush_scale * max
-            if utils.prefs().debug_output:
-                print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
-            
+    if utils.prefs().use_scale == 'ZUNITS' and (obj := bpy.context.active_object):
+        i, max = utils.max_list_value(obj.dimensions)
+        scale =  1 / utils.prefs().zbrush_scale * max
+        if utils.prefs().debug_output:
+            print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+
     #import
     if utils.prefs().flip_up_axis:  # fixes bad mesh orientation for some people
         if utils.prefs().flip_forward_axis:
@@ -87,58 +85,55 @@ def apply_transformation(me, is_import=True):
                     (0.0, 0.0, 1.0, 0.0),
                     (0.0, -1.0, 0.0, 0.0),
                     (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+        elif is_import:
+            #import
+            me.transform(mathutils.Matrix([
+                (-1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, 1.0, 0.0),
+                (0.0, 1.0, 0.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0)]) * scale
+            )
         else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    
+            #export
+            mat_transform = mathutils.Matrix([
+                (-1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, 1.0, 0.0),
+                (0.0, 1.0, 0.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+
+    elif utils.prefs().flip_forward_axis:            
+        if is_import:
+            #import
+            me.transform(mathutils.Matrix([
+                (-1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, -1.0, 0.0),
+                (0.0, -1.0, 0.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0)]) * scale
+            )
+            #me.flip_normals()
+        else:
+            #export
+            mat_transform = mathutils.Matrix([
+                (-1.0, 0.0, 0.0, 0.0),
+                (0.0, 0.0, -1.0, 0.0),
+                (0.0, -1.0, 0.0, 0.0),
+                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+    elif is_import:
+        #import
+        me.transform(mathutils.Matrix([
+            (1.0, 0.0, 0.0, 0.0),
+            (0.0, 0.0, 1.0, 0.0),
+            (0.0, -1.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0, 1.0)]) * scale
+        )
     else:
-        if utils.prefs().flip_forward_axis:            
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-                #me.flip_normals()
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (-1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-        else:
-            if is_import:
-                #import
-                me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    
+        #export
+        mat_transform = mathutils.Matrix([
+            (1.0, 0.0, 0.0, 0.0),
+            (0.0, 0.0, -1.0, 0.0),
+            (0.0, 1.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+
     return me, mat_transform
 
 
@@ -202,11 +197,11 @@ def apply_modifiers(obj:Object) -> Mesh:
         start_time = utils.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
         start_total_time = utils.profiler(time.perf_counter(), "")
 
-    depsgraph = bpy.context.evaluated_depsgraph_get()  
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh depsgraph")
-        
-    object_eval = obj.evaluated_get(depsgraph)   
+
+    object_eval = obj.evaluated_get(depsgraph)
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh object_eval")
 
@@ -228,14 +223,12 @@ def apply_modifiers(obj:Object) -> Mesh:
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh bmesh new")
 
-    bm.from_mesh(mesh_tmp)    
+    bm.from_mesh(mesh_tmp)
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh bmesh")
 
-    #join traingles only that are result of ngon triangulation 
-    facesTotTriangulate = [f for f in bm.faces if len(f.edges) > 4]   
-    if facesTotTriangulate:
-        result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate) 
+    if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
+        result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
         bmesh.ops.join_triangles(
             bm, faces = result['faces'], 
             cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
@@ -245,7 +238,7 @@ def apply_modifiers(obj:Object) -> Mesh:
 
         if utils.prefs().performance_profiling: 
             start_time = utils.profiler(start_time, "Make Mesh triangulate1")
-    
+
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh triangulate2")
 
@@ -257,17 +250,17 @@ def apply_modifiers(obj:Object) -> Mesh:
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
-    bm.free()     
+    bm.free()
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh bm free")  
 
     obj.to_mesh_clear()
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")  
-    
+
     if utils.prefs().performance_profiling:         
         utils.profiler(start_total_time, "Make Mesh return\n _____/") 
-   
+
     return mesh_tmp    
 
 
@@ -293,57 +286,54 @@ def clone_as_object(obj, link=True):
     #mesh_clone = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
     mesh_clone = bpy.data.meshes.new_from_object(obj_to_clone)
     mesh_clone.transform(obj.matrix_world)
-    obj_clone = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_clone)  
+    obj_clone = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_clone)
     if link:
         bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
-   
+
     return obj_clone
 
 
 def check_export_candidates(obj):
     
     if obj.type in {'MESH'}:
-        if not utils.prefs().export_modifiers in {'IGNORE'}:
-            if obj.modifiers:
-                for modifier in obj.modifiers:
-                    geometry_modifiers=['Skin', 'Screw']
-                    if modifier.name in geometry_modifiers and modifier.show_viewport:
-                        # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
-                        #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
-                        return modifier.name in geometry_modifiers and modifier.show_viewport   
-                    else:
-                        # when the modifier is disabled
-                        # - it can result in 0 faces which makes it a invalid export candidate
-                        # - or in a mesh with more than 0 faces which makes it a valid export candidate
-                        numFaces = len(obj.data.polygons)  
-                        #print("numfaces 1, no skin modifiers: ", numFaces) 
-            else: 
-                #when a object has no modifiers, enable export when it has polygons, else disable
-                numFaces = len(obj.data.polygons) 
-                #print("numfaces 2 modifier export: ", numFaces)
-        
-        else:
+        if utils.prefs().export_modifiers in {'IGNORE'}:
             # if export modifers is Ignored check for polygons to identify export candidates
             numFaces = len(obj.data.polygons)
             #print("numfaces 3 no active modifiers: ", numFaces)
+
+        elif obj.modifiers:
+            for modifier in obj.modifiers:
+                geometry_modifiers=['Skin', 'Screw']
+                if modifier.name in geometry_modifiers and modifier.show_viewport:
+                    # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
+                    #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
+                    return modifier.name in geometry_modifiers and modifier.show_viewport   
+                else:
+                    # when the modifier is disabled
+                    # - it can result in 0 faces which makes it a invalid export candidate
+                    # - or in a mesh with more than 0 faces which makes it a valid export candidate
+                    numFaces = len(obj.data.polygons)  
+                    #print("numfaces 1, no skin modifiers: ", numFaces) 
+        else: 
+            #when a object has no modifiers, enable export when it has polygons, else disable
+            numFaces = len(obj.data.polygons) 
+            #print("numfaces 2 modifier export: ", numFaces)
 
     elif obj.type in {'SURFACE', 'FONT', 'META'}: 
         #allow export for non mesh type objects 
         return True
 
     elif obj.type in {'CURVE'}:  
-        # curves will only get faces when they have a bevel or a extrude            
-        if bpy.data.curves[obj.data.name].bevel_depth or bpy.data.curves[obj.data.name].extrude:
-            #print(bpy.data.curves[obj.name].bevel_depth , bpy.data.curves[obj.name].extrude)
-            return True
-        else:
-            return False
-            
+        # curves will only get faces when they have a bevel or a extrude
+        return bool(
+            bpy.data.curves[obj.data.name].bevel_depth
+            or bpy.data.curves[obj.data.name].extrude
+        )
     else:
         if utils.prefs().debug_output:
             print("GoB: unsupported object type:", obj.type)  
         return False
-    
+
     return numFaces
 
 
