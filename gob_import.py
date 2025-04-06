@@ -418,6 +418,7 @@ class GoB_OT_import(Operator):
                                     objMat = bpy.data.materials[str(pgmat)]                      
                                 
                                 # assign material to object
+                                nodes.create_base_nodes(objMat)
                                 if not objMat.name in obj.material_slots:
                                     obj.data.materials.append(objMat)
                                     objMat.use_nodes = True     
@@ -437,17 +438,6 @@ class GoB_OT_import(Operator):
                             
                             if utils.prefs().performance_profiling: 
                                 start_time = utils.profiler(start_time, "____import_polygroups_to_vertexgroups")
-                            
-                        # import polygroups to face maps
-                        """ if utils.prefs().import_polygroups_to_facemaps:                                
-                            #wipe face maps before importing new ones due to random naming           
-                            [obj.face_maps.remove(facemap) for facemap in obj.face_maps]
-                            for group in set(polyGroupData):
-                                obj.face_maps.new(name=str(group)) 
-                            
-                            if utils.prefs().performance_profiling: 
-                                start_time = utils.profiler(start_time, "____import_polygroups_to_facemaps") """
-                       
                        # import polygroups to face sets
                         if utils.prefs().import_polygroups_to_facesets:
                             # create .sculpt_face_set attribute if not present
@@ -554,7 +544,7 @@ class GoB_OT_import(Operator):
                 else: 
                     if utils.prefs().debug_output:
                         print("Unknown tag:{0}".format(tag))
-                    if utag >= 10:
+                    if utag >= 100:
                         if utils.prefs().debug_output:
                             print("...Too many object tags unknown...\n")
                         break
@@ -585,7 +575,7 @@ class GoB_OT_import(Operator):
                             objMat = bpy.data.materials.new(objName)
                             obj.data.materials.append(objMat)
 
-                        nodes.create_material_node(objMat, diff_texture, norm_texture, disp_texture) 
+                        nodes.materail_from_polypaint(objMat) 
 
                 # TEXTURES    
                 elif utils.prefs().import_material == 'TEXTURES':                               
@@ -600,7 +590,7 @@ class GoB_OT_import(Operator):
                         obj.data.materials.append(objMat)
                     
                     print("create material node:", objMat)
-                    nodes.create_material_node(objMat, diff_texture, norm_texture, disp_texture)  
+                    nodes.material_fromm_texture(objMat, diff_texture, norm_texture, disp_texture)  
 
 
             if utils.prefs().performance_profiling: 
