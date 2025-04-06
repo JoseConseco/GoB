@@ -454,9 +454,6 @@ class GoB_OT_import(Operator):
                                 slot = obj.material_slots[bpy.data.materials[str(pgmat)].name].slot_index
                                 obj.data.polygons[i].material_index = slot     
                             
-                            # add faces to facemap
-                            """ if utils.prefs().import_polygroups_to_facemaps:
-                                obj.face_maps.get(str(pgmat)).add([i]) """
                             
                             # store polygroup index in storage
                             if utils.prefs().import_polygroups_to_facesets:
