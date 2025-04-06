@@ -291,7 +291,7 @@ class GoB_OT_export(Operator):
         
            
             # --Polygroups--     
-            if not utils.prefs().export_polygroups == 'NONE':  
+            if utils.prefs().export_polygroups != 'NONE':  
                 if utils.prefs().debug_output:
                     print("Export Polygroups: ", utils.prefs().export_polygroups)
 
