@@ -53,7 +53,7 @@ class GoB_OT_import(Operator):
             start_time = utils.profiler(time.perf_counter(), "Start Object Profiling")
             start_total_time = utils.profiler(time.perf_counter(), "...")
 
-        utag = 0
+        unknown_tag = 0
         vertsData = []
         facesData = []
         objMat = None
@@ -151,11 +151,11 @@ class GoB_OT_import(Operator):
                 else:
                     if utils.prefs().debug_output:
                         print("Unknown tag:{0}".format(tag))
-                    if utag >= 10:
+                    if unknown_tag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many mesh tags unknown...\n")
                         break
-                    utag += 1
+                    unknown_tag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                 tag = goz_file.read(4)
@@ -224,7 +224,7 @@ class GoB_OT_import(Operator):
                 start_time = utils.profiler(start_time, "Make Mesh import\n")
                 
             
-            utag = 0
+            unknown_tag = 0
             while tag:
                 
                 # UVs
@@ -541,11 +541,11 @@ class GoB_OT_import(Operator):
                 else: 
                     if utils.prefs().debug_output:
                         print("Unknown tag:{0}".format(tag))
-                    if utag >= 100:
+                    if unknown_tag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many object tags unknown...\n")
                         break
-                    utag += 1
+                    unknown_tag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
 
