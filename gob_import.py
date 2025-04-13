@@ -530,10 +530,10 @@ class GoB_OT_import(Operator):
                     if unknown_tag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many object tags unknown...\n")
+                        unknown_tag += 1
+                        cnt = unpack('<I', goz_file.read(4))[0] - 8
+                        goz_file.seek(cnt, 1)
                         break
-                    unknown_tag += 1
-                    cnt = unpack('<I', goz_file.read(4))[0] - 8
-                    goz_file.seek(cnt, 1)
 
                 tag = goz_file.read(4)
                 
