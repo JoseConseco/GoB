@@ -248,18 +248,10 @@ class GoB_Preferences(AddonPreferences):
         name="Polygroups to Vertex Groups",
         description="Import Polygroups as Vertex Groups",
         default=False) # Default: False    
-    import_polygroups_to_facemaps: BoolProperty(
-        name="Polygroups to Face Maps",
-        description="Import Polygroups as Face Maps",
-        default=True) # Default: True
     import_polygroups_to_facesets: BoolProperty(
         name="Polygroups to Face Sets",
         description="Import Polygroups as Face Sets",
         default=True) # Default: True
-    apply_facemaps_to_facesets: BoolProperty(
-        name="Apply Face Maps to Face Sets",
-        description="apply_facemaps_to_facesets",
-        default=False) # Default: False
     import_mask: BoolProperty(
         name="Mask",
         description="Import Mask to Vertex Group",
@@ -433,8 +425,6 @@ class GoB_Preferences(AddonPreferences):
         pg_col = col.column()
         pg_col.active = bool(self.import_polygroups)
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
-        #pg_col.prop(self, 'import_polygroups_to_facemaps')
-        #pg_col.prop(self, 'apply_facemaps_to_facesets')
         pg_col.prop(self, 'import_polygroups_to_facesets')
 
         if self.import_material == 'TEXTURES':
