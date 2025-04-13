@@ -181,23 +181,25 @@ class GoB_OT_import(Operator):
                     bm.from_mesh(me)
                     bm.faces.ensure_lookup_table() 
                     #update vertex positions
-                    for i, v in enumerate(bm.verts):
-                        v.co  = mathutils.Vector(vertsData[i])  
+                    verts_coords = [mathutils.Vector(coord) for coord in vertsData]
+                    for vert, coord in zip(bm.verts, verts_coords):
+                        vert.co = coord
                     bm.to_mesh(me)   
                     bm.free()
-                    #bmesh.update_edit_mesh(mesh, loop_triangles=True, destructive=True) #https://docs.blender.org/api/current/bmesh.html#bmesh.update_edit_mesh
-
-                #mesh has different vertex count
-                else:              
-                    me.clear_geometry() #NOTE: if this is done in edit mode we get a crash                         
-                    me.from_pydata(vertsData, [], facesData)
-                    #obj.data = me
+                
+                me.clear_geometry()
+                me.from_pydata(vertsData, [], facesData)                
+                #obj.data = me
+            
+            me.update(calc_edges=True, calc_edges_loose=True)  # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=update#bpy.types.Mesh.update
+            
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____create mesh") 
            
             me,_ = geometry.apply_transformation(me, is_import=True)
             # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
             me.transform(obj.matrix_world.inverted())   
+            
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____transform mesh")      
            
@@ -205,9 +207,8 @@ class GoB_OT_import(Operator):
             if utils.prefs().debug_output:
                 me.validate(verbose=False) # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=validate#bpy.types.Mesh.validate
                 if utils.prefs().performance_profiling:  
-                    start_time = utils.profiler(start_time, "____validate mesh")
-            
-            me.update(calc_edges=True, calc_edges_loose=True)  # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=update#bpy.types.Mesh.update
+                    start_time = utils.profiler(start_time, "____validate mesh")            
+           
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____update mesh")
             
@@ -265,8 +266,7 @@ class GoB_OT_import(Operator):
                                 x, y = unpack('<2f', goz_file.read(8))
 
                         bm.to_mesh(me)   
-                        bm.free()    
-                                           
+                        bm.free()                                               
                         me.update(calc_edges=True, calc_edges_loose=True)  
                         
                         if utils.prefs().performance_profiling: 
@@ -323,9 +323,9 @@ class GoB_OT_import(Operator):
                                         if loop.vert.index < len(polypaintData):
                                             loop[color_layer] = polypaintData[loop.vert.index]
 
-                                bm.to_mesh(me)                        
+                                bm.to_mesh(me)    
+                                bm.free()                                                
                                 me.update(calc_edges=True, calc_edges_loose=True)  
-                                bm.free()                            
                             polypaintData.clear()
                         
                         else:  # bpy.app.version >= (3,4,0):      
