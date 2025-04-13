@@ -396,6 +396,8 @@ class GoB_OT_import(Operator):
                     if utils.prefs().import_material == 'POLYGROUPS':
                         for pgmat in set(polyGroupData):
                             objMat = bpy.data.materials.get(str(pgmat)) or bpy.data.materials.new(str(pgmat))
+                            # assign material to object
+                            nodes.create_base_nodes(objMat)
                             if objMat.name not in obj.material_slots:
                                 obj.data.materials.append(objMat)
                                 objMat.use_nodes = True
