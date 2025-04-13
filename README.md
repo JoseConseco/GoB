@@ -8,7 +8,7 @@ You can transfer:
 * Polypainting
 * UVs
 * Mask
-* FaceMaps
+* FaceSets
 * Polygroup
 * Diffuse map
 * Normal map

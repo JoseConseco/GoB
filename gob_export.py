@@ -301,6 +301,9 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces))  
+                      
+                    if utils.prefs().debug_output:
+                        print("Exporting Face Sets: ", '.sculpt_face_set' in obj.data.attributes)
 
                     if '.sculpt_face_set' in obj.data.attributes:
                         for index, attr_data in enumerate(obj.data.attributes['.sculpt_face_set'].data):
@@ -558,10 +561,11 @@ class GoB_OT_export(Operator):
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")   
 
 
-        currentContext = 'OBJECT'
-        if context.object and context.object.mode != 'OBJECT':            
+        currentContext = None
+        if context.object:            
             currentContext = context.object.mode
-            bpy.ops.object.mode_set(mode='OBJECT')       
+            if context.object.mode != 'OBJECT':        
+                bpy.ops.object.mode_set(mode='OBJECT')         
 
         wm = context.window_manager
         wm.progress_begin(0,100)
@@ -598,8 +602,8 @@ class GoB_OT_export(Operator):
                     #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
-                    obj_tmp = bpy.data.objects.new((obj.name + '_' + obj.type), mesh_tmp)
-                    
+                    obj_tmp = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_tmp)
+
                     if utils.prefs().export_merge:
                         geometry.mesh_welder(obj_tmp)
 
@@ -617,7 +621,7 @@ class GoB_OT_export(Operator):
                     depsgraph = bpy.context.evaluated_depsgraph_get() 
 
                     # if one or less objects check amount of faces, 0 faces will crash zbrush
-                    if not utils.prefs().export_modifiers == 'IGNORE':
+                    if utils.prefs().export_modifiers != 'IGNORE':
                         object_eval = obj.evaluated_get(depsgraph)
                         numFaces = len(object_eval.data.polygons)
                     else: 
@@ -663,9 +667,11 @@ class GoB_OT_export(Operator):
                 else: #windows   
                     print("Windows Popen: ", utils.prefs().zbrush_exec)
                     Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
-                if context.object: #restore object context
-                    bpy.ops.object.mode_set(mode=currentContext) 
         
+        # restore object context
+        if context.object and currentContext: 
+            bpy.ops.object.mode_set(mode=currentContext) 
+
         return {'FINISHED'}
 
 
