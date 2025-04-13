@@ -623,16 +623,10 @@ class GoB_OT_import(Operator):
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
 
-        currentContext = 'OBJECT'
-        if context.object:
-            if context.object.mode != 'EDIT':
-                currentContext = context.object.mode
-                #print("currentContext: ", currentContext)
-                # ! cant get proper context from timers for now to change mode: 
-                # https://developer.blender.org/T62074
-                bpy.ops.object.mode_set(mode=currentContext) 
-            else:
-                bpy.ops.object.mode_set(mode='OBJECT')
+        
+        currentContext = context.object.mode
+        if context.object.mode != 'OBJECT':        
+            bpy.ops.object.mode_set(mode='OBJECT')    
 
 
         if utils.prefs().performance_profiling: 
@@ -649,6 +643,11 @@ class GoB_OT_import(Operator):
                 self.GoZit(ztool_path)
             wm.progress_update(step * i)
         wm.progress_end()
+        
+        # restore object context
+        if context.object: 
+            bpy.ops.object.mode_set(mode=currentContext) 
+
         if utils.prefs().debug_output:
             self.report({'INFO'}, "GoB: Imoprt cycle finished")
 
