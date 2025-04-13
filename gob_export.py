@@ -301,6 +301,9 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces))  
+                      
+                    if utils.prefs().debug_output:
+                        print("Exporting Face Sets: ", '.sculpt_face_set' in obj.data.attributes)
 
                     if '.sculpt_face_set' in obj.data.attributes:
                         for index, attr_data in enumerate(obj.data.attributes['.sculpt_face_set'].data):
@@ -558,10 +561,11 @@ class GoB_OT_export(Operator):
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")   
 
 
-        currentContext = context.object.mode
-
-        if context.object.mode != 'OBJECT':        
-            bpy.ops.object.mode_set(mode='OBJECT')       
+        currentContext = None
+        if context.object:            
+            currentContext = context.object.mode
+            if context.object.mode != 'OBJECT':        
+                bpy.ops.object.mode_set(mode='OBJECT')         
 
         wm = context.window_manager
         wm.progress_begin(0,100)
@@ -665,7 +669,7 @@ class GoB_OT_export(Operator):
                     Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
         
         # restore object context
-        if context.object: 
+        if context.object and currentContext: 
             bpy.ops.object.mode_set(mode=currentContext) 
 
         return {'FINISHED'}

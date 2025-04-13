@@ -72,7 +72,7 @@ class GoB_OT_import(Operator):
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
             if utils.prefs().debug_output:
-                print(f"Importing: {pathFile, objName}")  
+                print(f"\n\nGoB Importing: \n{pathFile, objName}")  
             if utils.prefs().performance_profiling:                
                 print(f"GoB Importing: {objName}")            
             tag = goz_file.read(4)
@@ -81,7 +81,7 @@ class GoB_OT_import(Operator):
                 # Name
                 if tag == b'\x89\x13\x00\x00':
                     if utils.prefs().debug_output:
-                        print("name:", tag)
+                        print("__ Name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                     if utils.prefs().performance_profiling:  
@@ -90,7 +90,7 @@ class GoB_OT_import(Operator):
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("Vertices:", tag)                    
+                        print("__ Vertices:", tag)                    
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -105,7 +105,7 @@ class GoB_OT_import(Operator):
                 # Faces
                 elif tag == b'\x21\x4e\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("Faces:", tag)
+                        print("__ Faces:", tag)
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     for i in range(cnt):
@@ -125,32 +125,32 @@ class GoB_OT_import(Operator):
                 # UVs
                 elif tag == b'\xa9\x61\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("UVs:", tag)
+                        print("__ UVs:", tag)
                     break
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("Polypainting:", tag)
+                        print("__ Polypainting:", tag)
                     break
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("Mask:", tag)
+                        print("__ Mask:", tag)
                     break
                 # Polyroups
                 elif tag == b'\x41\x9c\x00\x00': 
                     if utils.prefs().debug_output:
-                        print("Polyroups:", tag) 
+                        print("__ Polyroups:", tag) 
                     break
                 # End
                 elif tag == b'\x00\x00\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("End:", tag)
+                        print("__ End:", tag)
                     break
                 # Unknown tags
                 else:
                     if utils.prefs().debug_output:
-                        print("Unknown tag:{0}".format(tag))
+                        print("__ Unknown tag:{0}".format(tag))
                     if unknown_tag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many mesh tags unknown...\n")
@@ -158,48 +158,38 @@ class GoB_OT_import(Operator):
                     unknown_tag += 1
                     cnt = unpack('<I', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
+
                 tag = goz_file.read(4)
                 
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "Unpack Mesh Data\n")
 
-            # create new object
-            if not objName in bpy.data.objects.keys():
-                me = bpy.data.meshes.new(objName)  
+            # Create or update object
+            obj = bpy.data.objects.get(objName)
+            if not obj:
+                if utils.prefs().debug_output:
+                    print("\nGoB Create new object:", objName)
+                me = bpy.data.meshes.new(objName)
                 obj = bpy.data.objects.new(objName, me)
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj) 
-                me.from_pydata(vertsData, [], facesData)     
-                #me.transform(obj.matrix_world.inverted())      
-           
-            # object already exist
-            else:                
-                obj = bpy.data.objects[objName]                
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
+            else:
+                if utils.prefs().debug_output:
+                    print("\nGoB Object already exists:", objName)
                 me = obj.data
-                #mesh has same vertex count
-                if len(me.vertices) == len(vertsData): 
-                    bm = bmesh.new()
-                    bm.from_mesh(me)
-                    bm.faces.ensure_lookup_table() 
-                    #update vertex positions
-                    verts_coords = [mathutils.Vector(coord) for coord in vertsData]
-                    for vert, coord in zip(bm.verts, verts_coords):
-                        vert.co = coord
-                    bm.to_mesh(me)   
-                    bm.free()
-                
-                me.clear_geometry()
-                me.from_pydata(vertsData, [], facesData)                
-                #obj.data = me
-            
-            me.update(calc_edges=True, calc_edges_loose=True)  # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=update#bpy.types.Mesh.update
+
+            # Update mesh data
+            me.clear_geometry()
+            me.from_pydata(vertsData, [], facesData)
+            me.update(calc_edges=True, calc_edges_loose=True)
+            if utils.prefs().performance_profiling:  
+                start_time = utils.profiler(start_time, "____update mesh")
             
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____create mesh") 
            
-            me,_ = geometry.apply_transformation(me, is_import=True)
-            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations      
-            me.transform(obj.matrix_world.inverted())   
-            
+            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations  
+            me,_ = geometry.apply_transformation(me, is_import=True)    
+            me.transform(obj.matrix_world.inverted())               
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____transform mesh")      
            
@@ -209,12 +199,9 @@ class GoB_OT_import(Operator):
                 if utils.prefs().performance_profiling:  
                     start_time = utils.profiler(start_time, "____validate mesh")            
            
-            if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "____update mesh")
-            
             # make object active
             obj.select_set(state=True) 
-            bpy.context.view_layer.objects.active = obj
+            bpy.context.view_layer.objects.active = obj            
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "____make object active")
 
@@ -222,12 +209,11 @@ class GoB_OT_import(Operator):
             facesData.clear()
 
             if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "Make Mesh import\n")
-                
+                start_time = utils.profiler(start_time, "Make Mesh import\n")            
             
             unknown_tag = 0
             while tag:
-                
+
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':                    
                     if utils.prefs().debug_output:
@@ -622,11 +608,12 @@ class GoB_OT_import(Operator):
             if utils.prefs().debug_output:
                 self.report({'INFO'}, message="GoB: No goz files in GoZ_ObjectList") 
             return{'CANCELLED'}
-
         
-        currentContext = context.object.mode
-        if context.object.mode != 'OBJECT':        
-            bpy.ops.object.mode_set(mode='OBJECT')    
+        currentContext = None
+        if context.object:            
+            currentContext = context.object.mode
+            if context.object.mode != 'OBJECT':        
+                bpy.ops.object.mode_set(mode='OBJECT')    
 
 
         if utils.prefs().performance_profiling: 
@@ -645,7 +632,7 @@ class GoB_OT_import(Operator):
         wm.progress_end()
         
         # restore object context
-        if context.object: 
+        if context.object and currentContext: 
             bpy.ops.object.mode_set(mode=currentContext) 
 
         if utils.prefs().debug_output:
