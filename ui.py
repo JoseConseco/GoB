@@ -125,7 +125,7 @@ class GOB_OT_Popup(Operator):
         self.layout.label(text='        in the Add-ons Preferences')
 
     def open_addon_prefs(self, context):
-        context.window_manager.addon_support = {'OFFICIAL', 'COMMUNITY', 'TESTING'}
+        # Open the preferences window and show the add-on settings
         bpy.ops.preferences.addon_show(module=__package__)
 
     def invoke(self, context, event):       

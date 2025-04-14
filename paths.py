@@ -107,16 +107,27 @@ def find_zbrush(self, context, isMacOS):
                 utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, "ZBrush.app")
                 ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
-        else:  
-            filepath = os.path.join("C:\\", "Program Files", "Pixologic")    
-            #TODO: add maxon path detection here
-            #filepath = os.path.join(f"C:/Program Files/Maxon")
-            #find non version paths
-            if os.path.isdir(filepath):
-                i,zfolder = utils.max_list_value(os.listdir(filepath))                
-                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, "ZBrush.exe")
-                ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
-                self.is_found = True  
+        else:              
+            # Look for ZBrush in default installation paths
+            default_paths = [
+                os.path.join("C:\\", "Program Files"),
+                os.path.join("C:\\", "Program Files", "Pixologic")
+            ]
+            for base_path in default_paths:
+                if not os.path.isdir(base_path):
+                    continue
+
+                folder_list = [folder for folder in os.listdir(base_path) if 'zbrush' in str.lower(folder)]
+                if not folder_list:
+                    continue
+
+                i, zfolder = utils.max_list_value(folder_list)
+                zbrush_exec_path = os.path.join(base_path, zfolder, "ZBrush.exe")
+                if os.path.isfile(zbrush_exec_path):
+                    utils.prefs().zbrush_exec = zbrush_exec_path
+                    ui.ShowReport(self, [utils.prefs().zbrush_exec], f"GoB: {zfolder} default installation found", 'COLORSET_03_VEC')
+                    self.is_found = True
+                    break
 
     if not self.is_found:
         print('GoB: Zbrush executable not found')
