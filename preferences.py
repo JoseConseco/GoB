@@ -18,6 +18,7 @@
 
     
 """Addon preferences"""
+import bpy
 import os
 import platform
 from bpy.types import AddonPreferences
@@ -280,27 +281,7 @@ class GoB_Preferences(AddonPreferences):
     import_diffuse_colorspace: EnumProperty(
         name="",
         description="diffuse_colorspace",
-        items=[('ACES2065-1', 'ACES2065-1', ''),
-                ('ACEScg', 'ACEScg', ''),
-                ('AgX Base Display P3', 'AgX Base Display P3', ''),
-                ('AgX Base Rec.1886', 'AgX Base Rec.1886', ''),
-                ('AgX Base Rec.2020', 'AgX Base Rec.2020', ''),
-                ('AgX Base sRGB', 'AgX Base sRGB', ''),
-                ('AgX Log', 'AgX Log', ''),
-                ('Display P3', 'Display P3',''),
-                ('Filmic Log', 'Filmic Log', ''),
-                ('Filmic sRGB','Filmic sRGB',''),
-                ('Linear CIE-XYZ D65', 'Linear CIE-XYZ D65', ''),
-                ('Linear CIE-XYZ E', 'Linear CIE-XYZ E',''),
-                ('Linear DCI-P3 D65', 'Linear DCI-P3 D65', ''),
-                ('Linear FilmLight E-Gamut', 'Linear FilmLight E-Gamut',''),
-                ('Linear Rec.2020', 'Linear Rec.2020', ''),
-                ('Linear Rec.709', 'Linear Rec.709', ''),
-                ('Non-Color', 'Non-Color', ''),
-                ('Rec.1886', 'Rec.1886', ''),
-                ('Rec.2020', 'Rec.2020', ''),
-                ('sRGB', 'sRGB', ''),
-                ],
+        items=[(item.identifier, item.name, item.description) for item in bpy.types.ColorManagedInputColorspaceSettings.bl_rna.properties['name'].enum_items],
         default='sRGB') # Default: sRGB  
         
     import_displace_suffix: StringProperty(
@@ -312,27 +293,7 @@ class GoB_Preferences(AddonPreferences):
     import_displace_colorspace: EnumProperty(
         name="",
         description="displace_colorspace",
-        items=[('ACES2065-1', 'ACES2065-1', ''),
-                ('ACEScg', 'ACEScg', ''),
-                ('AgX Base Display P3', 'AgX Base Display P3', ''),
-                ('AgX Base Rec.1886', 'AgX Base Rec.1886', ''),
-                ('AgX Base Rec.2020', 'AgX Base Rec.2020', ''),
-                ('AgX Base sRGB', 'AgX Base sRGB', ''),
-                ('AgX Log', 'AgX Log', ''),
-                ('Display P3', 'Display P3',''),
-                ('Filmic Log', 'Filmic Log', ''),
-                ('Filmic sRGB','Filmic sRGB',''),
-                ('Linear CIE-XYZ D65', 'Linear CIE-XYZ D65', ''),
-                ('Linear CIE-XYZ E', 'Linear CIE-XYZ E',''),
-                ('Linear DCI-P3 D65', 'Linear DCI-P3 D65', ''),
-                ('Linear FilmLight E-Gamut', 'Linear FilmLight E-Gamut',''),
-                ('Linear Rec.2020', 'Linear Rec.2020', ''),
-                ('Linear Rec.709', 'Linear Rec.709', ''),
-                ('Non-Color', 'Non-Color', ''),
-                ('Rec.1886', 'Rec.1886', ''),
-                ('Rec.2020', 'Rec.2020', ''),
-                ('sRGB', 'sRGB', ''),
-                ],
+        items=[(item.identifier, item.name, item.description) for item in bpy.types.ColorManagedInputColorspaceSettings.bl_rna.properties['name'].enum_items],
         default='Linear Rec.709') # Default: Linear     
 
     import_normal_suffix: StringProperty(
@@ -343,28 +304,8 @@ class GoB_Preferences(AddonPreferences):
     import_normal_colorspace: EnumProperty(
         name="",
         description="normal_colorspace",
-        items=[('ACES2065-1', 'ACES2065-1', ''),
-                ('ACEScg', 'ACEScg', ''),
-                ('AgX Base Display P3', 'AgX Base Display P3', ''),
-                ('AgX Base Rec.1886', 'AgX Base Rec.1886', ''),
-                ('AgX Base Rec.2020', 'AgX Base Rec.2020', ''),
-                ('AgX Base sRGB', 'AgX Base sRGB', ''),
-                ('AgX Log', 'AgX Log', ''),
-                ('Display P3', 'Display P3',''),
-                ('Filmic Log', 'Filmic Log', ''),
-                ('Filmic sRGB','Filmic sRGB',''),
-                ('Linear CIE-XYZ D65', 'Linear CIE-XYZ D65', ''),
-                ('Linear CIE-XYZ E', 'Linear CIE-XYZ E',''),
-                ('Linear DCI-P3 D65', 'Linear DCI-P3 D65', ''),
-                ('Linear FilmLight E-Gamut', 'Linear FilmLight E-Gamut',''),
-                ('Linear Rec.2020', 'Linear Rec.2020', ''),
-                ('Linear Rec.709', 'Linear Rec.709', ''),
-                ('Non-Color', 'Non-Color', ''),
-                ('Rec.1886', 'Rec.1886', ''),
-                ('Rec.2020', 'Rec.2020', ''),
-                ('sRGB', 'sRGB', ''),
-                ],
-        default='Non-Color') # Default: Non-Color      
+        items=[(item.identifier, item.name, item.description) for item in bpy.types.ColorManagedInputColorspaceSettings.bl_rna.properties['name'].enum_items],
+        default='Non-Color') # Default: Non-Color
     
     # DEBUG    
     performance_profiling: BoolProperty(
@@ -473,7 +414,7 @@ class GoB_Preferences(AddonPreferences):
         box.use_property_split = True
         #box = layout.box() 
         box.label(text='GoB Troubleshooting', icon='QUESTION')   
-        import platform
+
         if platform.system() == 'Windows':
             icons = ui.preview_collections["main"]  
             box.operator( "gob.install_goz", text="Install GoZ", icon_value=icons["GOZ_SEND"].icon_id ) 
