@@ -47,6 +47,60 @@ class GoB_OT_import(Operator):
         ]
     )
 
+    def make_mesh(self, objName, vertsData, facesData) -> tuple:
+        """Create or update a mesh object from the given vertices and faces data.
+
+        Args:
+            objName (str): The name of the object to create or update.
+            vertsData (list of tuple): A list of vertex coordinates, where each vertex is represented as a tuple of three floats (x, y, z).
+            facesData (list of tuple): A list of face definitions, where each face is represented as a tuple of vertex indices.
+
+        Returns:
+            tuple: A tuple containing the created or updated object (bpy.types.Object) and its mesh data (bpy.types.Mesh).
+        """
+
+        if utils.prefs().debug_output:
+            print(f"\nGoB Object Name: {objName}")
+
+        obj = bpy.data.objects.get(objName)
+        if obj:
+            if utils.prefs().debug_output:
+                print(f"\nGoB Object already exists: {objName}")
+            me = obj.data
+        else:
+            if utils.prefs().debug_output:
+                print(f"\nGoB Creating new object: {objName}")
+            me = bpy.data.meshes.new(objName)
+            obj = bpy.data.objects.new(objName, me)
+            if bpy.context.view_layer.active_layer_collection:
+                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
+            else:
+                print("Error: Active layer collection is not set or invalid. Object could not be linked.")
+
+        # Clear and update mesh geometry
+        if bpy.app.version >= (3, 6, 0):
+            me.clear_geometry()
+        else:
+            me.vertices.clear()
+            me.edges.clear()
+            me.polygons.clear()
+
+        me.from_pydata(vertsData, [], facesData)
+        me.update(calc_edges=True, calc_edges_loose=True)
+
+        # Apply transformations and validate mesh
+        me, _ = geometry.apply_transformation(me, is_import=True)
+        me.transform(obj.matrix_world.inverted())
+        me.validate(verbose=utils.prefs().debug_output)
+
+        # Set object as active and update view layer
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.context.view_layer.update()
+
+        return obj, me
+
+
     def GoZit(self, pathFile): 
         if utils.prefs().performance_profiling: 
             print("\n")
@@ -71,6 +125,7 @@ class GoB_OT_import(Operator):
             obj_name = unpack('%ss' % lenObjName, goz_file.read(lenObjName))[0]
             # remove non ascii chars eg. /x 00
             objName = ''.join([letter for letter in obj_name[8:].decode('utf-8') if letter in string.printable])
+            
             if utils.prefs().debug_output:
                 print(f"\n\nGoB Importing: \n{pathFile, objName}")  
             if utils.prefs().performance_profiling:                
@@ -163,53 +218,10 @@ class GoB_OT_import(Operator):
                 
             if utils.prefs().performance_profiling:  
                 start_time = utils.profiler(start_time, "Unpack Mesh Data\n")
-
-            # Create or update object
-            obj = bpy.data.objects.get(objName)
-            if not obj:
-                if utils.prefs().debug_output:
-                    print("\nGoB Create new object:", objName)
-                me = bpy.data.meshes.new(objName)
-                obj = bpy.data.objects.new(objName, me)
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(obj)
-            else:
-                if utils.prefs().debug_output:
-                    print("\nGoB Object already exists:", objName)
-                me = obj.data
-
-            # Update mesh data
-            me.clear_geometry()
-            me.from_pydata(vertsData, [], facesData)
-            me.update(calc_edges=True, calc_edges_loose=True)
-            if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "____update mesh")
             
+            obj, me = self.make_mesh(objName, vertsData, facesData)
             if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "____create mesh") 
-           
-            # assume we have to reverse transformation from obj mode, this is needed after matrix transfomrmations  
-            me,_ = geometry.apply_transformation(me, is_import=True)    
-            me.transform(obj.matrix_world.inverted())               
-            if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "____transform mesh")      
-           
-            # update mesh data after transformations to fix normals 
-            if utils.prefs().debug_output:
-                me.validate(verbose=False) # https://docs.blender.org/api/current/bpy.types.Mesh.html?highlight=validate#bpy.types.Mesh.validate
-                if utils.prefs().performance_profiling:  
-                    start_time = utils.profiler(start_time, "____validate mesh")            
-           
-            # make object active
-            obj.select_set(state=True) 
-            bpy.context.view_layer.objects.active = obj            
-            if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "____make object active")
-
-            vertsData.clear()
-            facesData.clear()
-
-            if utils.prefs().performance_profiling:  
-                start_time = utils.profiler(start_time, "Make Mesh import\n")            
+                start_time = utils.profiler(start_time, "Make Mesh \n")            
             
             unknown_tag = 0
             while tag:
