@@ -232,6 +232,24 @@ class GoB_Preferences(AddonPreferences):
             default='AUTOMATIC') # Default: AUTOMATIC    
             
    
+    import_mask: BoolProperty(
+        name="Mask",
+        description="Import Mask to Vertex Group",
+        default=True) # Default: True
+    
+    import_uv: BoolProperty(
+        name="UV Map",
+        description="Import Uv Map from ZBrush",
+        default=True) # Default: True
+    import_uv_name: StringProperty(
+        name="UV Map", 
+        description="Set name for the UV Map", 
+        default="UVMap") # Default: UVMap
+    
+    import_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
+    import_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True 
+
+    
     import_polypaint: BoolProperty(
         name="Polypaint",
         description="Import Polypaint as Vertex Color",
@@ -240,6 +258,7 @@ class GoB_Preferences(AddonPreferences):
         name="Vertex Color", 
         description="Set name for Vertex Color Layer", 
         default="Col") # Default: Col    
+    
     import_polygroups: BoolProperty(
         name="Polygroups",
         description="Import Polygroup data",
@@ -252,21 +271,7 @@ class GoB_Preferences(AddonPreferences):
         name="Polygroups to Face Sets",
         description="Import Polygroups as Face Sets",
         default=True) # Default: True
-    import_mask: BoolProperty(
-        name="Mask",
-        description="Import Mask to Vertex Group",
-        default=True) # Default: True
-    import_uv: BoolProperty(
-        name="UV Map",
-        description="Import Uv Map from ZBrush",
-        default=True) # Default: True
-    import_uv_name: StringProperty(
-        name="UV Map", 
-        description="Set name for the UV Map", 
-        default="UVMap") # Default: UVMap
     
-    import_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
-    import_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True 
 
     import_diffuse_suffix: StringProperty(
         name="Base Color", 
@@ -414,16 +419,13 @@ class GoB_Preferences(AddonPreferences):
             uv_row.prop(self, 'import_uv_name', text='')
             col.prop(self, 'import_uv_flip_x') 
             col.prop(self, 'import_uv_flip_y') 
-            col.separator()
 
         pp_row = col.row()
         pp_row.prop(self, 'import_polypaint')
         if self.import_polypaint:
             pp_row.prop(self, 'import_polypaint_name', text='') 
 
-        col.prop(self, 'import_polygroups')
         pg_col = col.column()
-        pg_col.active = bool(self.import_polygroups)
         pg_col.prop(self, 'import_polygroups_to_vertexgroups')
         pg_col.prop(self, 'import_polygroups_to_facesets')
 
