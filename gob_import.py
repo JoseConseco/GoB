@@ -141,6 +141,22 @@ class GoB_OT_import(Operator):
                     goz_file.seek(cnt, 1)
                     if utils.prefs().performance_profiling:  
                         start_time = utils.profiler(start_time, "____Unpack Mesh Name")
+                
+                # This tag 8a13 was introduced with zbrush 2024 and its not clear what it does
+                # it seems to be a list of some data
+                # It is not used in the import process and is skipped
+                elif tag == b'\x8a\x13\x00\x00':  
+                    if utils.prefs().debug_output:
+                        print("Tag 8a13:", tag)       
+                    goz_file.seek(4, 1)
+                    cnt = unpack('<Q', goz_file.read(8))[0]
+                    print('8a13 cnt: ', cnt, range(cnt))
+                    for i in range(cnt):
+                        v1 = unpack('<f', goz_file.read(4))[0]
+                        v2 = unpack('<f', goz_file.read(4))[0] 
+                        v3 = unpack('<f', goz_file.read(4))[0]
+                        v4 = unpack('<f', goz_file.read(4))[0]
+                        print('8a13 data: ', v1, v2, v3, v4)                    
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
@@ -519,7 +535,7 @@ class GoB_OT_import(Operator):
                 # Unknown tags
                 else: 
                     if utils.prefs().debug_output:
-                        print("Unknown tag:{0}".format(tag))
+                        print("____ Unknown tag:{0}".format(tag))
                     if unknown_tag >= 10:
                         if utils.prefs().debug_output:
                             print("...Too many object tags unknown...\n")
