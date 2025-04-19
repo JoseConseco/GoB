@@ -147,16 +147,16 @@ class GoB_OT_import(Operator):
                 # It is not used in the import process and is skipped
                 elif tag == b'\x8a\x13\x00\x00':  
                     if utils.prefs().debug_output:
-                        print("Tag 8a13:", tag)       
+                        print("___ Subdivision Level 8a13:", tag)       
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
                     print('8a13 cnt: ', cnt, range(cnt))
                     for i in range(cnt):
-                        v1 = unpack('<f', goz_file.read(4))[0]
-                        v2 = unpack('<f', goz_file.read(4))[0] 
-                        v3 = unpack('<f', goz_file.read(4))[0]
-                        v4 = unpack('<f', goz_file.read(4))[0]
-                        print('8a13 data: ', v1, v2, v3, v4)                    
+                        v1 = unpack('<I', goz_file.read(4))[0]
+                        v2 = unpack('<I', goz_file.read(4))[0] 
+                        v3 = unpack('<I', goz_file.read(4))[0]
+                        v4 = unpack('<I', goz_file.read(4))[0]
+                        print('Subdivision Level 8a13: ', v1, v2, v3, v4)                    
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
