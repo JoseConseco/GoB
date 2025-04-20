@@ -299,8 +299,8 @@ class GoB_OT_import(Operator):
                     if utils.prefs().debug_output:
                         print("Import Polypaint: ", utils.prefs().import_polypaint)  
                     
-                    goz_file.seek(4, 1) # Always skip the header
-                    cnt = unpack('<I', goz_file.read(4))[0]
+                    goz_file.seek(4, 1) # Always skip the header                   
+                    cnt = unpack('<Q', goz_file.read(8))[0]
 
                     if utils.prefs().import_polypaint:     
                         if bpy.app.version < (3,4,0): 
@@ -360,15 +360,13 @@ class GoB_OT_import(Operator):
                                 vertex_data = goz_file.read(3)
                                 if len(vertex_data) < 3:
                                     if utils.prefs().debug_output:
-                                        print("error if buffer length is less than 3: ", i, vertex_data)
+                                        print(f"Error: Buffer length less than 3 at index {i}: {vertex_data}")
                                     break
-                                colordata = unpack('<3B', vertex_data) # Color
-                                unpack('<B', goz_file.read(1))  # Alpha 
+                                colordata = unpack('<3B', vertex_data)  # Color
+                                goz_file.seek(1, 1)  # Skip Alpha byte
                                 
-                                # convert color to vector                         
-                                rgb = [x / 255.0 for x in colordata]
-                                rgb.reverse()                   
-                                rgba = rgb + [alpha]   
+                                # Convert color to vector
+                                rgba = [x / 255.0 for x in reversed(colordata)] + [alpha]
 
                                 # Check that the index is within the range before assigning
                                 if i < len(me.attributes.active_color.data):
