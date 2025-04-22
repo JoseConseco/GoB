@@ -656,17 +656,18 @@ class GoB_OT_export(Operator):
             print(e)
 
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not paths.is_file_empty(paths.PATH_OBJLIST) and utils.prefs().export_run_zbrush: 
+        if not paths.is_file_empty(paths.PATH_OBJLIST): 
             path_exists = paths.find_zbrush(self, context, paths.isMacOS)
-            if not path_exists:
-                bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
-            else:
-                if paths.isMacOS:   
-                    print("OSX Popen: ", utils.prefs().zbrush_exec)
-                    Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])   
-                else: #windows   
-                    print("Windows Popen: ", utils.prefs().zbrush_exec)
-                    Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
+            if utils.prefs().export_run_zbrush:
+                if not path_exists:
+                    bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
+                else:
+                    if paths.isMacOS:   
+                        print("OSX Popen: ", utils.prefs().zbrush_exec)
+                        Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])   
+                    else: #windows   
+                        print("Windows Popen: ", utils.prefs().zbrush_exec)
+                        Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
         
         # restore object context
         if context.object and currentContext: 

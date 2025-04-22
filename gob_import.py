@@ -110,6 +110,7 @@ class GoB_OT_import(Operator):
         unknown_tag = 0
         vertsData = []
         facesData = []
+        subdiv = 0
         objMat = None
         diff_texture, disp_texture, norm_texture =  None, None, None
         exists = os.path.isfile(pathFile)
@@ -132,31 +133,30 @@ class GoB_OT_import(Operator):
                 print(f"GoB Importing: {objName}")            
             tag = goz_file.read(4)
             
+            
             while tag:                
                 # Name
                 if tag == b'\x89\x13\x00\x00':
                     if utils.prefs().debug_output:
-                        print("__ Name:", tag)
+                        print("_ Name:", tag)
                     cnt = unpack('<L', goz_file.read(4))[0] - 8
                     goz_file.seek(cnt, 1)
                     if utils.prefs().performance_profiling:  
                         start_time = utils.profiler(start_time, "____Unpack Mesh Name")
                 
-                # This tag 8a13 was introduced with zbrush 2024 and its not clear what it does
-                # it seems to be a list of some data
-                # It is not used in the import process and is skipped
-                elif tag == b'\x8a\x13\x00\x00':  
-                    if utils.prefs().debug_output:
-                        print("___ Subdivision Level 8a13:", tag)       
+                # Subdivision Levels
+                elif tag == b'\x8a\x13\x00\x00':       
                     goz_file.seek(4, 1)
                     cnt = unpack('<Q', goz_file.read(8))[0]
-                    print('8a13 cnt: ', cnt, range(cnt))
+                    if utils.prefs().debug_output:
+                        print('_ Subdivision Level 8a13 cnt: ', cnt)
+                        print("_ Subdivision Level 8a13:", tag)  
                     for i in range(cnt):
-                        v1 = unpack('<I', goz_file.read(4))[0]
+                        subdiv = unpack('<I', goz_file.read(4))[0]
                         v2 = unpack('<I', goz_file.read(4))[0] 
                         v3 = unpack('<I', goz_file.read(4))[0]
                         v4 = unpack('<I', goz_file.read(4))[0]
-                        print('Subdivision Level 8a13: ', v1, v2, v3, v4)                    
+                        print('_ _ Subdivision Level 8a13: ', subdiv, v2, v3, v4)                    
 
                 # Vertices
                 elif tag == b'\x11\x27\x00\x00':  
@@ -240,13 +240,13 @@ class GoB_OT_import(Operator):
                 start_time = utils.profiler(start_time, "Make Mesh \n")            
             
             unknown_tag = 0
-            while tag:
 
+            
+            while tag:
                 # UVs
                 if tag == b'\xa9\x61\x00\x00':                    
                     if utils.prefs().debug_output:
-                        print("Import UV: ", utils.prefs().import_uv)
-                    
+                        print("Import UV: ", utils.prefs().import_uv)                    
                     
                     goz_file.seek(4, 1) # Always skip the header
                     cnt = unpack('<Q', goz_file.read(8))[0] # Read the face count
@@ -293,7 +293,6 @@ class GoB_OT_import(Operator):
                         # Each face has 4 UV coordinates, so multiply by 4
                         goz_file.seek(cnt * 4 * 8, 1)  # Skip the UV weights
                         
-
                 # Polypainting
                 elif tag == b'\xb9\x88\x00\x00': 
                     if utils.prefs().debug_output:
@@ -311,7 +310,7 @@ class GoB_OT_import(Operator):
                                 vertex_data = goz_file.read(3)
                                 if len(vertex_data) < 3:
                                     if utils.prefs().debug_output:
-                                        print("error if buffer length is less than 3: ", i, vertex_data)
+                                        print("error if buffer length is less than 3: ", i, cnt, vertex_data)
                                     break
 
                                 colordata = unpack('<3B', vertex_data) # Color
@@ -360,7 +359,7 @@ class GoB_OT_import(Operator):
                                 vertex_data = goz_file.read(3)
                                 if len(vertex_data) < 3:
                                     if utils.prefs().debug_output:
-                                        print(f"Error: Buffer length less than 3 at index {i}: {vertex_data}")
+                                        print(f"Error: Buffer length less than 3 at index {i} {cnt}: {vertex_data}")
                                     break
                                 colordata = unpack('<3B', vertex_data)  # Color
                                 goz_file.seek(1, 1)  # Skip Alpha byte
@@ -378,7 +377,6 @@ class GoB_OT_import(Operator):
                     else:
                         # Skip over the polypaint data if not importing
                         goz_file.seek(cnt * 4, 1)  # Skip the polypaint weights
-
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   

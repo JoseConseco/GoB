@@ -193,7 +193,7 @@ def remove_internal_faces(obj:Object):
 def apply_modifiers(obj:Object) -> Mesh:  
 
     if utils.prefs().performance_profiling: 
-        print("\\_____")
+        print("\\___")
         start_time = utils.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
         start_total_time = utils.profiler(time.perf_counter(), "")
 

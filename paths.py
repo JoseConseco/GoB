@@ -108,15 +108,18 @@ def find_zbrush(self, context, isMacOS):
                 ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
                 self.is_found = True            
         else:              
-            # Look for ZBrush in default installation paths
-            default_paths = [
-                os.path.join("C:\\", "Program Files"),
-                os.path.join("C:\\", "Program Files", "Pixologic")
-            ]
+            # Determine the base paths based on the preference setting
+            if utils.prefs().use_pixologic_path:
+                default_paths = [os.path.join("C:\\", "Program Files", "Pixologic")]
+            else:
+                default_paths = [os.path.join("C:\\", "Program Files")]
+
+            # Check if the default paths exist and search for ZBrush folders
             for base_path in default_paths:
                 if not os.path.isdir(base_path):
                     continue
-
+                        
+                # Check for ZBrush folders in the base path
                 folder_list = [folder for folder in os.listdir(base_path) if 'zbrush' in str.lower(folder)]
                 if not folder_list:
                     continue
