@@ -49,6 +49,13 @@ class GoB_Preferences(AddonPreferences):
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
         default="")  # Default: ""
+    
+    use_pixologic_path: BoolProperty(
+        name="Find Pixologic Version",
+        description="When enabled the addon will search for the Pixologic ZBrush executable over the Maxon executable, "
+                    "\nthis is useful if you have a Pixologic installation of ZBrush and want to use it with GoB. "
+                    "\nIf you have a Maxon installation of ZBrush, please disable this option",
+        default=False) # Default: False
 
     custom_pixologoc_path: BoolProperty(
         name="Custom Pixologic Public Path",
@@ -323,6 +330,7 @@ class GoB_Preferences(AddonPreferences):
         box.use_property_split = True
         box.label(text='GoB General Options', icon='PREFERENCES') 
         col = box.column(align=False) 
+        col.prop(self, 'use_pixologic_path')
         col.prop(self, 'zbrush_exec')
         col.prop(self, 'project_path') 
 
