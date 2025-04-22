@@ -257,6 +257,10 @@ class GoB_Preferences(AddonPreferences):
     import_uv_flip_x: BoolProperty(name='UV Map Flip X', default=False) # Default: False 
     import_uv_flip_y: BoolProperty(name='UV Map Flip Y', default=True) # Default: True 
 
+    import_subdiv: BoolProperty(
+        name="Subdiv",
+        description="Import Subdivision Levels",
+        default=True) # Default: True
     
     import_polypaint: BoolProperty(
         name="Polypaint",
