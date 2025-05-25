@@ -31,7 +31,7 @@ bl_info = {
     "description": """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender. 
           Effortlessly transfer your models between ZBrush and Blender with a single click, streamlining your workflow and maximizing efficiency.""",
     "author": "ODe, JoseConseco, Daniel Grauer (kromar)",
-    "version": (4, 1, 9),
+    "version": (4, 2, 0),
     "blender": (4, 00, 0),
     "location": "In the info header",
     "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
