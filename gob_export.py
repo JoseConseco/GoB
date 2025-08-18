@@ -18,6 +18,7 @@
 
 import bpy
 import os
+import numpy as np
 import time
 import shutil
 from struct import pack
@@ -188,18 +189,27 @@ class GoB_OT_export(Operator):
                 if utils.prefs().performance_profiling: 
                     start_time = utils.profiler(start_time, "    UV: polygones")
 
+                total_uvs = len(mesh_tmp.polygons) * 4
+                uv_coords = np.zeros(total_uvs * 2, dtype=np.float32)
+                uv_layer.data.foreach_get('uv', uv_coords)
+                uv_coords = uv_coords.reshape(-1, 2)
+                if utils.prefs().export_uv_flip_x:
+                    uv_coords[:, 0] = 1.0 - uv_coords[:, 0]
+                if utils.prefs().export_uv_flip_y:
+                    uv_coords[:, 1] = 1.0 - uv_coords[:, 1]
+
+                uv_data = []
+                coord_index = 0
                 for face in mesh_tmp.polygons:
                     for loop_index in face.loop_indices:
-                        uv = uv_layer.data[loop_index].uv
-                        if utils.prefs().export_uv_flip_x:
-                            uv.x = 1.0 - uv.x
-                        if utils.prefs().export_uv_flip_y:
-                            uv.y = 1.0 - uv.y
-
-                        goz_file.write(pack('<2f', uv.x, uv.y))
+                        x, y = uv_coords[coord_index]
+                        uv_data.extend([x, y])
+                        coord_index += 1
 
                     if len(face.loop_indices) == 3:
-                        goz_file.write(pack('<2f', 0.0, 1.0))
+                        uv_data.extend([0.0, 1.0])
+
+                goz_file.write(pack(f'<{len(uv_data)}f', *uv_data))
 
                 if utils.prefs().performance_profiling: 
                     start_time = utils.profiler(start_time, "    UV: write uvs")
