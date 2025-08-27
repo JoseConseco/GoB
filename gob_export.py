@@ -153,10 +153,24 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))
-            for vert in mesh_tmp.vertices:
-                modif_coo = obj.matrix_world @ vert.co      # @ is used for matrix multiplications
-                modif_coo = mat_transform @ modif_coo
-                goz_file.write(pack('<3f', modif_coo[0], modif_coo[1], modif_coo[2]))                
+            
+            vertex_coords = np.zeros(numVertices * 3, dtype=np.float32)
+            mesh_tmp.vertices.foreach_get('co', vertex_coords)
+            vertex_coords = vertex_coords.reshape(-1, 3)
+
+            matrix_world_np = np.array(obj.matrix_world, dtype=np.float32)
+            mat_transform_np = np.array(mat_transform, dtype=np.float32)
+            
+            homogeneous_coords = np.column_stack([vertex_coords, np.ones(numVertices)])
+            
+            # matrix_world
+            transformed_coords = (matrix_world_np @ homogeneous_coords.T).T[:, :3]
+            
+            # mat_transform
+            homogeneous_transformed = np.column_stack([transformed_coords, np.ones(numVertices)])
+            final_coords = (mat_transform_np @ homogeneous_transformed.T).T[:, :3]
+
+            goz_file.write(pack(f'<{numVertices * 3}f', *final_coords.flatten()))
 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Vertices")            
@@ -165,17 +179,23 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
             goz_file.write(pack('<I', numFaces*4*4+16))
             goz_file.write(pack('<Q', numFaces))
+            
+            face_data = bytearray()
+            
             for face in mesh_tmp.polygons:
                 if len(face.vertices) == 4:
-                    goz_file.write(pack('<4I', face.vertices[0],
+                    face_data.extend(pack('<4I', face.vertices[0],
                                 face.vertices[1],
                                 face.vertices[2],
                                 face.vertices[3]))
                 elif len(face.vertices) == 3:
-                    goz_file.write(pack('<3I4B', face.vertices[0],
+                    face_data.extend(pack('<3I4B', face.vertices[0],
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
+            
+            goz_file.write(face_data)
+            
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Faces")
 
