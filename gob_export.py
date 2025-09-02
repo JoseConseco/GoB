@@ -303,17 +303,31 @@ class GoB_OT_export(Operator):
 
             # --Mask--
             if not utils.prefs().export_clear_mask:
-                for vertexGroup in obj.vertex_groups:
-                    if vertexGroup.name.lower() in {'mask'}:
-                        goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
-                        goz_file.write(pack('<I', numVertices*2+16))
-                        goz_file.write(pack('<Q', numVertices))                        
-                        for i in range(numVertices):                                
-                            try:
-                                goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
-                            except Exception as e:
-                                #print("no vertex group: ", e)
-                                goz_file.write(pack('<H', 65535))                                
+                # since blender 4.1, Sculpt mask values are stored in a generic attribute
+                # https://developer.blender.org/docs/release_notes/4.1/python_api/#mesh
+                if '.sculpt_mask' in obj.data.attributes and bpy.app.version >= (4, 1, 0):
+                    goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
+                    goz_file.write(pack('<I', numVertices*2+16))
+                    goz_file.write(pack('<Q', numVertices))
+
+                    mask_data = np.zeros(numVertices, dtype=np.float32)
+                    obj.data.attributes['.sculpt_mask'].data.foreach_get('value', mask_data)
+                    mask_values = ((1.0 - mask_data) * 65535).astype(np.uint16)
+
+                    goz_file.write(pack(f'<{numVertices}H', *mask_values))
+
+                else:
+                    for vertexGroup in obj.vertex_groups:
+                        if vertexGroup.name.lower() in {'mask'}:
+                            goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
+                            goz_file.write(pack('<I', numVertices*2+16))
+                            goz_file.write(pack('<Q', numVertices))
+                            for i in range(numVertices):
+                                try:
+                                    goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
+                                except Exception as e:
+                                    #print("no vertex group: ", e)
+                                    goz_file.write(pack('<H', 65535))
 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Mask")
