@@ -29,7 +29,7 @@ def prefs():
 
 
 def gob_version():
-    return str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info['name'] == 'GoB'][0])
+    return str([addon.bl_info.get('version', (-1,-1,-1)) for addon in addon_utils.modules() if addon.bl_info.get('name','') == 'GoB'][0])
      
     
 def max_list_value(list):
