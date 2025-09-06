@@ -350,23 +350,24 @@ class GoB_OT_export(Operator):
                         print("Exporting Face Sets: ", '.sculpt_face_set' in obj.data.attributes)
 
                     if '.sculpt_face_set' in obj.data.attributes:
-                        for index, attr_data in enumerate(obj.data.attributes['.sculpt_face_set'].data):
-                            if attr_data.value < 0: #write default polygroup color
-                                goz_file.write(pack('<H', 65504))                                                                     
-                            else:
-                                if utils.prefs().debug_output:
-                                    print("face_sets PG color: ", attr_data.value)
-                                try:
-                                    goz_file.write(pack('<H', attr_data.value))
-                                except IndexError:
-                                    print(f"Index error on face sets index {index}")
-                                    goz_file.write(pack('<H', 65504))
+                        face_set_data = np.zeros(numFaces, dtype=np.int32)
+                        obj.data.attributes['.sculpt_face_set'].data.foreach_get('value', face_set_data)
+                        
+                        face_set_data = np.where(face_set_data < 0, 65504, face_set_data)
+                        face_set_data = face_set_data.astype(np.uint16)
+                        goz_file.write(pack(f'<{numFaces}H', *face_set_data))
+                        
+                        if utils.prefs().debug_output:
+                            print(f"Face sets exported: {numFaces} faces")
+                            unique_values = np.unique(face_set_data)
+                            print(f"Unique face set values: {unique_values}")
 
                     else:   #assign empty when no face sets are found        
-                        for face in mesh_tmp.polygons:   
-                            if utils.prefs().debug_output:
-                                print("write empty color for PG face", face.index)     
-                            goz_file.write(pack('<H', 65504))
+                        default_face_set_data = np.full(numFaces, 65504, dtype=np.uint16)
+                        goz_file.write(pack(f'<{numFaces}H', *default_face_set_data))
+                        
+                        if utils.prefs().debug_output:
+                            print(f"Default face sets written: {numFaces} faces")
 
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "Write Polygroup FaceSets") 
