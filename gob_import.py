@@ -595,13 +595,14 @@ class GoB_OT_import(Operator):
 
     def execute(self, context):   
         
-        if utils.prefs().custom_pixologoc_path:
-            paths.PATH_GOZ =  utils.prefs().pixologoc_path  
+        paths.set_goz_root(
+            utils.prefs().pixologoc_path if utils.prefs().custom_pixologoc_path else None
+        )
 
         global gob_import_cache
         goz_obj_paths = []
         try:
-            with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"), 'rt') as goz_objs_list:
+            with open(paths.PATH_OBJLIST, 'rt') as goz_objs_list:
                 goz_obj_paths.extend(f'{line.strip()}.GoZ' for line in goz_objs_list)
         except PermissionError:
             if utils.prefs().debug_output:
@@ -653,6 +654,10 @@ class GoB_OT_import(Operator):
 
     
     def invoke(self, context, event):  
+        paths.set_goz_root(
+            utils.prefs().pixologoc_path if utils.prefs().custom_pixologoc_path else None
+        )
+
         if utils.prefs().debug_output:
             print("ACTION: ", self.action) 
 
@@ -693,9 +698,12 @@ class GoB_OT_import(Operator):
 def run_import_periodically():
     # print("Runing timers update check")
     global cached_last_edition_time, run_background_update
+    paths.set_goz_root(
+        utils.prefs().pixologoc_path if utils.prefs().custom_pixologoc_path else None
+    )
 
     try:
-        file_edition_time = os.path.getmtime(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt"))
+        file_edition_time = os.path.getmtime(paths.PATH_OBJLIST)
         #print("file_edition_time: ", file_edition_time, end='\n\n')
     except Exception as e:
         print(e)

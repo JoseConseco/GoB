@@ -24,13 +24,88 @@ from bpy.types import Operator
 from . import ui, utils, gob_import
 
 
+def goz_root_candidates():
+    system = platform.system()
+    if system == 'Windows':
+        public_root = os.environ.get('PUBLIC', os.path.join("C:\\", "Users", "Public"))
+        return [
+            os.path.join(public_root, "Documents", "Maxon"),
+            os.path.join(public_root, "Documents", "Pixologic"),
+            os.path.join(public_root, "Maxon"),
+            os.path.join(public_root, "Pixologic"),
+        ]
+    if system == 'Darwin':
+        return [
+            os.path.join(os.sep, "Users", "Shared", "Maxon"),
+            os.path.join(os.sep, "Users", "Shared", "Pixologic"),
+        ]
+    return []
+
+
+def is_goz_root(path):
+    if not path:
+        return False
+    return any(
+        os.path.isdir(os.path.join(path, folder))
+        for folder in ("GoZApps", "GoZBrush", "GoZProjects")
+    )
+
+
+def resolve_goz_root(path_override=None):
+    if path_override:
+        return os.path.normpath(path_override)
+
+    for candidate in goz_root_candidates():
+        if is_goz_root(candidate):
+            return os.path.normpath(candidate)
+
+    candidates = goz_root_candidates()
+    return os.path.normpath(candidates[0]) if candidates else False
+
+
+def set_goz_root(path_override=None):
+    global PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_VARS
+
+    PATH_GOZ = resolve_goz_root(path_override)
+    if PATH_GOZ:
+        PATH_OBJLIST = os.path.join(PATH_GOZ, "GoZBrush", "GoZ_ObjectList.txt")
+        PATH_CONFIG = os.path.join(PATH_GOZ, "GoZBrush", "GoZ_Config.txt")
+        PATH_VARS = os.path.join(PATH_GOZ, "GoZProjects", "Default", "GoB_variables.zvr")
+    else:
+        PATH_OBJLIST = False
+        PATH_CONFIG = False
+        PATH_VARS = False
+
+    return PATH_GOZ
+
+
+def get_gozbrush_launcher():
+    if not PATH_GOZ:
+        return None
+
+    if platform.system() == 'Windows':
+        candidates = [os.path.join(PATH_GOZ, "GoZBrush", "GoZBrushFromApp.exe")]
+    elif platform.system() == 'Darwin':
+        candidates = [
+            os.path.join(PATH_GOZ, "GoZBrush", "GoZBrushFromApp.app", "Contents", "MacOS", "GoZBrushFromApp"),
+            os.path.join(PATH_GOZ, "GoZBrush", "GoZBrushFromApp"),
+        ]
+    else:
+        candidates = []
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
 def gob_init_os_paths():   
     isMacOS = False
     useZSH = False
     if platform.system() == 'Windows':  
         print("GoB Found System: ", platform.system())
         isMacOS = False
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
+        PATH_GOZ = resolve_goz_root()
 
     elif platform.system() == 'Darwin': #osx
         print("GoB Found System: ", platform.system())
@@ -45,7 +120,7 @@ def gob_init_os_paths():
 
         isMacOS = True        
         #print(os.path.isfile("/Users/Shared/Pixologic/GoZBrush/GoZBrushFromApp.app/Contents/MacOS/GoZBrushFromApp"))
-        PATH_GOZ = os.path.join("Users", "Shared", "Pixologic")
+        PATH_GOZ = resolve_goz_root()
     else:
         print("GoB Unkonwn System: ", platform.system())
         PATH_GOZ = False ## NOTE: GOZ seems to be missing, reinstall from zbrush
@@ -160,7 +235,7 @@ class GoB_OT_GoZ_Installer(Operator):
                 Popen(['open', '-a', GOZ_INSTALLER])  
             else:    
                 GOZ_INSTALLER = os.path.join(path, "Troubleshoot Help", "GoZ_for_ZBrush_Installer_WIN.exe")
-                Popen([GOZ_INSTALLER], shell=True)
+                Popen([GOZ_INSTALLER])
         else:
             bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
         return {'FINISHED'}
