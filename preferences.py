@@ -45,7 +45,7 @@ class GoB_Preferences(AddonPreferences):
     #GLOBAL
     zbrush_exec: StringProperty(
         name="ZBrush Path", 
-        description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
+        description="Select ZBrush executable (for example C:\\Program Files\\Maxon ZBrush 2025\\ZBrush.exe). "
                     "\nIf not specified the system default for Zscript (.zsc) files will be used", 
         subtype='FILE_PATH',
         default="")  # Default: ""
@@ -58,23 +58,16 @@ class GoB_Preferences(AddonPreferences):
         default=False) # Default: False
 
     custom_pixologoc_path: BoolProperty(
-        name="Custom Pixologic Public Path",
-        description="This will allow you to set a custom Public Pixologic Path, this is where ZBrush stores GoZ configurations",
+        name="Custom GoZ Public Path",
+        description="Set a custom public GoZ path when ZBrush stores GoZ data outside the detected Maxon or Pixologic folder",
         default=False) # Default: False
 
-    if platform.system() == 'Windows':
-        PATH_GOZ = os.path.join(os.environ['PUBLIC'] , "Pixologic")
-    elif platform.system() == 'Darwin': #osx
-        PATH_GOZ = os.path.join("Users", "Shared", "Pixologic")
-    else:
-        PATH_GOZ = False
-
     pixologoc_path: StringProperty(
-        name="Pixologic Public Path", 
-        description="Set public pixologic path, this needs to be a valid folder which zbrush accesses." 
-                    "By default this folder is on the windows system drive under C:\\Users\\Public\\Pixologic", 
+        name="GoZ Public Path", 
+        description="Set the public GoZ folder used by ZBrush."
+                    "\nExamples: C:\\Users\\Public\\Documents\\Maxon or C:\\Users\\Public\\Documents\\Pixologic", 
         subtype='DIR_PATH',
-        default=PATH_GOZ)  # Default: PATH_GOZ  
+        default=paths.PATH_GOZ or "")  # Default: PATH_GOZ  
 
     project_path: StringProperty(
         name="Project Path", 

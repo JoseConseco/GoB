@@ -531,32 +531,33 @@ class GoB_OT_export(Operator):
 
     def execute(self, context): 
        
-        if utils.prefs().custom_pixologoc_path:
-            paths.PATH_GOZ =  utils.prefs().pixologoc_path  
+        paths.set_goz_root(
+            utils.prefs().pixologoc_path if utils.prefs().custom_pixologoc_path else None
+        )
 
         PATH_PROJECT = utils.prefs().project_path
 
         #setup GoZ configuration
         #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
+        source_GoZ_Info_dir = os.path.join(paths.PATH_GOB, "Blender")
+        target_GoZ_Info_dir = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
+        source_GoZ_Info = os.path.join(source_GoZ_Info_dir, "GoZ_Info.txt")
+        target_GoZ_Info = os.path.join(target_GoZ_Info_dir, "GoZ_Info.txt")
         try:    #install in GoZApps if missing     
-            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
-            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
-            print(source_GoZ_Info, target_GoZ_Info)
-            shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)            
-        except FileExistsError: #if blender folder is found update the info file
-            source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender", "GoZ_Info.txt")
-            target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Info.txt")
-            shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
+            print(source_GoZ_Info_dir, target_GoZ_Info_dir)
+            shutil.copytree(source_GoZ_Info_dir, target_GoZ_Info_dir, symlinks=True)
+        except FileExistsError:
+            pass
+        except Exception as e:
+            print(e)
 
-            #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+        try:
+            shutil.copy2(source_GoZ_Info, target_GoZ_Info)
             with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 blender_path = os.path.join(paths.PATH_BLENDER).replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
-            #specify GoZ application
             with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_Application.txt"), 'wt') as GoZ_Application:
-                GoZ_Application.write("Blender")   
-
+                GoZ_Application.write("Blender")
         except Exception as e:
             print(e)
 
@@ -701,18 +702,21 @@ class GoB_OT_export(Operator):
             print(e)
 
         # only run if PATH_OBJLIST file file is not empty, else zbrush errors
-        if not paths.is_file_empty(paths.PATH_OBJLIST): 
-            path_exists = paths.find_zbrush(self, context, paths.isMacOS)
-            if utils.prefs().export_run_zbrush:
+        if not paths.is_file_empty(paths.PATH_OBJLIST) and utils.prefs().export_run_zbrush:
+            goz_launcher = paths.get_gozbrush_launcher()
+            if goz_launcher:
+                print("GoB GoZ launcher:", goz_launcher)
+                Popen([goz_launcher])
+            else:
+                path_exists = paths.find_zbrush(self, context, paths.isMacOS)
                 if not path_exists:
                     bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
-                else:
-                    if paths.isMacOS:   
-                        print("OSX Popen: ", utils.prefs().zbrush_exec)
-                        Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])   
-                    else: #windows   
-                        print("Windows Popen: ", utils.prefs().zbrush_exec)
-                        Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
+                elif paths.isMacOS:
+                    print("OSX Popen: ", utils.prefs().zbrush_exec)
+                    Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])
+                else: #windows
+                    print("Windows Popen: ", utils.prefs().zbrush_exec)
+                    Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT])
         
         # restore object context
         if context.object and currentContext: 
