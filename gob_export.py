@@ -38,7 +38,7 @@ class GoB_OT_export(Operator):
         description="Export as a tool instead of a subtool",
         default=False,
     )
-    
+
     @classmethod
     def poll(cls, context):              
         return geometry.export_poll(cls, context)    
@@ -67,10 +67,10 @@ class GoB_OT_export(Operator):
 
         fileExt = '.bmp'
 
-        # write GoB ZScript variables   
+        # write GoB ZScript variables
         with open(paths.PATH_VARS , 'wb') as GoBVars:            
             GoBVars.write(pack('<4B', 0xE9, 0x03, 0x00, 0x00))
-            #list size
+            # list size
             GoBVars.write(pack('<1B', 0x07))   #NOTE: n list items, update this when adding new items to list
             GoBVars.write(pack('<2B', 0x00, 0x00)) 
             if utils.prefs().performance_profiling: 
@@ -82,7 +82,7 @@ class GoB_OT_export(Operator):
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "    variablesFile: Write fileExtension")
 
-            # 1: textureFormat   
+            # 1: textureFormat
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
             GoBVars.write(b'.bmp') 
             if utils.prefs().performance_profiling: 
@@ -109,7 +109,7 @@ class GoB_OT_export(Operator):
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "    variablesFile: Write dispTexture suffix")
 
-            #5: GoB version  
+            # 5: GoB version
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S 
             GoBVars.write(utils.gob_version().encode('utf-8'))
             if utils.prefs().performance_profiling: 
@@ -121,11 +121,10 @@ class GoB_OT_export(Operator):
             GoBVars.write(name.encode('utf-8')) 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "    variablesFile: Write Project Path")
-            #end  
+            # end
             GoBVars.write(pack('<B', 0x00))  #. 
         if utils.prefs().performance_profiling: 
             start_time = utils.profiler(start_time, "variablesFile: Write GoB_variables")
-
 
         with open(os.path.join(path_export + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:    
             numFaces = len(mesh_tmp.polygons)
@@ -153,19 +152,19 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<4B', 0x11, 0x27, 0x00, 0x00))
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))
-            
+
             vertex_coords = np.zeros(numVertices * 3, dtype=np.float32)
             mesh_tmp.vertices.foreach_get('co', vertex_coords)
             vertex_coords = vertex_coords.reshape(-1, 3)
 
             matrix_world_np = np.array(obj.matrix_world, dtype=np.float32)
             mat_transform_np = np.array(mat_transform, dtype=np.float32)
-            
+
             homogeneous_coords = np.column_stack([vertex_coords, np.ones(numVertices)])
-            
+
             # matrix_world
             transformed_coords = (matrix_world_np @ homogeneous_coords.T).T[:, :3]
-            
+
             # mat_transform
             homogeneous_transformed = np.column_stack([transformed_coords, np.ones(numVertices)])
             final_coords = (mat_transform_np @ homogeneous_transformed.T).T[:, :3]
@@ -179,9 +178,9 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<4B', 0x21, 0x4E, 0x00, 0x00))
             goz_file.write(pack('<I', numFaces*4*4+16))
             goz_file.write(pack('<Q', numFaces))
-            
+
             face_data = bytearray()
-            
+
             for face in mesh_tmp.polygons:
                 if len(face.vertices) == 4:
                     face_data.extend(pack('<4I', face.vertices[0],
@@ -193,9 +192,9 @@ class GoB_OT_export(Operator):
                                 face.vertices[1],
                                 face.vertices[2],
                                 0xFF, 0xFF, 0xFF, 0xFF))
-            
+
             goz_file.write(face_data)
-            
+
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Faces")
 
@@ -237,13 +236,12 @@ class GoB_OT_export(Operator):
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write UV")
 
-
             # --Polypaint--
             if bpy.app.version < (3,4,0): 
                 if mesh_tmp.vertex_colors.active:
                     vcoldata = mesh_tmp.vertex_colors.active.data # color[loop_id]
                     vcolArray = bytearray([0] * numVertices * 3)
-                    #fill vcArray(vert_idx + rgb_offset) = color_xyz
+                    # fill vcArray(vert_idx + rgb_offset) = color_xyz
                     for loop in mesh_tmp.loops: #in the end we will fill verts with last vert_loop color
                         vert_idx = loop.vertex_index
                         vcolArray[vert_idx*3] = int(255*vcoldata[loop.index].color[0])
@@ -326,37 +324,40 @@ class GoB_OT_export(Operator):
                                 try:
                                     goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
                                 except Exception as e:
-                                    #print("no vertex group: ", e)
+                                    # print("no vertex group: ", e)
                                     goz_file.write(pack('<H', 65535))
 
             if utils.prefs().performance_profiling: 
                 start_time = utils.profiler(start_time, "Write Mask")
 
-        
-           
-            # --Polygroups--     
+            # --Polygroups--
             if utils.prefs().export_polygroups != 'NONE':  
                 if utils.prefs().debug_output:
                     print("Export Polygroups: ", utils.prefs().export_polygroups)
 
-                #Polygroups from Face Sets
+                # Polygroups from Face Sets
                 if utils.prefs().export_polygroups == 'FACE_SETS':
 
                     goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces))  
-                      
+
                     if utils.prefs().debug_output:
                         print("Exporting Face Sets: ", '.sculpt_face_set' in obj.data.attributes)
 
                     if '.sculpt_face_set' in obj.data.attributes:
                         face_set_data = np.zeros(numFaces, dtype=np.int32)
-                        obj.data.attributes['.sculpt_face_set'].data.foreach_get('value', face_set_data)
-                        
+                        face_attr = obj.data.attributes.get(".sculpt_face_set")
+
+                        if face_attr and len(face_attr.data) == len(face_set_data):
+                            face_attr.data.foreach_get("value", face_set_data)
+                        else:
+                            face_set_data[:] = [0] * len(face_set_data)
+
                         face_set_data = np.where(face_set_data < 0, 65504, face_set_data)
                         face_set_data = face_set_data.astype(np.uint16)
                         goz_file.write(pack(f'<{numFaces}H', *face_set_data))
-                        
+
                         if utils.prefs().debug_output:
                             print(f"Face sets exported: {numFaces} faces")
                             unique_values = np.unique(face_set_data)
@@ -365,7 +366,7 @@ class GoB_OT_export(Operator):
                     else:   #assign empty when no face sets are found        
                         default_face_set_data = np.full(numFaces, 65504, dtype=np.uint16)
                         goz_file.write(pack(f'<{numFaces}H', *default_face_set_data))
-                        
+
                         if utils.prefs().debug_output:
                             print(f"Default face sets written: {numFaces} faces")
 
@@ -379,13 +380,12 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<Q', numFaces)) 
 
                     groupColor=[]                        
-                    #create a color for each facemap (0xffff)
+                    # create a color for each facemap (0xffff)
                     for vg in obj.vertex_groups:
                         color = utils.random_color()
                         groupColor.append(color)
-                    #add a color for elements that are not part of a vertex group
+                    # add a color for elements that are not part of a vertex group
                     groupColor.append(0)
-
 
                     ''' 
                     # create a list of each vertex group assignement so one vertex can be in x amount of groups 
@@ -404,11 +404,11 @@ class GoB_OT_export(Operator):
                             if vgData[face.index]:                            
                                 group =  max(vgData[face.index], key = vgData[face.index].count)
                                 count = vgData[face.index].count(group)
-                                #print(vgData[face.index])
-                                #print("face:", face.index, "verts:", len(face.vertices), "elements:", count, 
-                                #"\ngroup:", group, "color:", groupColor[group] )                            
+                                # print(vgData[face.index])
+                                # print("face:", face.index, "verts:", len(face.vertices), "elements:", count,
+                                # "\ngroup:", group, "color:", groupColor[group] )
                                 if len(face.vertices) == count:
-                                    #print(face.index, group, groupColor[group], count)
+                                    # print(face.index, group, groupColor[group], count)
                                     goz_file.write(pack('<H', groupColor[group]))
                                 else:
                                     goz_file.write(pack('<H', 65504))
@@ -418,17 +418,16 @@ class GoB_OT_export(Operator):
                         if utils.prefs().performance_profiling: 
                             start_time = utils.profiler(start_time, "Write Polygroup Vertex groups")
 
-
                 # Polygroups from materials
                 if utils.prefs().export_polygroups == 'MATERIALS':   
-                    #print("material slots: ", len(obj.material_slots))
+                    # print("material slots: ", len(obj.material_slots))
                     if len(obj.material_slots) > 0:               
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
                         goz_file.write(pack('<Q', numFaces))  
 
                         groupColor=[]
-                        #create a color for each material slot (0xffff)
+                        # create a color for each material slot (0xffff)
                         for mat in obj.material_slots:
                             if mat:
                                 color = utils.random_color()
@@ -437,12 +436,11 @@ class GoB_OT_export(Operator):
                                 groupColor.append(65504)
 
                         for f in mesh_tmp.polygons:  # iterate over faces
-                            #print(f.index, f.material_index, groupColor[f.material_index], numFaces, len(mesh_tmp.polygons))
+                            # print(f.index, f.material_index, groupColor[f.material_index], numFaces, len(mesh_tmp.polygons))
                             goz_file.write(pack('<H', groupColor[f.material_index]))                        
 
                     if utils.prefs().performance_profiling: 
                         start_time = utils.profiler(start_time, "Write Polygroup materials") 
-
 
             # Diff, disp_texture and norm_texture maps
             diff_texture = None
@@ -453,11 +451,11 @@ class GoB_OT_export(Operator):
                 if mat.name:
                     material = bpy.data.materials[mat.name]
                     if material.use_nodes:
-                        #print("material:", mat.name, "using nodes \n")
+                        # print("material:", mat.name, "using nodes \n")
                         for node in material.node_tree.nodes:	
-                            #print("node: ", node.type)                                
+                            # print("node: ", node.type)
                             if node.type in {'TEX_IMAGE'} and node.image:
-                                #print("IMAGES: ", node.image.name, node.image)	
+                                # print("IMAGES: ", node.image.name, node.image)
                                 if (utils.prefs().import_diffuse_suffix) in node.image.name:                                
                                     diff_texture = node.image
                                 if (utils.prefs().import_displace_suffix) in node.image.name:
@@ -468,7 +466,7 @@ class GoB_OT_export(Operator):
                                 print("group found")
             user_file_fomrat = scn.render.image_settings.file_format
             scn.render.image_settings.file_format = 'BMP'
-            #fileExt = ('.' + utils.prefs().texture_format.lower())
+            # fileExt = ('.' + utils.prefs().texture_format.lower())
             fileExt = '.bmp'
 
             if diff_texture:
@@ -525,19 +523,19 @@ class GoB_OT_export(Operator):
                 print(30*"=")
 
         bpy.data.meshes.remove(mesh_tmp)
-        #restore user file format
+        # restore user file format
         scn.render.image_settings.file_format = user_file_fomrat
         return
 
     def execute(self, context): 
-       
+
         if utils.prefs().custom_pixologoc_path:
             paths.PATH_GOZ =  utils.prefs().pixologoc_path  
 
         PATH_PROJECT = utils.prefs().project_path
 
-        #setup GoZ configuration
-        #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):  
+        # setup GoZ configuration
+        # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):
         try:    #install in GoZApps if missing     
             source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
             target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
@@ -548,27 +546,27 @@ class GoB_OT_export(Operator):
             target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)  
 
-            #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+            # write blender path to GoZ configuration
+            # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"):
             with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 blender_path = os.path.join(paths.PATH_BLENDER).replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
-            #specify GoZ application
+            # specify GoZ application
             with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")   
 
         except Exception as e:
             print(e)
 
-        #update project path
-        #print("Project file path: ", f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
+        # update project path
+        # print("Project file path: ", f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT) 
 
         # remove ZTL files since they mess up Zbrush importing subtools
         if utils.prefs().clean_project_path:
             for file_name in os.listdir(PATH_PROJECT):
-                #print(file_name)
+                # print(file_name)
                 if file_name.lower().endswith(('.goz', '.ztn', '.ztl')):
                     print('cleaning file:', file_name)
                     os.remove(os.path.join(PATH_PROJECT, file_name))
@@ -600,11 +598,10 @@ class GoB_OT_export(Operator):
 
         except Exception as e:
             print("Goz config missing, writing file ", e)         
-            #write blender path to GoZ configuration
-            #if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"): 
+            # write blender path to GoZ configuration
+            # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"):
             with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")   
-
 
         currentContext = None
         if context.object:            
@@ -644,7 +641,7 @@ class GoB_OT_export(Operator):
 
                     depsgraph = context.evaluated_depsgraph_get()
                     obj_to_convert = obj.evaluated_get(depsgraph)
-                    #mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+                    # mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
                     obj_tmp = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_tmp)
@@ -659,7 +656,7 @@ class GoB_OT_export(Operator):
                         with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj_tmp.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')                        
-                        #cleanup temp mesh
+                        # cleanup temp mesh
                         bpy.data.meshes.remove(mesh_tmp)
 
                 elif obj.type in {'MESH'}:
@@ -690,7 +687,7 @@ class GoB_OT_export(Operator):
 
                 else:
                     ui.ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC') 
-                    #print("GoB: unsupported obj.type found:", obj.type, obj.name)
+                    # print("GoB: unsupported obj.type found:", obj.type, obj.name)
 
                 wm.progress_update(step * i)
             wm.progress_end()
@@ -713,13 +710,12 @@ class GoB_OT_export(Operator):
                     else: #windows   
                         print("Windows Popen: ", utils.prefs().zbrush_exec)
                         Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)  
-        
+
         # restore object context
         if context.object and currentContext: 
             bpy.ops.object.mode_set(mode=currentContext) 
 
         return {'FINISHED'}
-
 
     def escape_object_name(self, obj):
         """
@@ -737,9 +733,9 @@ class GoB_OT_export(Operator):
         new_name = new_name.strip('_')
         
         if found_string:
-            # suffixes in zbrush longer than 1 symbol after a . (dot) require a specal addition 
+            # suffixes in zbrush longer than 1 symbol after a . (dot) require a specal addition
             # of symbol+underline to be exported from zbrush, otherwise the whole suffix gets removed.
-            # Due to the complicated name that this would create, only the . (dot) for one symbol suffix are kept, 
+            # Due to the complicated name that this would create, only the . (dot) for one symbol suffix are kept,
             # the others are going to be replaced by a _ (underline) resulting from .001 to _001
             if len(found_string.group()) > 2:              
                 new_name = re.sub(r'\.', '_', new_name)
@@ -754,4 +750,3 @@ class GoB_OT_export(Operator):
             new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
             i += 1          
         obj.name = new_name
-
