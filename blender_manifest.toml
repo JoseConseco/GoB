@@ -2,7 +2,7 @@
 schema_version = "1.0.0"
 id = "gob"
 name = "GoB"
-version = "4.2.3"
+version = "4.2.5"
 tagline = "GoB providing a bridge between ZBrush and Blender"
 maintainer = "Daniel Grauer (kromar)"
 type = "add-on"
@@ -13,13 +13,13 @@ website = "https://github.com/JoseConseco/GoB/wiki"
 copyright = ["2024 Jose Conseco", "2024 Daniel Grauer (kromar)"]
 [permissions]
   files = "Requires access to deploy Zbrush configuration files"
-[build] 
+[build]
   paths_exclude_pattern = [
-  ".git", 
-  "__pycache__/", 
-  ".gitignore", 
-  "README.md", 
+  ".git",
+  "__pycache__/",
+  ".gitignore",
+  "README.md",
   "LICENSE.md",
   "*.psd", "*.kra", "*.xpm", "*.blend",
-  "build", 
+  "build",
   ]

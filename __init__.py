@@ -17,26 +17,25 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-import bpy
 import os
+
+import bpy
 import bpy.utils.previews
-from . import (gob_import, 
-               paths, 
-               gob_export, 
-               preferences, 
-               ui)
+
+from . import gob_export, gob_import, paths, preferences, ui
 
 bl_info = {
     "name": "GoB",
-    "description": """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender. 
+    "description": """GoB (for GoBlender) is an unofficial GoZ-like extension, providing a seamless bridge between ZBrush and Blender.
           Effortlessly transfer your models between ZBrush and Blender with a single click, streamlining your workflow and maximizing efficiency.""",
     "author": "ODe, JoseConseco, Daniel Grauer (kromar)",
-    "version": (4, 2, 3),
+    "version": (4, 2, 5),
     "blender": (4, 00, 0),
     "location": "In the info header",
-    "doc_url": "https://github.com/JoseConseco/GoB/wiki",                
+    "doc_url": "https://github.com/JoseConseco/GoB/wiki",
     "tracker_url": "https://github.com/JoseConseco/GoB/issues/new",
-    "category": "Import-Export"}
+    "category": "Import-Export",
+}
 
 
 classes = (
@@ -46,7 +45,7 @@ classes = (
     ui.GOB_OT_Popup,
     paths.GoB_OT_GoZ_Installer,
     preferences.GoB_Preferences,
-    )
+)
 
 
 def register():
@@ -55,14 +54,18 @@ def register():
     global icons
     icons = bpy.utils.previews.new()
     icons_dir = os.path.join(os.path.dirname(__file__), "icons")
-    icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), 'IMAGE')
-    icons.load("GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), 'IMAGE')
-    icons.load("GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), 'IMAGE')
-    
-    icons.load("GOZ_SEND_FLAT", os.path.join(icons_dir, "goz_send_flat.png"), 'IMAGE')
-    icons.load("GOZ_SYNC_FLAT", os.path.join(icons_dir, "goz_sync_flat.png"), 'IMAGE')
+    icons.load("GOZ_SEND", os.path.join(icons_dir, "goz_send.png"), "IMAGE")
+    icons.load(
+        "GOZ_SYNC_ENABLED", os.path.join(icons_dir, "goz_sync_enabled.png"), "IMAGE"
+    )
+    icons.load(
+        "GOZ_SYNC_DISABLED", os.path.join(icons_dir, "goz_sync_disabled.png"), "IMAGE"
+    )
 
-    ui.preview_collections["main"] = icons 
+    icons.load("GOZ_SEND_FLAT", os.path.join(icons_dir, "goz_send_flat.png"), "IMAGE")
+    icons.load("GOZ_SYNC_FLAT", os.path.join(icons_dir, "goz_sync_flat.png"), "IMAGE")
+
+    ui.preview_collections["main"] = icons
     bpy.types.TOPBAR_HT_upper_bar.prepend(ui.draw_goz_buttons)
 
 
