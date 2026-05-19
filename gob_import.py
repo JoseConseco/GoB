@@ -444,22 +444,43 @@ class GoB_OT_import(Operator):
                     cnt = unpack("<Q", goz_file.read(8))[0]  # Read the count
 
                     if utils.prefs().import_mask:
+                        # Read all mask weights first
+                        maskData = []
+                        for vertexIndex in range(cnt):
+                            weight = unpack("<H", goz_file.read(2))[0] / 65535.0
+                            maskData.append(weight)
+
+                        # Create or clear vertex group for mask
                         if "mask" in obj.vertex_groups:
                             obj.vertex_groups.remove(obj.vertex_groups["mask"])
                         groupMask = obj.vertex_groups.new(name="mask")
 
-                        for vertexIndex in range(cnt):
-                            weight = unpack("<H", goz_file.read(2))[0] / 65535
-                            # Only add vertices that have non-one weight (masked)
+                        # Add vertices with non-zero mask to the vertex group
+                        for vertexIndex, weight in enumerate(maskData):
                             if weight < 1.0:
                                 groupMask.add([vertexIndex], weight, "REPLACE")
+
+                        # Create sculpt mask attribute (available in Blender 4.1+)
+                        if hasattr(me, "attributes"):
+                            # Create or get the sculpt mask attribute
+                            if ".sculpt_mask" not in me.attributes:
+                                me.attributes.new(".sculpt_mask", "FLOAT", "POINT")
+
+                            # Set mask values to vertices
+                            # Invert the weight so that 1.0 = fully masked, 0.0 = not masked
+                            mask_attr = me.attributes[".sculpt_mask"]
+                            for vertexIndex, weight in enumerate(maskData):
+                                mask_attr.data[vertexIndex].value = 1.0 - weight
+
+                            if utils.prefs().debug_output:
+                                print("Sculpt mask attribute created and populated")
+
+                        if utils.prefs().performance_profiling:
+                            start_time = utils.profiler(start_time, "Mask\n")
 
                     else:
                         # Skip over the mask data if not importing
                         goz_file.seek(cnt * 2, 1)  # Skip the mask weights
-
-                    if utils.prefs().performance_profiling:
-                        start_time = utils.profiler(start_time, "Mask\n")
 
                 # Polygroups
                 elif tag == b"\x41\x9c\x00\x00":
