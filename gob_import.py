@@ -143,7 +143,7 @@ class GoB_OT_import(Operator):
                     goz_file.seek(cnt, 1)
                     if utils.prefs().performance_profiling:  
                         start_time = utils.profiler(start_time, "____Unpack Mesh Name")
-                
+
                 # Subdivision Levels
                 elif tag == b'\x8a\x13\x00\x00':       
                     goz_file.seek(4, 1)
@@ -208,7 +208,7 @@ class GoB_OT_import(Operator):
                     if utils.prefs().debug_output:
                         print("__ Mask:", tag)
                     break
-                # Polyroups
+                # Polygroups
                 elif tag == b'\x41\x9c\x00\x00': 
                     if utils.prefs().debug_output:
                         print("__ Polyroups:", tag) 
@@ -298,85 +298,102 @@ class GoB_OT_import(Operator):
                     if utils.prefs().debug_output:
                         print("Import Polypaint: ", utils.prefs().import_polypaint)  
                     
-                    goz_file.seek(4, 1) # Always skip the header                   
+                    goz_file.seek(4, 1) # Always skip the header
                     cnt = unpack('<Q', goz_file.read(8))[0]
 
-                    if utils.prefs().import_polypaint:     
-                        if bpy.app.version < (3,4,0): 
-                            polypaintData = []
-                                            
-                            for i in range(cnt):                                 
-                                # Avoid error if buffer length is less than 3
-                                vertex_data = goz_file.read(3)
-                                if len(vertex_data) < 3:
-                                    if utils.prefs().debug_output:
-                                        print("error if buffer length is less than 3: ", i, cnt, vertex_data)
+                    # Buffer-based polypaint parsing for performance and robustness.
+                    tag_set = {b'\x32\x75\x00\x00', b'\x41\x9c\x00\x00', b'\x00\x00\x00\x00'}
+                    polypaintData = []
+
+                    try:
+                        pos = goz_file.tell()
+                        file_size = os.fstat(goz_file.fileno()).st_size
+                        remaining_bytes = max(0, file_size - pos)
+                    except Exception:
+                        remaining_bytes = None
+
+                    if utils.prefs().import_polypaint:
+                        if remaining_bytes is None:
+                            # Fallback to incremental read if we can't determine remaining bytes
+                            while True:
+                                entry = goz_file.read(4)
+                                if len(entry) < 4:
                                     break
+                                if entry in tag_set:
+                                    goz_file.seek(-4, 1)
+                                    break
+                                col = entry[:3]
+                                polypaintData.append(tuple([x/255.0 for x in reversed(col)] + [1]))
+                        else:
+                            data = goz_file.read(remaining_bytes)
+                            found_at = None
+                            for idx in range(0, len(data)-3, 4):
+                                chunk = data[idx:idx+4]
+                                if chunk in tag_set:
+                                    found_at = idx
+                                    break
+                                col = chunk[:3]
+                                polypaintData.append(tuple([x/255.0 for x in reversed(col)] + [1]))
 
-                                colordata = unpack('<3B', vertex_data) # Color
-                                unpack('<B', goz_file.read(1))  # Alpha
-                                alpha = 1  
+                            if found_at is None:
+                                goz_file.seek(pos + len(data), 0)
+                            else:
+                                goz_file.seek(pos + found_at, 0)
 
-                                # convert color to vector                         
-                                rgb = [x / 255.0 for x in colordata]    
-                                rgb.reverse()                    
-                                rgba = rgb + [alpha]                                          
-                                polypaintData.append(tuple(rgba))                      
-                                            
-                            if utils.prefs().performance_profiling: 
-                                start_time = utils.profiler(start_time, "Polypaint Unpack")
-
-                            if polypaintData:                   
+                        # Assign colors
+                        if polypaintData:
+                            if bpy.app.version < (3,4,0):
                                 bm = bmesh.new()
                                 bm.from_mesh(me)
                                 bm.faces.ensure_lookup_table()
-                                if me.vertex_colors:                            
-                                    if utils.prefs().import_polypaint_name in me.vertex_colors: 
+                                if me.vertex_colors:
+                                    if utils.prefs().import_polypaint_name in me.vertex_colors:
                                         color_layer = bm.loops.layers.color.get(utils.prefs().import_polypaint_name)
                                     else:
-                                        color_layer = bm.loops.layers.color.new(utils.prefs().import_polypaint_name)                                    
+                                        color_layer = bm.loops.layers.color.new(utils.prefs().import_polypaint_name)
                                 else:
-                                    color_layer = bm.loops.layers.color.new(utils.prefs().import_polypaint_name)                
-                                                
+                                    color_layer = bm.loops.layers.color.new(utils.prefs().import_polypaint_name)
+
                                 for face in bm.faces:
                                     for loop in face.loops:
-                                        # Check that the index is within the range before assigning
                                         if loop.vert.index < len(polypaintData):
                                             loop[color_layer] = polypaintData[loop.vert.index]
 
-                                bm.to_mesh(me)    
-                                bm.free()                                                
-                                me.update(calc_edges=True, calc_edges_loose=True)  
-                            polypaintData.clear()
-                        
-                        else:  # bpy.app.version >= (3,4,0):      
-                            if not me.color_attributes:
-                                me.color_attributes.new(utils.prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')  
+                                bm.to_mesh(me)
+                                bm.free()
+                                me.update(calc_edges=True, calc_edges_loose=True)
+                            else:
+                                if not me.color_attributes:
+                                    me.color_attributes.new(utils.prefs().import_polypaint_name, 'BYTE_COLOR', 'POINT')
+                                for i, rgba in enumerate(polypaintData):
+                                    if i < len(me.attributes.active_color.data):
+                                        me.attributes.active_color.data[i].color_srgb = rgba
 
-                            alpha = 1   
-                            for i in range(cnt): 
-                                # Avoid error if buffer length is less than 3
-                                vertex_data = goz_file.read(3)
-                                if len(vertex_data) < 3:
-                                    if utils.prefs().debug_output:
-                                        print(f"Error: Buffer length less than 3 at index {i} {cnt}: {vertex_data}")
-                                    break
-                                colordata = unpack('<3B', vertex_data)  # Color
-                                goz_file.seek(1, 1)  # Skip Alpha byte
-                                
-                                # Convert color to vector
-                                rgba = [x / 255.0 for x in reversed(colordata)] + [alpha]
-
-                                # Check that the index is within the range before assigning
-                                if i < len(me.attributes.active_color.data):
-                                    me.attributes.active_color.data[i].color_srgb = rgba
-                        
-                        if utils.prefs().performance_profiling: 
+                        if utils.prefs().performance_profiling:
                             start_time = utils.profiler(start_time, "Polypaint Assign")
-                            
                     else:
-                        # Skip over the polypaint data if not importing
-                        goz_file.seek(cnt * 4, 1)  # Skip the polypaint weights
+                        # Not importing polypaint: skip to next tag by scanning remaining bytes
+                        if remaining_bytes is None:
+                            # step-scan
+                            while True:
+                                peek = goz_file.read(4)
+                                if len(peek) < 4:
+                                    break
+                                if peek in tag_set:
+                                    goz_file.seek(-4, 1)
+                                    break
+                                goz_file.seek(-3, 1)
+                        else:
+                            data = goz_file.read(remaining_bytes)
+                            found_at = None
+                            for idx in range(0, len(data)-3, 4):
+                                if data[idx:idx+4] in tag_set:
+                                    found_at = idx
+                                    break
+                            if found_at is None:
+                                goz_file.seek(pos + len(data), 0)
+                            else:
+                                goz_file.seek(pos + found_at, 0)
 
                 # Mask
                 elif tag == b'\x32\x75\x00\x00':   
@@ -726,7 +743,3 @@ def run_import_periodically():
 def run_import_manually():  
     gob_import_cache.clear() 
     bpy.ops.scene.gob_import() #only call operator update is found (executing operatros is slow)  
-    
-
-
-
