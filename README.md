@@ -14,34 +14,20 @@ You can transfer:
 * Normal map
 * Displacement map
 
-## Clean Installation of GoB
-1. Remove your old GoB addon from your Blender Addons Folder
-2. Copy the extracted GoB addon into your Blender Addon Folder
-3. Start Blender and enable the GoB addon in the Preferences > Addons menu and safe your preferences
-4. Select a object you want to send to Zbrush and press the Export Button in the Header. 
-   This will configure Zbrush to know that it is communicating with Blender, Run Zbrush and load in your Object.
-5. Restart Zbrush and that is it.
-
-## Update GoB
-1. Remove your old GoB addon from your Blender Addons Folder
-2. Copy the extracted GoB addon into your Blender Addon Folder
-
-
-### Configure Blender
-**_Note**: If you have a previous version, remove it via the Addon panel (unroll the GoB entry and remove it) before continuing._
-
-**_Note**: Github breaks (changes) name of zip file and the first (root) folder inside zip, when you download addon. Both zip file and first folder inside should be named: 'GoB'
-The addon final location sould look like this:
-* C:\Users\XXXXX\AppData\Roaming\Blender Foundation\Blender\2.80\scripts\addons\**GoB**
-
-1. In Blender, open the addon panel, then click the _'Install From Files...'_ button at the bottom. Select the `GoB.zip` file, this will install the addon inside the correct folder.
-3. Check the **GoB** box and save the User preferences to launch it at startup. Then click on the Import icon on the header (on top of Blender) to activate autoloading.
+## GoB Setup
+1. Download the latest "Source code (zip)" from "Releases"
+2. Open Blender and Navigate to Edit > Preferences > Get Extensions
+3. Uninstall any previous version of GoB by locating it in your extensions list, opening the drop down menu on the right side, and clicking "uninstall".
+4. Install GoB by clicking the drop down menu found in the top right of the extensions window, and selecting "install from disk".
+5. Navigate to and select the zip file downloaded in step One.
+6. Locate GoB in Edit > Preferences > Add-ons to configure your settings.
 
 
 ## Usage
 The addon adds two icons Import/Export to the top info panel:
 * By clicking on the Export icon, you export the selected mesh objects into ZBrush.
-* By clicking on the Import icon, you enable  autoloading mode. Latest objects are imported from GoZ.
+* By clicking on the Import icon, you toggle autoloading mode. This will automatically load any models into blender that are exported from ZBrush via GoZ.
+* By clicking on the Manual icon, you execute a one time import of the most recent model exported from ZBrush via GoZ.
 
 
 # Acknowledgements
