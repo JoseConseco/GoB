@@ -731,18 +731,23 @@ class GoB_OT_export(Operator):
         suffix_pattern = '\.(.*)'
         found_string = re.search(suffix_pattern, obj.name)   
         new_name = obj.name
+
+        new_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', new_name)
+        new_name = re.sub(r'_+', '_', new_name)
+        new_name = new_name.strip('_')
+        
         if found_string:
             # suffixes in zbrush longer than 1 symbol after a . (dot) require a specal addition 
             # of symbol+underline to be exported from zbrush, otherwise the whole suffix gets removed.
             # Due to the complicated name that this would create, only the . (dot) for one symbol suffix are kept, 
             # the others are going to be replaced by a _ (underline) resulting from .001 to _001
             if len(found_string.group()) > 2:              
-                new_name = re.sub('[^\w\_\-]+', '_', obj.name)
-            else:
-                return       
+                new_name = re.sub(r'\.', '_', new_name)
         
         if new_name == obj.name:
-            return            
+            return
+        elif not new_name:
+            new_name = "Object"
         i = 0
         while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
             name_cut = None if i == 0 else -2  #in first loop, do not slice name.
