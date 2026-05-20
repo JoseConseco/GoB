@@ -256,9 +256,11 @@ def apply_modifiers(obj:Object) -> Mesh:
                 face[face_set_layer] = face_set_values[i]
 
     if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
-        result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
+        bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh triangulate1")
+
+    bm.normal_update(   )
 
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh triangulate2")
@@ -268,6 +270,9 @@ def apply_modifiers(obj:Object) -> Mesh:
         start_time = utils.profiler(start_time, "Make Mesh export_mesh")
 
     bm.to_mesh(mesh_out)
+    mesh_out.validate(verbose=utils.prefs().debug_output)
+    mesh_out.update(calc_edges=True, calc_edges_loose=True)
+
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 

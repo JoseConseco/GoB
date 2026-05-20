@@ -208,8 +208,8 @@ class GoB_OT_export(Operator):
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    UV: polygones")
 
-                total_uvs = len(mesh_tmp.polygons) * 4
-                uv_coords = np.zeros(total_uvs * 2, dtype=np.float32)
+                uv_coords = np.zeros(len(uv_layer.data) * 2, dtype=np.float32)
+
                 uv_layer.data.foreach_get('uv', uv_coords)
                 uv_coords = uv_coords.reshape(-1, 2)
                 if utils.prefs().export_uv_flip_x:
@@ -218,12 +218,10 @@ class GoB_OT_export(Operator):
                     uv_coords[:, 1] = 1.0 - uv_coords[:, 1]
 
                 uv_data = []
-                coord_index = 0
                 for face in mesh_tmp.polygons:
                     for loop_index in face.loop_indices:
-                        x, y = uv_coords[coord_index]
+                        x, y = uv_coords[loop_index]
                         uv_data.extend([x, y])
-                        coord_index += 1
 
                     if len(face.loop_indices) == 3:
                         uv_data.extend([0.0, 1.0])
