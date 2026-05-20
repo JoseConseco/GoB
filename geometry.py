@@ -217,7 +217,13 @@ def apply_modifiers(obj:Object) -> Mesh:
         
         # For ONLY_EXPORT, skip bmesh triangulation to preserve face sets and other custom attributes
         final_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
-        mesh_tmp.copy_to(final_mesh)
+        
+        # Use bmesh to copy mesh data while preserving custom attributes
+        bm = bmesh.new()
+        bm.from_mesh(mesh_tmp)
+        bm.to_mesh(final_mesh)
+        bm.free()
+        
         if utils.prefs().performance_profiling: 
             start_time = utils.profiler(start_time, "Make Mesh copy")
         
