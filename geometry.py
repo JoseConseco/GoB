@@ -213,7 +213,22 @@ def apply_modifiers(obj:Object) -> Mesh:
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
         mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
         if utils.prefs().performance_profiling: 
-            start_time = utils.profiler(start_time, "Make Mesh to_mesh") 
+            start_time = utils.profiler(start_time, "Make Mesh to_mesh")
+        
+        # For ONLY_EXPORT, skip bmesh triangulation to preserve face sets and other custom attributes
+        final_mesh = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
+        mesh_tmp.copy_to(final_mesh)
+        if utils.prefs().performance_profiling: 
+            start_time = utils.profiler(start_time, "Make Mesh copy")
+        
+        obj.to_mesh_clear()
+        if utils.prefs().performance_profiling: 
+            start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")
+        
+        if utils.prefs().performance_profiling:         
+            utils.profiler(start_total_time, "Make Mesh return\n _____/")
+        
+        return final_mesh
 
     else:
         mesh_tmp = obj.data
