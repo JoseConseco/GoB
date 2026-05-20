@@ -20,7 +20,6 @@ import bpy
 import bmesh   
 import mathutils
 import time
-import math
 from bpy.types import Object, Mesh
 from . import utils
 
@@ -218,7 +217,8 @@ def apply_modifiers(obj:Object) -> Mesh:
     else:
         mesh_tmp = obj.data
 
-    #DO the triangulation of Ngons only, but do not write it to original object.    
+    # Triangulate n-gons only. Boolean cuts often produce complex n-gons, and
+    # joining the triangles back can create invalid quads that break in ZBrush.
     bm = bmesh.new()
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh bmesh new")
@@ -228,17 +228,11 @@ def apply_modifiers(obj:Object) -> Mesh:
         start_time = utils.profiler(start_time, "Make Mesh bmesh")
 
     if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
-        result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
-        bmesh.ops.join_triangles(
-            bm, faces = result['faces'], 
-            cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-            cmp_vcols=False,cmp_materials=False, 
-            angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
-
-
+        bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
         if utils.prefs().performance_profiling: 
             start_time = utils.profiler(start_time, "Make Mesh triangulate1")
 
+    bm.normal_update()
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh triangulate2")
 
@@ -247,6 +241,8 @@ def apply_modifiers(obj:Object) -> Mesh:
         start_time = utils.profiler(start_time, "Make Mesh export_mesh")
 
     bm.to_mesh(mesh_tmp)
+    mesh_tmp.validate(verbose=utils.prefs().debug_output)
+    mesh_tmp.update(calc_edges=True, calc_edges_loose=True)
     if utils.prefs().performance_profiling: 
         start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
