@@ -189,7 +189,8 @@ def remove_internal_faces(obj:Object):
         bpy.ops.object.mode_set(mode=last_context)
         restore_selection(selected, active)
 
-def apply_modifiers(obj: Object) -> Mesh:
+
+def apply_modifiers(obj:Object) -> Mesh:
 
     if utils.prefs().performance_profiling:
         print("\\___")
@@ -204,12 +205,11 @@ def apply_modifiers(obj: Object) -> Mesh:
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh object_eval")
 
-    # Snapshot sculpt attributes from the original mesh BEFORE any operations
     original_mesh = obj.data
 
     if utils.prefs().export_modifiers == 'APPLY_EXPORT':
         mesh_tmp = bpy.data.meshes.new_from_object(object_eval)
-        copy_sculpt_attributes(original_mesh, mesh_tmp)  # <-- restore after new_from_object
+        copy_sculpt_attributes(original_mesh, mesh_tmp)
         obj.data = mesh_tmp
         obj.modifiers.clear()
 
@@ -221,7 +221,21 @@ def apply_modifiers(obj: Object) -> Mesh:
     else:
         mesh_tmp = obj.data
 
-    # Triangulate Ngons only
+    # Read face set values from original_mesh BEFORE the bmesh round-trip,
+    # while face indices still correspond 1:1 with mesh_tmp faces.
+    face_set_values = None
+    face_set_attr = original_mesh.attributes.get('.sculpt_face_set')
+    if face_set_attr and len(face_set_attr.data) == len(mesh_tmp.polygons):
+        face_set_values = [d.value for d in face_set_attr.data]
+
+    # Read sculpt mask values from original_mesh — these are per-vertex so
+    # triangulation does not affect them, but to_mesh() drops them.
+    sculpt_mask_values = None
+    mask_attr = original_mesh.attributes.get('.sculpt_mask')
+    if mask_attr and len(mask_attr.data) == len(mesh_tmp.vertices):
+        sculpt_mask_values = [d.value for d in mask_attr.data]
+
+    #DO the triangulation of Ngons only, but do not write it to original object.
     bm = bmesh.new()
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh bmesh new")
@@ -230,14 +244,19 @@ def apply_modifiers(obj: Object) -> Mesh:
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh bmesh")
 
+    # Store face set values on a bmesh custom layer so they survive
+    # triangulation and join_triangles — bmesh propagates custom face int
+    # layers onto new faces created during triangulation automatically.
+    face_set_layer = None
+    if face_set_values is not None:
+        face_set_layer = bm.faces.layers.int.new('face_set_tmp')
+        bm.faces.ensure_lookup_table()
+        for i, face in enumerate(bm.faces):
+            if i < len(face_set_values):
+                face[face_set_layer] = face_set_values[i]
+
     if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
         result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
-        bmesh.ops.join_triangles(
-            bm, faces=result['faces'],
-            cmp_seam=False, cmp_sharp=False, cmp_uvs=False,
-            cmp_vcols=False, cmp_materials=False,
-            angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
-
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh triangulate1")
 
@@ -256,8 +275,33 @@ def apply_modifiers(obj: Object) -> Mesh:
     if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh bm free")
 
-    # Restore sculpt attributes onto the final export mesh
-    copy_sculpt_attributes(original_mesh, mesh_out)  # <-- key: uses original, not mesh_tmp
+    # Write face set values from the bmesh layer onto mesh_out now that
+    # face count is final. We read back via the named attribute that
+    # bm.to_mesh() wrote out for us.
+    if face_set_layer is not None:
+        face_set_out = mesh_out.attributes.get('face_set_tmp')
+        if face_set_out:
+            # Create the real sculpt face set attribute and populate it
+            sculpt_fs = mesh_out.attributes.get('.sculpt_face_set')
+            if sculpt_fs:
+                mesh_out.attributes.remove(sculpt_fs)
+            sculpt_fs = mesh_out.attributes.new('.sculpt_face_set', 'INT', 'FACE')
+            src_values = [d.value for d in face_set_out.data]
+            for i, d in enumerate(sculpt_fs.data):
+                d.value = src_values[i]
+            # Remove the temporary layer
+            mesh_out.attributes.remove(face_set_out)
+
+    # Restore sculpt mask — per-vertex so unaffected by triangulation,
+    # but still needs explicit copy as bmesh drops it.
+    if sculpt_mask_values is not None:
+        sculpt_mask = mesh_out.attributes.get('.sculpt_mask')
+        if sculpt_mask:
+            mesh_out.attributes.remove(sculpt_mask)
+        sculpt_mask = mesh_out.attributes.new('.sculpt_mask', 'FLOAT', 'POINT')
+        for i, d in enumerate(sculpt_mask.data):
+            if i < len(sculpt_mask_values):
+                d.value = sculpt_mask_values[i]
 
     obj.to_mesh_clear()
     if utils.prefs().performance_profiling:
@@ -267,6 +311,7 @@ def apply_modifiers(obj: Object) -> Mesh:
         utils.profiler(start_total_time, "Make Mesh return\n _____/")
 
     return mesh_out
+
 
 def process_linked_objects(obj):
 
@@ -366,30 +411,3 @@ def export_poll(cls, context):
         export = any(exportCandidates)
 
     return export
-
-def copy_sculpt_attributes(src_mesh, dst_mesh):
-    """Copy sculpt mask and face set attributes from src to dst mesh."""
-    SCULPT_ATTRS = ['.sculpt_mask', '.sculpt_face_set']
-
-    for attr_name in SCULPT_ATTRS:
-        src_attr = src_mesh.attributes.get(attr_name)
-        if not src_attr:
-            continue
-
-        # Remove existing attribute on dst if present (e.g. from to_mesh)
-        dst_attr = dst_mesh.attributes.get(attr_name)
-        if dst_attr:
-            dst_mesh.attributes.remove(dst_attr)
-
-        # Recreate with matching domain and data type
-        dst_attr = dst_mesh.attributes.new(
-            name=attr_name,
-            type=src_attr.data_type,
-            domain=src_attr.domain
-        )
-
-        # Copy raw values
-        src_values = [d.value for d in src_attr.data]
-        for i, d in enumerate(dst_attr.data):
-            if i < len(src_values):
-                d.value = src_values[i]
