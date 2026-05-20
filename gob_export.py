@@ -208,8 +208,8 @@ class GoB_OT_export(Operator):
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    UV: polygones")
 
-                total_uvs = len(mesh_tmp.polygons) * 4
-                uv_coords = np.zeros(total_uvs * 2, dtype=np.float32)
+                uv_coords = np.zeros(len(uv_layer.data) * 2, dtype=np.float32)
+
                 uv_layer.data.foreach_get('uv', uv_coords)
                 uv_coords = uv_coords.reshape(-1, 2)
                 if utils.prefs().export_uv_flip_x:
@@ -218,12 +218,10 @@ class GoB_OT_export(Operator):
                     uv_coords[:, 1] = 1.0 - uv_coords[:, 1]
 
                 uv_data = []
-                coord_index = 0
                 for face in mesh_tmp.polygons:
                     for loop_index in face.loop_indices:
-                        x, y = uv_coords[coord_index]
+                        x, y = uv_coords[loop_index]
                         uv_data.extend([x, y])
-                        coord_index += 1
 
                     if len(face.loop_indices) == 3:
                         uv_data.extend([0.0, 1.0])
@@ -303,13 +301,13 @@ class GoB_OT_export(Operator):
             if utils.prefs().export_mask !='NONE':
                 # since blender 4.1, Sculpt mask values are stored in a generic attribute
                 # https://developer.blender.org/docs/release_notes/4.1/python_api/#mesh
-                if '.sculpt_mask' in obj.data.attributes and utils.prefs().export_mask == 'SCULPT_MASK' and bpy.app.version >= (4, 1, 0):
+                if '.sculpt_mask' in mesh_tmp.attributes and utils.prefs().export_mask == 'SCULPT_MASK' and bpy.app.version >= (4, 1, 0):
                     goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
                     goz_file.write(pack('<I', numVertices*2+16))
                     goz_file.write(pack('<Q', numVertices))
 
                     mask_data = np.zeros(numVertices, dtype=np.float32)
-                    obj.data.attributes['.sculpt_mask'].data.foreach_get('value', mask_data)
+                    mesh_tmp.attributes['.sculpt_mask'].data.foreach_get('value', mask_data)
                     mask_values = ((1.0 - mask_data) * 65535).astype(np.uint16)
 
                     goz_file.write(pack(f'<{numVertices}H', *mask_values))
@@ -343,11 +341,11 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<Q', numFaces))
 
                     if utils.prefs().debug_output:
-                        print("Exporting Face Sets: ", '.sculpt_face_set' in obj.data.attributes)
+                        print("Exporting Face Sets: ", '.sculpt_face_set' in mesh_tmp.attributes)
 
-                    if '.sculpt_face_set' in obj.data.attributes:
+                    if '.sculpt_face_set' in mesh_tmp.attributes:
                         face_set_data = np.zeros(numFaces, dtype=np.int32)
-                        face_attr = obj.data.attributes.get(".sculpt_face_set")
+                        face_attr = mesh_tmp.attributes.get(".sculpt_face_set")
 
                         if face_attr and len(face_attr.data) == len(face_set_data):
                             face_attr.data.foreach_get("value", face_set_data)
@@ -387,11 +385,6 @@ class GoB_OT_export(Operator):
                     # add a color for elements that are not part of a vertex group
                     groupColor.append(0)
 
-                    '''
-                    # create a list of each vertex group assignement so one vertex can be in x amount of groups
-                    # then check for each face to which groups their vertices are MOST assigned to
-                    # and choose that group for the polygroup color if its on all vertices of the face
-                    '''
                     if len(obj.vertex_groups) > 0:
                         vgData = []
                         for face in mesh_tmp.polygons:
@@ -404,11 +397,7 @@ class GoB_OT_export(Operator):
                             if vgData[face.index]:
                                 group =  max(vgData[face.index], key = vgData[face.index].count)
                                 count = vgData[face.index].count(group)
-                                # print(vgData[face.index])
-                                # print("face:", face.index, "verts:", len(face.vertices), "elements:", count,
-                                # "\ngroup:", group, "color:", groupColor[group] )
                                 if len(face.vertices) == count:
-                                    # print(face.index, group, groupColor[group], count)
                                     goz_file.write(pack('<H', groupColor[group]))
                                 else:
                                     goz_file.write(pack('<H', 65504))
@@ -420,14 +409,12 @@ class GoB_OT_export(Operator):
 
                 # Polygroups from materials
                 if utils.prefs().export_polygroups == 'MATERIALS':
-                    # print("material slots: ", len(obj.material_slots))
                     if len(obj.material_slots) > 0:
                         goz_file.write(pack('<4B', 0x41, 0x9C, 0x00, 0x00))
                         goz_file.write(pack('<I', numFaces*2+16))
                         goz_file.write(pack('<Q', numFaces))
 
                         groupColor=[]
-                        # create a color for each material slot (0xffff)
                         for mat in obj.material_slots:
                             if mat:
                                 color = utils.random_color()
@@ -435,8 +422,7 @@ class GoB_OT_export(Operator):
                             else:
                                 groupColor.append(65504)
 
-                        for f in mesh_tmp.polygons:  # iterate over faces
-                            # print(f.index, f.material_index, groupColor[f.material_index], numFaces, len(mesh_tmp.polygons))
+                        for f in mesh_tmp.polygons:
                             goz_file.write(pack('<H', groupColor[f.material_index]))
 
                     if utils.prefs().performance_profiling:
@@ -451,11 +437,8 @@ class GoB_OT_export(Operator):
                 if mat.name:
                     material = bpy.data.materials[mat.name]
                     if material.use_nodes:
-                        # print("material:", mat.name, "using nodes \n")
                         for node in material.node_tree.nodes:
-                            # print("node: ", node.type)
                             if node.type in {'TEX_IMAGE'} and node.image:
-                                # print("IMAGES: ", node.image.name, node.image)
                                 if (utils.prefs().import_diffuse_suffix) in node.image.name:
                                     diff_texture = node.image
                                 if (utils.prefs().import_displace_suffix) in node.image.name:
@@ -466,7 +449,6 @@ class GoB_OT_export(Operator):
                                 print("group found")
             user_file_fomrat = scn.render.image_settings.file_format
             scn.render.image_settings.file_format = 'BMP'
-            # fileExt = ('.' + utils.prefs().texture_format.lower())
             fileExt = '.bmp'
 
             if diff_texture:
@@ -534,62 +516,42 @@ class GoB_OT_export(Operator):
 
         PATH_PROJECT = utils.prefs().project_path
 
-        # setup GoZ configuration
-        # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Info.txt"):
-        try:    #install in GoZApps if missing
+        try:
             source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
             target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender")
             print(source_GoZ_Info, target_GoZ_Info)
             shutil.copytree(source_GoZ_Info, target_GoZ_Info, symlinks=True)
-        except FileExistsError: #if blender folder is found update the info file
+        except FileExistsError:
             source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender", "GoZ_Info.txt")
             target_GoZ_Info = os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Info.txt")
             shutil.copy2(source_GoZ_Info, target_GoZ_Info)
 
-            # write blender path to GoZ configuration
-            # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"):
             with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 blender_path = os.path.join(paths.PATH_BLENDER).replace('\\', '/')
                 GoB_Config.write(f'PATH = "{blender_path}"')
-            # specify GoZ application
             with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_Application.txt"), 'wt') as GoZ_Application:
                 GoZ_Application.write("Blender")
 
         except Exception as e:
             print(e)
 
-        # update project path
-        # print("Project file path: ", f"{paths.PATH_GOZ}/GoZBrush/GoZ_ProjectPath.txt")
         with open(os.path.join(paths.PATH_GOZ, "GoZBrush", "GoZ_ProjectPath.txt"), 'wt') as GoZ_Application:
             GoZ_Application.write(PATH_PROJECT)
 
-        # remove ZTL files since they mess up Zbrush importing subtools
         if utils.prefs().clean_project_path:
             for file_name in os.listdir(PATH_PROJECT):
-                # print(file_name)
                 if file_name.lower().endswith(('.goz', '.ztn', '.ztl')):
                     print('cleaning file:', file_name)
                     os.remove(os.path.join(PATH_PROJECT, file_name))
 
-        """
-        # a object can either be imported as tool or as subtool in zbrush
-        # the IMPORT_AS_SUBTOOL needs to be changed in ../Pixologic/GoZBrush/GoZ_Config.txt
-        # for zbrush to recognize the import mode
-            GoZ_Config.txt
-                PATH = "C:/PROGRAM FILES/PIXOLOGIC/ZBRUSH 2021/ZBrush.exe"
-                IMPORT_AS_SUBTOOL = TRUE
-                SHOW_HELP_WINDOW = TRUE
-        """
         import_as_subtool = 'IMPORT_AS_SUBTOOL = TRUE'
         import_as_tool = 'IMPORT_AS_SUBTOOL = FALSE'
 
         try:
             with open(paths.PATH_CONFIG) as r:
-                # IMPORT AS SUBTOOL
-                r = r.read().replace('\t', ' ') #fix indentations in source data
+                r = r.read().replace('\t', ' ')
                 if self.as_tool:
                     new_config = r.replace(import_as_subtool, import_as_tool)
-                # IMPORT AS TOOL
                 else:
                     new_config = r.replace(import_as_tool, import_as_subtool)
 
@@ -598,8 +560,6 @@ class GoB_OT_export(Operator):
 
         except Exception as e:
             print("Goz config missing, writing file ", e)
-            # write blender path to GoZ configuration
-            # if not os.path.isfile(f"{paths.PATH_GOZ}/GoZApps/Blender/GoZ_Config.txt"):
             with open(os.path.join(paths.PATH_GOZ, "GoZApps", "Blender", "GoZ_Config.txt"), 'wt') as GoB_Config:
                 GoB_Config.write(f"PATH = \'{paths.PATH_BLENDER}\'")
 
@@ -618,30 +578,8 @@ class GoB_OT_export(Operator):
             for i, obj in enumerate(context.selected_objects):
                 if obj.type in surface_types:
 
-                    """
-                    # Avoid annoying None checks later on.
-                    if obj.type not in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
-                        self.report({'INFO'}, "Object can not be converted to mesh")
-                        return {'CANCELLED'}
-
-                    depsgraph = context.evaluated_depsgraph_get()
-                    # Invoke to_mesh() for original object.
-                    mesh_from_orig = obj.to_mesh()
-                    self.report({'INFO'}, f"{len(mesh_from_orig.vertices)} in new mesh without modifiers.")
-
-                    # Remove temporary mesh.
-                    obj.to_mesh_clear()
-                    # Invoke to_mesh() for evaluated object.
-                    object_eval = obj.evaluated_get(depsgraph)
-                    mesh_from_eval = object_eval.to_mesh()
-                    self.report({'INFO'}, f"{len(mesh_from_eval.vertices)} in new mesh with modifiers.")
-                    # Remove temporary mesh.
-                    object_eval.to_mesh_clear()
-                    #"""
-
                     depsgraph = context.evaluated_depsgraph_get()
                     obj_to_convert = obj.evaluated_get(depsgraph)
-                    # mesh_tmp = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
                     mesh_tmp = bpy.data.meshes.new_from_object(obj_to_convert)
                     mesh_tmp.transform(obj.matrix_world)
                     obj_tmp = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_tmp)
@@ -656,13 +594,11 @@ class GoB_OT_export(Operator):
                         with open( f"{PATH_PROJECT}{obj_tmp.name}.ztn", 'wt') as ztn:
                             ztn.write(f'{PATH_PROJECT}{obj_tmp.name}')
                         GoZ_ObjectList.write(f'{PATH_PROJECT}{obj_tmp.name}\n')
-                        # cleanup temp mesh
                         bpy.data.meshes.remove(mesh_tmp)
 
                 elif obj.type in {'MESH'}:
                     depsgraph = bpy.context.evaluated_depsgraph_get()
 
-                    # if one or less objects check amount of faces, 0 faces will crash zbrush
                     if utils.prefs().export_modifiers != 'IGNORE':
                         object_eval = obj.evaluated_get(depsgraph)
                         numFaces = len(object_eval.data.polygons)
@@ -675,7 +611,7 @@ class GoB_OT_export(Operator):
 
                         if bpy.ops.geometry.color_attribute_convert.poll():
                             bpy.ops.geometry.color_attribute_convert(domain='POINT', data_type='FLOAT_COLOR')
-                            obj.data.update()  # Force mesh data update
+                            obj.data.update()
 
                         self.escape_object_name(obj)
                         self.exportGoZ(context.scene, obj, f'{PATH_PROJECT}')
@@ -687,7 +623,6 @@ class GoB_OT_export(Operator):
 
                 else:
                     ui.ShowReport(self, [obj.type, obj.name], "GoB: unsupported obj.type found:", 'COLORSET_01_VEC')
-                    # print("GoB: unsupported obj.type found:", obj.type, obj.name)
 
                 wm.progress_update(step * i)
             wm.progress_end()
@@ -697,7 +632,6 @@ class GoB_OT_export(Operator):
         except Exception as e:
             print(e)
 
-        # only run if PATH_OBJLIST file file is not empty, else zbrush errors
         if not paths.is_file_empty(paths.PATH_OBJLIST):
             path_exists = paths.find_zbrush(self, context, paths.isMacOS)
             if utils.prefs().export_run_zbrush:
@@ -707,22 +641,16 @@ class GoB_OT_export(Operator):
                     if paths.isMacOS:
                         print("OSX Popen: ", utils.prefs().zbrush_exec)
                         Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])
-                    else: #windows
+                    else:
                         print("Windows Popen: ", utils.prefs().zbrush_exec)
                         Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)
 
-        # restore object context
         if context.object and currentContext:
             bpy.ops.object.mode_set(mode=currentContext)
 
         return {'FINISHED'}
 
     def escape_object_name(self, obj):
-        """
-        Escape object name so it can be used as a valid file name.
-        Keep only alphanumeric characters, underscore, dash and dot, and replace other characters with an underscore.
-        Multiple consecutive invalid characters will be replaced with just a single underscore character.
-        """
         import re
         suffix_pattern = '\.(.*)'
         found_string = re.search(suffix_pattern, obj.name)
@@ -733,10 +661,6 @@ class GoB_OT_export(Operator):
         new_name = new_name.strip('_')
 
         if found_string:
-            # suffixes in zbrush longer than 1 symbol after a . (dot) require a specal addition
-            # of symbol+underline to be exported from zbrush, otherwise the whole suffix gets removed.
-            # Due to the complicated name that this would create, only the . (dot) for one symbol suffix are kept,
-            # the others are going to be replaced by a _ (underline) resulting from .001 to _001
             if len(found_string.group()) > 2:
                 new_name = re.sub(r'\.', '_', new_name)
 
@@ -745,8 +669,8 @@ class GoB_OT_export(Operator):
         elif not new_name:
             new_name = "Object"
         i = 0
-        while new_name in bpy.data.objects.keys(): #while name collision with other scene objs,
-            name_cut = None if i == 0 else -2  #in first loop, do not slice name.
-            new_name = new_name[:name_cut] + str(i).zfill(2) #add two latters to end of obj name.
+        while new_name in bpy.data.objects.keys():
+            name_cut = None if i == 0 else -2
+            new_name = new_name[:name_cut] + str(i).zfill(2)
             i += 1
         obj.name = new_name
