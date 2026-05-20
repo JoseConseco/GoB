@@ -16,8 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy   
-import bmesh   
+import bpy
+import bmesh
 import mathutils
 import time
 import math
@@ -25,41 +25,41 @@ from bpy.types import Object, Mesh
 from . import utils
 
 
-def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):           
-          
-    if obj.data.color_attributes:   
+def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
+
+    if obj.data.color_attributes:
         #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-        vcolArray = bytearray([0] * numVertices * 3) 
-        active_color = obj.data.color_attributes.active_color  
+        vcolArray = bytearray([0] * numVertices * 3)
+        active_color = obj.data.color_attributes.active_color
         color_attribute = mesh.attributes.get(active_color.name, None)
-        
+
         # Pre-calculate vertex base indices for faster access
         vertex_indices = [i * 3 for i in range(numVertices)]
 
         for vert, vertex_index in zip(mesh.vertices, vertex_indices):
             color_data = color_attribute.data[vert.index]
-            color = color_data.color_srgb        
-            
+            color = color_data.color_srgb
+
             vcolArray[vertex_index] = int(255 * color[0])
             vcolArray[vertex_index +1] = int(255 * color[1])
-            vcolArray[vertex_index +2] = int(255 * color[2])     
+            vcolArray[vertex_index +2] = int(255 * color[2])
     else:
-        print('No vertex colors found') 
-        
+        print('No vertex colors found')
+
     # Ensure vcolArray is correctly populated
-    assert len(vcolArray) == numVertices * 3, "GoB vcolArray length mismatch" 
+    assert len(vcolArray) == numVertices * 3, "GoB vcolArray length mismatch"
 
     return vcolArray
 
 
-def apply_transformation(me, is_import=True): 
+def apply_transformation(me, is_import=True):
     mat_transform = None
     scale = 1.0
 
     if utils.prefs().use_scale == 'BUNITS':
         scale = 1 / bpy.context.scene.unit_settings.scale_length
 
-    if utils.prefs().use_scale == 'MANUAL':        
+    if utils.prefs().use_scale == 'MANUAL':
         scale =  1 / utils.prefs().manual_scale
 
     if utils.prefs().use_scale == 'ZUNITS' and (obj := bpy.context.active_object):
@@ -101,7 +101,7 @@ def apply_transformation(me, is_import=True):
                 (0.0, 1.0, 0.0, 0.0),
                 (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
 
-    elif utils.prefs().flip_forward_axis:            
+    elif utils.prefs().flip_forward_axis:
         if is_import:
             #import
             me.transform(mathutils.Matrix([
@@ -137,13 +137,13 @@ def apply_transformation(me, is_import=True):
     return me, mat_transform
 
 
-def mesh_welder(obj, d = 0.0001):    
-    " merges vertices that are closer than d to each other" 
+def mesh_welder(obj, d = 0.0001):
+    " merges vertices that are closer than d to each other"
     d = utils.prefs().export_merge_distance
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=d)
-    bm.to_mesh(obj.data)  
+    bm.to_mesh(obj.data)
     bm.free()
 
 
@@ -154,16 +154,16 @@ def restore_selection(selected, active):
     bpy.context.view_layer.objects.active = active
 
 
-def remove_internal_faces(obj:Object): 
+def remove_internal_faces(obj:Object):
 
-    "remove internal non-manifold faces where all edges have more than 2 face users https://github.com/JoseConseco/GoB/issues/210"  
-    if utils.prefs().export_remove_internal_faces:     
+    "remove internal non-manifold faces where all edges have more than 2 face users https://github.com/JoseConseco/GoB/issues/210"
+    if utils.prefs().export_remove_internal_faces:
         #remember whats selected
         selected = bpy.context.selected_objects
         active = bpy.context.active_object
-        
+
         bpy.ops.object.select_all(action='DESELECT')
-        obj.select_set(state=True) 
+        obj.select_set(state=True)
         bpy.context.view_layer.objects.active = obj
         last_context = obj.mode
         last_select_mode = bpy.ops.mesh.select_mode
@@ -171,104 +171,108 @@ def remove_internal_faces(obj:Object):
             print("last_context: ", last_context, last_select_mode)
 
         bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_mode(use_extend=True, 
+        bpy.ops.mesh.select_mode(use_extend=True,
                                 use_expand=False,
-                                type='VERT', 
-                                action='ENABLE')   
+                                type='VERT',
+                                action='ENABLE')
 
         bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.mesh.select_interior_faces() #Select faces where all edges have more than 2 face users
-        bpy.ops.mesh.select_non_manifold(extend=True, 
-                                        use_wire=True, 
-                                        use_boundary=False, 
-                                        use_multi_face=True, 
+        bpy.ops.mesh.select_non_manifold(extend=True,
+                                        use_wire=True,
+                                        use_boundary=False,
+                                        use_multi_face=True,
                                         use_non_contiguous=True, #Non Contiguous, Edges between faces pointing in alternate directions
                                         use_verts=True)
-                                        
+
         bpy.ops.mesh.delete(type='FACE')
         bpy.ops.object.mode_set(mode=last_context)
         restore_selection(selected, active)
 
+def apply_modifiers(obj: Object) -> Mesh:
 
-def apply_modifiers(obj:Object) -> Mesh:  
-
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         print("\\___")
         start_time = utils.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
         start_total_time = utils.profiler(time.perf_counter(), "")
 
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh depsgraph")
 
     object_eval = obj.evaluated_get(depsgraph)
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh object_eval")
 
-    if utils.prefs().export_modifiers == 'APPLY_EXPORT':      
-        mesh_tmp = bpy.data.meshes.new_from_object(object_eval) 
+    # Snapshot sculpt attributes from the original mesh BEFORE any operations
+    original_mesh = obj.data
+
+    if utils.prefs().export_modifiers == 'APPLY_EXPORT':
+        mesh_tmp = bpy.data.meshes.new_from_object(object_eval)
+        copy_sculpt_attributes(original_mesh, mesh_tmp)  # <-- restore after new_from_object
         obj.data = mesh_tmp
-        obj.modifiers.clear() 
+        obj.modifiers.clear()
 
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)   
-        if utils.prefs().performance_profiling: 
-            start_time = utils.profiler(start_time, "Make Mesh to_mesh") 
+        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+        if utils.prefs().performance_profiling:
+            start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
     else:
         mesh_tmp = obj.data
 
-    #DO the triangulation of Ngons only, but do not write it to original object.    
+    # Triangulate Ngons only
     bm = bmesh.new()
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh bmesh new")
 
     bm.from_mesh(mesh_tmp)
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh bmesh")
 
     if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
         result = bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
         bmesh.ops.join_triangles(
-            bm, faces = result['faces'], 
-            cmp_seam=False, cmp_sharp=False, cmp_uvs=False, 
-            cmp_vcols=False,cmp_materials=False, 
-            angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi)) 
+            bm, faces=result['faces'],
+            cmp_seam=False, cmp_sharp=False, cmp_uvs=False,
+            cmp_vcols=False, cmp_materials=False,
+            angle_face_threshold=(math.pi), angle_shape_threshold=(math.pi))
 
-
-        if utils.prefs().performance_profiling: 
+        if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh triangulate1")
 
-    if utils.prefs().performance_profiling: 
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh triangulate2")
 
-    mesh_tmp = bpy.data.meshes.new(name=f'{obj.name}_goz')  # mesh is deleted in main loop
-    if utils.prefs().performance_profiling: 
+    mesh_out = bpy.data.meshes.new(name=f'{obj.name}_goz')
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh export_mesh")
 
-    bm.to_mesh(mesh_tmp)
-    if utils.prefs().performance_profiling: 
+    bm.to_mesh(mesh_out)
+    if utils.prefs().performance_profiling:
         start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
     bm.free()
-    if utils.prefs().performance_profiling: 
-        start_time = utils.profiler(start_time, "Make Mesh bm free")  
+    if utils.prefs().performance_profiling:
+        start_time = utils.profiler(start_time, "Make Mesh bm free")
+
+    # Restore sculpt attributes onto the final export mesh
+    copy_sculpt_attributes(original_mesh, mesh_out)  # <-- key: uses original, not mesh_tmp
 
     obj.to_mesh_clear()
-    if utils.prefs().performance_profiling: 
-        start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")  
+    if utils.prefs().performance_profiling:
+        start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")
 
-    if utils.prefs().performance_profiling:         
-        utils.profiler(start_total_time, "Make Mesh return\n _____/") 
+    if utils.prefs().performance_profiling:
+        utils.profiler(start_total_time, "Make Mesh return\n _____/")
 
-    return mesh_tmp    
+    return mesh_out
 
-
-def process_linked_objects(obj):  
+def process_linked_objects(obj):
 
     """ TODO: when linked system is finalized it could be possible to provide
     #  a option to modify the linked object. for now a copy
-    #  of the linked object is created to goz it """        
+    #  of the linked object is created to goz it """
     if obj.library:
         new_obj = obj.copy()
         new_obj.data = obj.data.copy()
@@ -283,18 +287,18 @@ def clone_as_object(obj, link=True):
     " create a new object from a exiting one"
     depsgraph = bpy.context.evaluated_depsgraph_get()
     obj_to_clone = obj.evaluated_get(depsgraph)
-    #mesh_clone = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph) 
+    #mesh_clone = obj.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
     mesh_clone = bpy.data.meshes.new_from_object(obj_to_clone)
     mesh_clone.transform(obj.matrix_world)
     obj_clone = bpy.data.objects.new(f'{obj.name}_{obj.type}', mesh_clone)
     if link:
-        bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone) 
+        bpy.context.view_layer.active_layer_collection.collection.objects.link(obj_clone)
 
     return obj_clone
 
 
 def check_export_candidates(obj):
-    
+
     if obj.type in {'MESH'}:
         if utils.prefs().export_modifiers in {'IGNORE'}:
             # if export modifers is Ignored check for polygons to identify export candidates
@@ -307,23 +311,23 @@ def check_export_candidates(obj):
                 if modifier.name in geometry_modifiers and modifier.show_viewport:
                     # a mesh can have 0 faces but a modifier which adds polygons which makes is a valid export object
                     #print("numfaces 0, skin modifier: ", modifier.name in ['Skin'] and modifier.show_viewport)
-                    return modifier.name in geometry_modifiers and modifier.show_viewport   
+                    return modifier.name in geometry_modifiers and modifier.show_viewport
                 else:
                     # when the modifier is disabled
                     # - it can result in 0 faces which makes it a invalid export candidate
                     # - or in a mesh with more than 0 faces which makes it a valid export candidate
-                    numFaces = len(obj.data.polygons)  
-                    #print("numfaces 1, no skin modifiers: ", numFaces) 
-        else: 
+                    numFaces = len(obj.data.polygons)
+                    #print("numfaces 1, no skin modifiers: ", numFaces)
+        else:
             #when a object has no modifiers, enable export when it has polygons, else disable
-            numFaces = len(obj.data.polygons) 
+            numFaces = len(obj.data.polygons)
             #print("numfaces 2 modifier export: ", numFaces)
 
-    elif obj.type in {'SURFACE', 'FONT', 'META'}: 
-        #allow export for non mesh type objects 
+    elif obj.type in {'SURFACE', 'FONT', 'META'}:
+        #allow export for non mesh type objects
         return True
 
-    elif obj.type in {'CURVE'}:  
+    elif obj.type in {'CURVE'}:
         # curves will only get faces when they have a bevel or a extrude
         return bool(
             bpy.data.curves[obj.data.name].bevel_depth
@@ -331,34 +335,61 @@ def check_export_candidates(obj):
         )
     else:
         if utils.prefs().debug_output:
-            print("GoB: unsupported object type:", obj.type)  
+            print("GoB: unsupported object type:", obj.type)
         return False
 
     return numFaces
 
 
-def export_poll(cls, context):  
+def export_poll(cls, context):
 
     # do not allow export if no objects are selected
     if not context.selected_objects:
         return False
 
     # if one object is selected, check amount of faces. 0 faces will crash zbrush!
-    elif len(context.selected_objects) == 1: 
+    elif len(context.selected_objects) == 1:
         if context.active_object:
-            obj = context.active_object 
+            obj = context.active_object
             export = check_export_candidates(obj)
         else:
-            for obj in context.selected_objects:  
+            for obj in context.selected_objects:
                 export = check_export_candidates(obj)
-    
+
     #check for faces in multiple objects, only if any face in object is found exporting should be allowed
-    else: 
+    else:
         exportCandidates=[]
-        for obj in context.selected_objects:  
+        for obj in context.selected_objects:
             candidate = check_export_candidates(obj)
             exportCandidates.append(candidate)
         #print("any export candidate: ", any(exportCandidates))
         export = any(exportCandidates)
-    
+
     return export
+
+def copy_sculpt_attributes(src_mesh, dst_mesh):
+    """Copy sculpt mask and face set attributes from src to dst mesh."""
+    SCULPT_ATTRS = ['.sculpt_mask', '.sculpt_face_set']
+
+    for attr_name in SCULPT_ATTRS:
+        src_attr = src_mesh.attributes.get(attr_name)
+        if not src_attr:
+            continue
+
+        # Remove existing attribute on dst if present (e.g. from to_mesh)
+        dst_attr = dst_mesh.attributes.get(attr_name)
+        if dst_attr:
+            dst_mesh.attributes.remove(dst_attr)
+
+        # Recreate with matching domain and data type
+        dst_attr = dst_mesh.attributes.new(
+            name=attr_name,
+            type=src_attr.data_type,
+            domain=src_attr.domain
+        )
+
+        # Copy raw values
+        src_values = [d.value for d in src_attr.data]
+        for i, d in enumerate(dst_attr.data):
+            if i < len(src_values):
+                d.value = src_values[i]
