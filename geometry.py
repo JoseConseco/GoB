@@ -134,6 +134,85 @@ def apply_transformation(me, is_import=True):
             (0.0, 1.0, 0.0, 0.0),
             (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
 
+    # Apply axis remapping
+    if (utils.prefs().remap_x_axis != 'NONE' or
+        utils.prefs().remap_y_axis != 'NONE' or
+        utils.prefs().remap_z_axis != 'NONE'):
+
+        # Create a matrix to handle axis remapping
+        remap_matrix = mathutils.Matrix.Identity(4)
+
+        # Map X axis
+        if utils.prefs().remap_x_axis == 'X':
+            # Keep X as X - no change needed
+            pass
+        elif utils.prefs().remap_x_axis == 'Y':
+            # Map X to Y (swap rows 0 and 1)
+            remap_matrix[0][0] = 0.0
+            remap_matrix[0][1] = 1.0
+            remap_matrix[1][0] = 1.0
+            remap_matrix[1][1] = 0.0
+        elif utils.prefs().remap_x_axis == 'Z':
+            # Map X to Z (swap rows 0 and 2)
+            remap_matrix[0][0] = 0.0
+            remap_matrix[0][2] = 1.0
+            remap_matrix[2][0] = 1.0
+            remap_matrix[2][2] = 0.0
+
+        # Map Y axis
+        if utils.prefs().remap_y_axis == 'X':
+            # Map Y to X (swap rows 1 and 0)
+            remap_matrix[1][0] = 1.0
+            remap_matrix[1][1] = 0.0
+            remap_matrix[0][1] = 1.0
+            remap_matrix[0][0] = 0.0
+        elif utils.prefs().remap_y_axis == 'Y':
+            # Keep Y as Y - no change needed
+            pass
+        elif utils.prefs().remap_y_axis == 'Z':
+            # Map Y to Z (swap rows 1 and 2)
+            remap_matrix[1][1] = 0.0
+            remap_matrix[1][2] = 1.0
+            remap_matrix[2][1] = 1.0
+            remap_matrix[2][2] = 0.0
+
+        # Map Z axis
+        if utils.prefs().remap_z_axis == 'X':
+            # Map Z to X (swap rows 2 and 0)
+            remap_matrix[2][0] = 1.0
+            remap_matrix[2][1] = 0.0
+            remap_matrix[0][2] = 1.0
+            remap_matrix[0][0] = 0.0
+        elif utils.prefs().remap_z_axis == 'Y':
+            # Map Z to Y (swap rows 2 and 1)
+            remap_matrix[2][2] = 0.0
+            remap_matrix[2][1] = 1.0
+            remap_matrix[1][2] = 1.0
+            remap_matrix[1][1] = 0.0
+        elif utils.prefs().remap_z_axis == 'Z':
+            # Keep Z as Z - no change needed
+            pass
+
+        # Apply the remapping transformation
+        me.transform(remap_matrix * scale)
+    
+    # Apply individual axis flipping
+    if utils.prefs().flip_x_axis or utils.prefs().flip_y_axis or utils.prefs().flip_z_axis:
+        # Create transformation matrix for individual axes
+        flip_matrix = mathutils.Matrix.Identity(4)
+        
+        if utils.prefs().flip_x_axis:
+            flip_matrix[0][0] = -1.0
+            
+        if utils.prefs().flip_y_axis:
+            flip_matrix[1][1] = -1.0
+            
+        if utils.prefs().flip_z_axis:
+            flip_matrix[2][2] = -1.0
+            
+        # Apply the transformation
+        me.transform(flip_matrix * scale)
+    
     return me, mat_transform
 
 
