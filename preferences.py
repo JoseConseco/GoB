@@ -155,42 +155,39 @@ class GoB_Preferences(AddonPreferences):
         description="Flip the Z axis on Import/Export",
         default=False,
     )  # Default: False
-    
+
     # Axis Remapping
     remap_x_axis: EnumProperty(
         name="Remap X Axis",
         description="Remap the X axis to another axis",
         items=[
-            ("NONE", "None", "Don't remap"),
             ("X", "X", "Keep X as X"),
             ("Y", "Y", "Map X to Y"),
             ("Z", "Z", "Map X to Z"),
         ],
-        default="NONE",
+        default="X",
     )  # Default: NONE
-    
+
     remap_y_axis: EnumProperty(
         name="Remap Y Axis",
         description="Remap the Y axis to another axis",
         items=[
-            ("NONE", "None", "Don't remap"),
             ("X", "X", "Map Y to X"),
             ("Y", "Y", "Keep Y as Y"),
             ("Z", "Z", "Map Y to Z"),
         ],
-        default="NONE",
+        default="Y",
     )  # Default: NONE
-    
+
     remap_z_axis: EnumProperty(
         name="Remap Z Axis",
         description="Remap the Z axis to another axis",
         items=[
-            ("NONE", "None", "Don't remap"),
             ("X", "X", "Map Z to X"),
             ("Y", "Y", "Map Z to Y"),
             ("Z", "Z", "Keep Z as Z"),
         ],
-        default="NONE",
+        default="Z",
     )  # Default: NONE
     show_button_text: BoolProperty(
         name="Show Buttons Text",
