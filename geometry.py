@@ -139,80 +139,76 @@ def apply_transformation(me, is_import=True):
         utils.prefs().remap_y_axis != 'NONE' or
         utils.prefs().remap_z_axis != 'NONE'):
 
-        # Create a matrix to handle axis remapping
+        # Build transformation matrix by setting up the correct column mappings
+        # This creates a 3x3 matrix that maps original coordinates to new coordinates
+        # The structure is: new_X = [a,b,c] * [old_X, old_Y, old_Z]^T etc.
+
+        # Initialize a 4x4 identity matrix
         remap_matrix = mathutils.Matrix.Identity(4)
 
-        # Map X axis
+        # Reset the 3x3 portion to zero (this prevents interference from previous operations)
+        for i in range(3):
+            for j in range(3):
+                remap_matrix[i][j] = 0.0
+
+        # Set up how new X comes from original coordinates
         if utils.prefs().remap_x_axis == 'X':
-            # Keep X as X - no change needed
-            pass
+            remap_matrix[0][0] = 1.0
         elif utils.prefs().remap_x_axis == 'Y':
-            # Map X to Y (swap rows 0 and 1)
-            remap_matrix[0][0] = 0.0
             remap_matrix[0][1] = 1.0
-            remap_matrix[1][0] = 1.0
-            remap_matrix[1][1] = 0.0
         elif utils.prefs().remap_x_axis == 'Z':
-            # Map X to Z (swap rows 0 and 2)
-            remap_matrix[0][0] = 0.0
             remap_matrix[0][2] = 1.0
-            remap_matrix[2][0] = 1.0
-            remap_matrix[2][2] = 0.0
 
-        # Map Y axis
+        # Set up how new Y comes from original coordinates
         if utils.prefs().remap_y_axis == 'X':
-            # Map Y to X (swap rows 1 and 0)
             remap_matrix[1][0] = 1.0
-            remap_matrix[1][1] = 0.0
-            remap_matrix[0][1] = 1.0
-            remap_matrix[0][0] = 0.0
         elif utils.prefs().remap_y_axis == 'Y':
-            # Keep Y as Y - no change needed
-            pass
+            remap_matrix[1][1] = 1.0
         elif utils.prefs().remap_y_axis == 'Z':
-            # Map Y to Z (swap rows 1 and 2)
-            remap_matrix[1][1] = 0.0
             remap_matrix[1][2] = 1.0
-            remap_matrix[2][1] = 1.0
-            remap_matrix[2][2] = 0.0
 
-        # Map Z axis
+        # Set up how new Z comes from original coordinates
         if utils.prefs().remap_z_axis == 'X':
-            # Map Z to X (swap rows 2 and 0)
             remap_matrix[2][0] = 1.0
-            remap_matrix[2][1] = 0.0
-            remap_matrix[0][2] = 1.0
-            remap_matrix[0][0] = 0.0
         elif utils.prefs().remap_z_axis == 'Y':
-            # Map Z to Y (swap rows 2 and 1)
-            remap_matrix[2][2] = 0.0
             remap_matrix[2][1] = 1.0
-            remap_matrix[1][2] = 1.0
-            remap_matrix[1][1] = 0.0
         elif utils.prefs().remap_z_axis == 'Z':
-            # Keep Z as Z - no change needed
-            pass
+            remap_matrix[2][2] = 1.0
 
         # Apply the remapping transformation
         me.transform(remap_matrix * scale)
-    
+        
+        # Flip normals if exactly two axes were remapped (which indicates a reflection)
+        # Count how many axes are being remapped
+        remaps_count = 0
+        if utils.prefs().remap_x_axis != 'X':
+            remaps_count += 1
+        if utils.prefs().remap_y_axis != 'Y':
+            remaps_count += 1
+        if utils.prefs().remap_z_axis != 'Z':
+            remaps_count += 1
+            
+        # Flip normals for exactly two remaps (reflection)
+        if remaps_count == 2:
+            me.flip_normals()
+
     # Apply individual axis flipping
     if utils.prefs().flip_x_axis or utils.prefs().flip_y_axis or utils.prefs().flip_z_axis:
         # Create transformation matrix for individual axes
         flip_matrix = mathutils.Matrix.Identity(4)
-        
+
         if utils.prefs().flip_x_axis:
             flip_matrix[0][0] = -1.0
-            
+
         if utils.prefs().flip_y_axis:
             flip_matrix[1][1] = -1.0
-            
+
         if utils.prefs().flip_z_axis:
             flip_matrix[2][2] = -1.0
-            
+
         # Apply the transformation
         me.transform(flip_matrix * scale)
-    
+
     return me, mat_transform
 
 
