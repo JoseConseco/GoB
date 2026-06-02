@@ -41,6 +41,51 @@ class GoB_Preferences(AddonPreferences):
     bl_idname = __package__
     tabs: EnumProperty(name="Tabs", items=preferences_tabs, default="OPTIONS")
 
+    def on_x_axis_remap_change(self, context):
+        x_axis = self.remap_x_axis
+        if x_axis == self.remap_y_axis:
+            if x_axis != "X":
+                self.remap_y_axis = "X"
+            else:
+                self.remap_y_axis = "Y"
+        if x_axis == self.remap_z_axis:
+            if x_axis != "X":
+                self.remap_z_axis = "X"
+            else:
+                self.remap_z_axis = "Z"
+        else:
+            pass
+
+    def on_y_axis_remap_change(self, context):
+        y_axis = self.remap_y_axis
+        if y_axis == self.remap_x_axis:
+            if y_axis != "Y":
+                self.remap_x_axis = "Y"
+            else:
+                self.remap_x_axis = "X"
+        if y_axis == self.remap_z_axis:
+            if y_axis != "Y":
+                self.remap_z_axis = "Y"
+            else:
+                self.remap_z_axis = "Z"
+        else:
+            pass
+
+    def on_z_axis_remap_change(self, context):
+        z_axis = self.remap_z_axis
+        if z_axis == self.remap_x_axis:
+            if z_axis != "Z":
+                self.remap_x_axis = "Z"
+            else:
+                self.remap_x_axis = "X"
+        if z_axis == self.remap_y_axis:
+            if z_axis != "Z":
+                self.remap_y_axis = "Z"
+            else:
+                self.remap_y_axis = "Y"
+        else:
+            pass
+
     # GLOBAL
     zbrush_exec: StringProperty(
         name="ZBrush Path",
@@ -166,6 +211,7 @@ class GoB_Preferences(AddonPreferences):
             ("Z", "Z", "Map X to Z"),
         ],
         default="X",
+        update=on_x_axis_remap_change
     )  # Default: NONE
 
     remap_y_axis: EnumProperty(
@@ -177,6 +223,7 @@ class GoB_Preferences(AddonPreferences):
             ("Z", "Z", "Map Y to Z"),
         ],
         default="Y",
+        update=on_y_axis_remap_change
     )  # Default: NONE
 
     remap_z_axis: EnumProperty(
@@ -188,6 +235,7 @@ class GoB_Preferences(AddonPreferences):
             ("Z", "Z", "Keep Z as Z"),
         ],
         default="Z",
+        update=on_z_axis_remap_change
     )  # Default: NONE
     show_button_text: BoolProperty(
         name="Show Buttons Text",
