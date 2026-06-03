@@ -126,6 +126,12 @@ class GoB_OT_export(Operator):
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "variablesFile: Write GoB_variables")
 
+        try:
+            object_name_bytes = obj.name.encode('ascii')
+        except UnicodeEncodeError:
+            self.escape_object_name(obj)
+            object_name_bytes = obj.name.encode('ascii')
+
         with open(os.path.join(path_export + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
             numFaces = len(mesh_tmp.polygons)
             numVertices = len(mesh_tmp.vertices)
@@ -134,13 +140,13 @@ class GoB_OT_export(Operator):
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
             goz_file.write(pack('<6B', 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E))
             goz_file.write(pack('<I', 1))  # obj tag
-            goz_file.write(pack('<I', len(obj.name)+24))
+            goz_file.write(pack('<I', len(object_name_bytes)+24))
             goz_file.write(pack('<Q', 1))
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Write File Header")
 
             # --Object Name--
-            goz_file.write(b'GoZMesh_' + obj.name.encode('utf-8'))
+            goz_file.write(b'GoZMesh_' + object_name_bytes)
             goz_file.write(pack('<4B', 0x89, 0x13, 0x00, 0x00))
             goz_file.write(pack('<I', 20))
             goz_file.write(pack('<Q', 1))
@@ -652,25 +658,20 @@ class GoB_OT_export(Operator):
 
     def escape_object_name(self, obj):
         import re
-        suffix_pattern = '\.(.*)'
-        found_string = re.search(suffix_pattern, obj.name)
-        new_name = obj.name
 
-        new_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', new_name)
-        new_name = re.sub(r'_+', '_', new_name)
-        new_name = new_name.strip('_')
+        original_name = obj.name
+        new_name = re.sub(r'[^A-Za-z0-9_-]+', '_', original_name)
+        new_name = re.sub(r'_+', '_', new_name).strip('_-')
 
-        if found_string:
-            if len(found_string.group()) > 2:
-                new_name = re.sub(r'\.', '_', new_name)
-
-        if new_name == obj.name:
-            return
-        elif not new_name:
+        if not new_name:
             new_name = "Object"
+
+        if new_name == original_name:
+            return
+
+        base_name = new_name
         i = 0
-        while new_name in bpy.data.objects.keys():
-            name_cut = None if i == 0 else -2
-            new_name = new_name[:name_cut] + str(i).zfill(2)
+        while new_name in bpy.data.objects and bpy.data.objects[new_name] != obj:
+            new_name = f"{base_name}_{i:02d}"
             i += 1
         obj.name = new_name
