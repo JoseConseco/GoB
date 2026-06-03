@@ -175,29 +175,19 @@ class GoB_Preferences(AddonPreferences):
         precision=2,
         subtype="FACTOR",
     )
-    flip_up_axis: BoolProperty(
-        name="Flip up axis",
-        description="Flip the up axis on Import/Export",
-        default=False,
-    )  # Default: False
-    flip_forward_axis: BoolProperty(
-        name="Flip forward axis",
-        description="Flip the forward axis on Import/Export",
-        default=False,
-    )  # Default: False
     flip_x_axis: BoolProperty(
         name="Flip X axis",
-        description="Flip the X axis on Import/Export",
+        description="Flip the X axis (before remapping)",
         default=False,
     )  # Default: False
     flip_y_axis: BoolProperty(
         name="Flip Y axis",
-        description="Flip the Y axis on Import/Export",
+        description="Flip the Y axis (before remapping)",
         default=False,
     )  # Default: False
     flip_z_axis: BoolProperty(
         name="Flip Z axis",
-        description="Flip the Z axis on Import/Export",
+        description="Flip the Z axis (before remapping)",
         default=False,
     )  # Default: False
 
@@ -212,7 +202,7 @@ class GoB_Preferences(AddonPreferences):
         ],
         default="X",
         update=on_x_axis_remap_change
-    )  # Default: NONE
+    )  # Default: X
 
     remap_y_axis: EnumProperty(
         name="Remap Y Axis",
@@ -224,7 +214,7 @@ class GoB_Preferences(AddonPreferences):
         ],
         default="Y",
         update=on_y_axis_remap_change
-    )  # Default: NONE
+    )  # Default: Y
 
     remap_z_axis: EnumProperty(
         name="Remap Z Axis",
@@ -236,7 +226,7 @@ class GoB_Preferences(AddonPreferences):
         ],
         default="Z",
         update=on_z_axis_remap_change
-    )  # Default: NONE
+    )  # Default: Z
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
@@ -511,14 +501,12 @@ class GoB_Preferences(AddonPreferences):
             col.prop(self, "pixologoc_path")
 
         col.prop(self, "clean_project_path")
-        col.prop(self, "flip_up_axis")
-        col.prop(self, "flip_forward_axis")
-        col.prop(self, "flip_x_axis")
-        col.prop(self, "flip_y_axis")
-        col.prop(self, "flip_z_axis")
         col.prop(self, "remap_x_axis")
+        col.prop(self, "flip_x_axis")
         col.prop(self, "remap_y_axis")
+        col.prop(self, "flip_y_axis")
         col.prop(self, "remap_z_axis")
+        col.prop(self, "flip_z_axis")
         col.prop(self, "use_scale")
         if self.use_scale == "MANUAL":
             col.prop(self, "manual_scale")

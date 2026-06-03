@@ -91,10 +91,6 @@ def apply_transformation(me, is_import=True):
         utils.prefs().remap_y_axis != 'NONE' or
         utils.prefs().remap_z_axis != 'NONE'):
 
-        # Build transformation matrix by setting up the correct column mappings
-        # This creates a 3x3 matrix that maps original coordinates to new coordinates
-        # The structure is: new_X = [a,b,c] * [old_X, old_Y, old_Z]^T etc.
-
         # Initialize a 4x4 identity matrix
         remap_matrix = mathutils.Matrix.Identity(4)
 
@@ -103,12 +99,12 @@ def apply_transformation(me, is_import=True):
             for j in range(3):
                 remap_matrix[i][j] = 0.0
 
-        # Set up how new X comes from original coordinates
-
+        # Set values to be used in the remap matrix
         x_value = 1.0
         y_value = 1.0
         z_value = 1.0
 
+        # Flip values if axes are flipped
         if utils.prefs().flip_x_axis:
             x_value = -1.0
         if utils.prefs().flip_y_axis:
@@ -116,6 +112,7 @@ def apply_transformation(me, is_import=True):
         if utils.prefs().flip_z_axis:
             z_value = -1.0
 
+        # Set up how new X comes from original coordinates
         if utils.prefs().remap_x_axis == 'X':
             remap_matrix[0][0] = x_value
         elif utils.prefs().remap_x_axis == 'Y':
@@ -146,6 +143,7 @@ def apply_transformation(me, is_import=True):
             remap_matrix = remap_matrix.inverted()
             me.transform(remap_matrix * scale)
 
+        # Flip normals if they have been inverted by the transform
         det = remap_matrix.determinant()
         if det < 0:
             me.flip_normals()
