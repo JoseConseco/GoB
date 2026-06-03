@@ -41,6 +41,51 @@ class GoB_Preferences(AddonPreferences):
     bl_idname = __package__
     tabs: EnumProperty(name="Tabs", items=preferences_tabs, default="OPTIONS")
 
+    def on_x_axis_remap_change(self, context):
+        x_axis = self.remap_x_axis
+        if x_axis == self.remap_y_axis:
+            if x_axis != "X":
+                self.remap_y_axis = "X"
+            else:
+                self.remap_y_axis = "Y"
+        if x_axis == self.remap_z_axis:
+            if x_axis != "X":
+                self.remap_z_axis = "X"
+            else:
+                self.remap_z_axis = "Z"
+        else:
+            pass
+
+    def on_y_axis_remap_change(self, context):
+        y_axis = self.remap_y_axis
+        if y_axis == self.remap_x_axis:
+            if y_axis != "Y":
+                self.remap_x_axis = "Y"
+            else:
+                self.remap_x_axis = "X"
+        if y_axis == self.remap_z_axis:
+            if y_axis != "Y":
+                self.remap_z_axis = "Y"
+            else:
+                self.remap_z_axis = "Z"
+        else:
+            pass
+
+    def on_z_axis_remap_change(self, context):
+        z_axis = self.remap_z_axis
+        if z_axis == self.remap_x_axis:
+            if z_axis != "Z":
+                self.remap_x_axis = "Z"
+            else:
+                self.remap_x_axis = "X"
+        if z_axis == self.remap_y_axis:
+            if z_axis != "Z":
+                self.remap_y_axis = "Z"
+            else:
+                self.remap_y_axis = "Y"
+        else:
+            pass
+
     # GLOBAL
     zbrush_exec: StringProperty(
         name="ZBrush Path",
@@ -130,16 +175,58 @@ class GoB_Preferences(AddonPreferences):
         precision=2,
         subtype="FACTOR",
     )
-    flip_up_axis: BoolProperty(
-        name="Flip up axis",
-        description="Flip the up axis on Import/Export",
+    flip_x_axis: BoolProperty(
+        name="Flip X axis",
+        description="Flip the X axis (before remapping)",
         default=False,
     )  # Default: False
-    flip_forward_axis: BoolProperty(
-        name="Flip forward axis",
-        description="Flip the forward axis on Import/Export",
+    flip_y_axis: BoolProperty(
+        name="Flip Y axis",
+        description="Flip the Y axis (before remapping)",
         default=False,
     )  # Default: False
+    flip_z_axis: BoolProperty(
+        name="Flip Z axis",
+        description="Flip the Z axis (before remapping)",
+        default=False,
+    )  # Default: False
+
+    # Axis Remapping
+    remap_x_axis: EnumProperty(
+        name="Remap X Axis",
+        description="Remap the X axis to another axis",
+        items=[
+            ("X", "X", "Keep X as X"),
+            ("Y", "Y", "Map X to Y"),
+            ("Z", "Z", "Map X to Z"),
+        ],
+        default="X",
+        update=on_x_axis_remap_change
+    )  # Default: X
+
+    remap_y_axis: EnumProperty(
+        name="Remap Y Axis",
+        description="Remap the Y axis to another axis",
+        items=[
+            ("X", "X", "Map Y to X"),
+            ("Y", "Y", "Keep Y as Y"),
+            ("Z", "Z", "Map Y to Z"),
+        ],
+        default="Y",
+        update=on_y_axis_remap_change
+    )  # Default: Y
+
+    remap_z_axis: EnumProperty(
+        name="Remap Z Axis",
+        description="Remap the Z axis to another axis",
+        items=[
+            ("X", "X", "Map Z to X"),
+            ("Y", "Y", "Map Z to Y"),
+            ("Z", "Z", "Keep Z as Z"),
+        ],
+        default="Z",
+        update=on_z_axis_remap_change
+    )  # Default: Z
     show_button_text: BoolProperty(
         name="Show Buttons Text",
         description="Show Text on the Import/Export Buttons",
@@ -414,8 +501,12 @@ class GoB_Preferences(AddonPreferences):
             col.prop(self, "pixologoc_path")
 
         col.prop(self, "clean_project_path")
-        col.prop(self, "flip_up_axis")
-        col.prop(self, "flip_forward_axis")
+        col.prop(self, "remap_x_axis")
+        col.prop(self, "flip_x_axis")
+        col.prop(self, "remap_y_axis")
+        col.prop(self, "flip_y_axis")
+        col.prop(self, "remap_z_axis")
+        col.prop(self, "flip_z_axis")
         col.prop(self, "use_scale")
         if self.use_scale == "MANUAL":
             col.prop(self, "manual_scale")

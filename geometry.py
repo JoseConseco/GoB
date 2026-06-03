@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import re
+
 import bpy
 import bmesh
 import mathutils
@@ -68,57 +70,7 @@ def apply_transformation(me, is_import=True):
         if utils.prefs().debug_output:
             print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
 
-    #import
-    if utils.prefs().flip_up_axis:  # fixes bad mesh orientation for some people
-        if utils.prefs().flip_forward_axis:
-            if is_import:
-                me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-        elif is_import:
-            #import
-            me.transform(mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, 1.0, 0.0),
-                (0.0, 1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * scale
-            )
-        else:
-            #export
-            mat_transform = mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, 1.0, 0.0),
-                (0.0, 1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-
-    elif utils.prefs().flip_forward_axis:
-        if is_import:
-            #import
-            me.transform(mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, -1.0, 0.0),
-                (0.0, -1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * scale
-            )
-            #me.flip_normals()
-        else:
-            #export
-            mat_transform = mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, -1.0, 0.0),
-                (0.0, -1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    elif is_import:
+    if is_import:
         #import
         me.transform(mathutils.Matrix([
             (1.0, 0.0, 0.0, 0.0),
@@ -133,6 +85,68 @@ def apply_transformation(me, is_import=True):
             (0.0, 0.0, -1.0, 0.0),
             (0.0, 1.0, 0.0, 0.0),
             (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+
+    # Apply axis remapping
+    if (utils.prefs().remap_x_axis != 'NONE' or
+        utils.prefs().remap_y_axis != 'NONE' or
+        utils.prefs().remap_z_axis != 'NONE'):
+
+        # Initialize a 4x4 identity matrix
+        remap_matrix = mathutils.Matrix.Identity(4)
+
+        # Reset the 3x3 portion to zero (this prevents interference from previous operations)
+        for i in range(3):
+            for j in range(3):
+                remap_matrix[i][j] = 0.0
+
+        # Set values to be used in the remap matrix
+        x_value = 1.0
+        y_value = 1.0
+        z_value = 1.0
+
+        # Flip values if axes are flipped
+        if utils.prefs().flip_x_axis:
+            x_value = -1.0
+        if utils.prefs().flip_y_axis:
+            y_value = -1.0
+        if utils.prefs().flip_z_axis:
+            z_value = -1.0
+
+        # Set up how new X comes from original coordinates
+        if utils.prefs().remap_x_axis == 'X':
+            remap_matrix[0][0] = x_value
+        elif utils.prefs().remap_x_axis == 'Y':
+            remap_matrix[0][1] = x_value
+        elif utils.prefs().remap_x_axis == 'Z':
+            remap_matrix[0][2] = x_value
+
+        # Set up how new Y comes from original coordinates
+        if utils.prefs().remap_y_axis == 'X':
+            remap_matrix[1][0] = y_value
+        elif utils.prefs().remap_y_axis == 'Y':
+            remap_matrix[1][1] = y_value
+        elif utils.prefs().remap_y_axis == 'Z':
+            remap_matrix[1][2] = y_value
+
+        # Set up how new Z comes from original coordinates
+        if utils.prefs().remap_z_axis == 'X':
+            remap_matrix[2][0] = z_value
+        elif utils.prefs().remap_z_axis == 'Y':
+            remap_matrix[2][1] = z_value
+        elif utils.prefs().remap_z_axis == 'Z':
+            remap_matrix[2][2] = z_value
+
+        # Apply the remapping transformation
+        if is_import:
+            me.transform(remap_matrix * scale)
+        else:
+            remap_matrix = remap_matrix.inverted()
+            me.transform(remap_matrix * scale)
+
+        # Flip normals if they have been inverted by the transform
+        det = remap_matrix.determinant()
+        if det < 0:
+            me.flip_normals()
 
     return me, mat_transform
 
