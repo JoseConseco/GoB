@@ -70,57 +70,7 @@ def apply_transformation(me, is_import=True):
         if utils.prefs().debug_output:
             print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
 
-    #import
-    if utils.prefs().flip_up_axis:  # fixes bad mesh orientation for some people
-        if utils.prefs().flip_forward_axis:
-            if is_import:
-                me.transform(mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, -1.0, 0.0),
-                    (0.0, 1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * scale
-                )
-            else:
-                #export
-                mat_transform = mathutils.Matrix([
-                    (1.0, 0.0, 0.0, 0.0),
-                    (0.0, 0.0, 1.0, 0.0),
-                    (0.0, -1.0, 0.0, 0.0),
-                    (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-        elif is_import:
-            #import
-            me.transform(mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, 1.0, 0.0),
-                (0.0, 1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * scale
-            )
-        else:
-            #export
-            mat_transform = mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, 1.0, 0.0),
-                (0.0, 1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-
-    elif utils.prefs().flip_forward_axis:
-        if is_import:
-            #import
-            me.transform(mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, -1.0, 0.0),
-                (0.0, -1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * scale
-            )
-            #me.flip_normals()
-        else:
-            #export
-            mat_transform = mathutils.Matrix([
-                (-1.0, 0.0, 0.0, 0.0),
-                (0.0, 0.0, -1.0, 0.0),
-                (0.0, -1.0, 0.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
-    elif is_import:
+    if is_import:
         #import
         me.transform(mathutils.Matrix([
             (1.0, 0.0, 0.0, 0.0),
@@ -154,30 +104,40 @@ def apply_transformation(me, is_import=True):
                 remap_matrix[i][j] = 0.0
 
         # Set up how new X comes from original coordinates
+
+        x_value = 1.0
+        y_value = 1.0
+        z_value = 1.0
+
+        if utils.prefs().flip_x_axis:
+            x_value = -1.0
+        if utils.prefs().flip_y_axis:
+            y_value = -1.0
+        if utils.prefs().flip_z_axis:
+            z_value = -1.0
+
         if utils.prefs().remap_x_axis == 'X':
-            remap_matrix[0][0] = 1.0
+            remap_matrix[0][0] = x_value
         elif utils.prefs().remap_x_axis == 'Y':
-            remap_matrix[0][1] = -1.0
+            remap_matrix[0][1] = x_value
         elif utils.prefs().remap_x_axis == 'Z':
-            remap_matrix[0][2] = -1.0
+            remap_matrix[0][2] = x_value
 
         # Set up how new Y comes from original coordinates
         if utils.prefs().remap_y_axis == 'X':
-            remap_matrix[1][0] = 1.0
+            remap_matrix[1][0] = y_value
         elif utils.prefs().remap_y_axis == 'Y':
-            remap_matrix[1][1] = 1.0
+            remap_matrix[1][1] = y_value
         elif utils.prefs().remap_y_axis == 'Z':
-            remap_matrix[1][2] = -1.0
+            remap_matrix[1][2] = y_value
 
         # Set up how new Z comes from original coordinates
         if utils.prefs().remap_z_axis == 'X':
-            remap_matrix[2][0] = 1.0
+            remap_matrix[2][0] = z_value
         elif utils.prefs().remap_z_axis == 'Y':
-            remap_matrix[2][1] = -1.0
+            remap_matrix[2][1] = z_value
         elif utils.prefs().remap_z_axis == 'Z':
-            remap_matrix[2][2] = 1.0
-
-        print(remap_matrix)
+            remap_matrix[2][2] = z_value
 
         # Apply the remapping transformation
         if is_import:
@@ -186,40 +146,9 @@ def apply_transformation(me, is_import=True):
             remap_matrix = remap_matrix.inverted()
             me.transform(remap_matrix * scale)
 
-        # Flip normals if exactly two axes were remapped (which indicates a reflection)
-        # Count how many axes are being remapped
-        remaps_count = 0
-        if utils.prefs().remap_x_axis != 'X':
-            remaps_count += 1
-        if utils.prefs().remap_y_axis != 'Y':
-            remaps_count += 1
-        if utils.prefs().remap_z_axis != 'Z':
-            remaps_count += 1
-
-        # Flip normals for exactly two remaps (reflection)
-        #if remaps_count == 2:
-        #    me.flip_normals()
-
         det = remap_matrix.determinant()
         if det < 0:
             me.flip_normals()
-
-    # Apply individual axis flipping
-    if utils.prefs().flip_x_axis or utils.prefs().flip_y_axis or utils.prefs().flip_z_axis:
-        # Create transformation matrix for individual axes
-        flip_matrix = mathutils.Matrix.Identity(4)
-
-        if utils.prefs().flip_x_axis:
-            flip_matrix[0][0] = -1.0
-
-        if utils.prefs().flip_y_axis:
-            flip_matrix[1][1] = -1.0
-
-        if utils.prefs().flip_z_axis:
-            flip_matrix[2][2] = -1.0
-
-        # Apply the transformation
-        me.transform(flip_matrix * scale)
 
     return me, mat_transform
 
