@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import re
+
 import bpy
 import bmesh
 import mathutils
@@ -155,9 +157,9 @@ def apply_transformation(me, is_import=True):
         if utils.prefs().remap_x_axis == 'X':
             remap_matrix[0][0] = 1.0
         elif utils.prefs().remap_x_axis == 'Y':
-            remap_matrix[0][1] = 1.0
+            remap_matrix[0][1] = -1.0
         elif utils.prefs().remap_x_axis == 'Z':
-            remap_matrix[0][2] = 1.0
+            remap_matrix[0][2] = -1.0
 
         # Set up how new Y comes from original coordinates
         if utils.prefs().remap_y_axis == 'X':
@@ -165,19 +167,25 @@ def apply_transformation(me, is_import=True):
         elif utils.prefs().remap_y_axis == 'Y':
             remap_matrix[1][1] = 1.0
         elif utils.prefs().remap_y_axis == 'Z':
-            remap_matrix[1][2] = 1.0
+            remap_matrix[1][2] = -1.0
 
         # Set up how new Z comes from original coordinates
         if utils.prefs().remap_z_axis == 'X':
             remap_matrix[2][0] = 1.0
         elif utils.prefs().remap_z_axis == 'Y':
-            remap_matrix[2][1] = 1.0
+            remap_matrix[2][1] = -1.0
         elif utils.prefs().remap_z_axis == 'Z':
             remap_matrix[2][2] = 1.0
 
+        print(remap_matrix)
+
         # Apply the remapping transformation
-        me.transform(remap_matrix * scale)
-        
+        if is_import:
+            me.transform(remap_matrix * scale)
+        else:
+            remap_matrix = remap_matrix.inverted()
+            me.transform(remap_matrix * scale)
+
         # Flip normals if exactly two axes were remapped (which indicates a reflection)
         # Count how many axes are being remapped
         remaps_count = 0
@@ -187,9 +195,13 @@ def apply_transformation(me, is_import=True):
             remaps_count += 1
         if utils.prefs().remap_z_axis != 'Z':
             remaps_count += 1
-            
+
         # Flip normals for exactly two remaps (reflection)
-        if remaps_count == 2:
+        #if remaps_count == 2:
+        #    me.flip_normals()
+
+        det = remap_matrix.determinant()
+        if det < 0:
             me.flip_normals()
 
     # Apply individual axis flipping
