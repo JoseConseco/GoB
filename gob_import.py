@@ -547,12 +547,13 @@ class GoB_OT_import(Operator):
                     if utils.prefs().import_polygroups_to_facesets:
                         if ".sculpt_face_set" not in obj.data.attributes:
                             obj.data.attributes.new(".sculpt_face_set", "INT", "FACE")
-                        face_set_index_storage = [int(pgmat) for pgmat in polyGroupData]
+                        face_set_index_storage = [0] * len(me.polygons)
 
                     # Assign data to polygons
-                    for i, pgmat in enumerate(polyGroupData):
+                    for i in range(min(len(me.polygons), len(polyGroupData))):
+                        pgmat = polyGroupData[i]
                         if utils.prefs().import_material == "POLYGROUPS":
-                            obj.data.polygons[i].material_index = obj.material_slots[
+                            me.polygons[i].material_index = obj.material_slots[
                                 str(pgmat)
                             ].slot_index
                         if utils.prefs().import_polygroups_to_facesets:
