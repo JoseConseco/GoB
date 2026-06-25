@@ -223,12 +223,13 @@ def apply_modifiers(obj:Object) -> Mesh:
 
     if utils.prefs().export_modifiers == 'APPLY_EXPORT':
         mesh_tmp = bpy.data.meshes.new_from_object(object_eval)
-        copy_sculpt_attributes(original_mesh, mesh_tmp)
+        #copy_sculpt_attributes(original_mesh, mesh_tmp)
         obj.data = mesh_tmp
         obj.modifiers.clear()
 
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
         mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+        obj_tmp = obj.evaluated_get(depsgraph)
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
@@ -238,7 +239,9 @@ def apply_modifiers(obj:Object) -> Mesh:
     # Read face set values from original_mesh BEFORE the bmesh round-trip,
     # while face indices still correspond 1:1 with mesh_tmp faces.
     face_set_values = None
-    face_set_attr = original_mesh.attributes.get('.sculpt_face_set')
+    face_set_attr = original_mesh.attributes.get('sculpt_face_set')
+    if utils.prefs().debug_output:
+        print("Face sets found: ", face_set_attr)
     if face_set_attr and len(face_set_attr.data) == len(mesh_tmp.polygons):
         face_set_values = [d.value for d in face_set_attr.data]
 
@@ -262,12 +265,18 @@ def apply_modifiers(obj:Object) -> Mesh:
     # triangulation and join_triangles — bmesh propagates custom face int
     # layers onto new faces created during triangulation automatically.
     face_set_layer = None
+    if utils.prefs().debug_output:
+        print("Face set values: ", face_set_values)
+        print("Face set layer: ", face_set_layer)
     if face_set_values is not None:
         face_set_layer = bm.faces.layers.int.new('face_set_tmp')
         bm.faces.ensure_lookup_table()
         for i, face in enumerate(bm.faces):
             if i < len(face_set_values):
                 face[face_set_layer] = face_set_values[i]
+
+    if utils.prefs().debug_output:
+        print("Face set layer: ", face_set_layer)
 
     if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
         bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
@@ -299,17 +308,25 @@ def apply_modifiers(obj:Object) -> Mesh:
     # bm.to_mesh() wrote out for us.
     if face_set_layer is not None:
         face_set_out = mesh_out.attributes.get('face_set_tmp')
+        if utils.prefs().debug_output:
+            print(f"face_set_out is: {face_set_out}") # Add this
         if face_set_out:
             # Create the real sculpt face set attribute and populate it
-            sculpt_fs = mesh_out.attributes.get('.sculpt_face_set')
+            sculpt_fs = mesh_out.attributes.get('sculpt_face_set')
             if sculpt_fs:
                 mesh_out.attributes.remove(sculpt_fs)
-            sculpt_fs = mesh_out.attributes.new('.sculpt_face_set', 'INT', 'FACE')
+            sculpt_fs = mesh_out.attributes.new('sculpt_face_set', 'INT', 'FACE')
             src_values = [d.value for d in face_set_out.data]
             for i, d in enumerate(sculpt_fs.data):
                 d.value = src_values[i]
             # Remove the temporary layer
             mesh_out.attributes.remove(face_set_out)
+            if utils.prefs().debug_output:
+                print("Attributes:", mesh_out.attributes.keys())
+                if mesh_out.attributes.get('sculpt_face_set'):
+                    print("true")
+                else:
+                    print("false")
 
     # Restore sculpt mask — per-vertex so unaffected by triangulation,
     # but still needs explicit copy as bmesh drops it.
