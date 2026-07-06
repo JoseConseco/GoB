@@ -48,6 +48,38 @@ class GoB_OT_import(Operator):
         ]
     )
 
+    def _ensure_object_in_view_layer(self, obj: bpy.types.Object, obj_name: str) -> None:
+        """Link obj into the active view layer if it only exists as orphan/excluded data."""
+        view_layer = bpy.context.view_layer
+        if obj.name in view_layer.objects:
+            return
+
+        if utils.prefs().debug_output:
+            print(f"\nGoB Re-linking object into view layer: {obj_name}")
+
+        # Scene root is always on the view layer; active subcollections may be excluded.
+        scene_coll = bpy.context.scene.collection
+        if obj.name not in scene_coll.objects:
+            scene_coll.objects.link(obj)
+
+        obj.hide_set(False)
+        obj.hide_viewport = False
+        view_layer.update()
+
+        if obj.name not in view_layer.objects:
+            for coll in list(obj.users_collection):
+                if coll != scene_coll:
+                    coll.objects.unlink(obj)
+            if obj.name not in scene_coll.objects:
+                scene_coll.objects.link(obj)
+            view_layer.update()
+
+        if obj.name not in view_layer.objects:
+            raise RuntimeError(
+                f"GoB: '{obj_name}' could not be added to view layer "
+                f"'{view_layer.name}'"
+            )
+
     def make_mesh(self, objName, vertsData, facesData) -> tuple:
         """Create or update a mesh object from the given vertices and faces data.
 
@@ -73,14 +105,8 @@ class GoB_OT_import(Operator):
                 print(f"\nGoB Creating new object: {objName}")
             me = bpy.data.meshes.new(objName)
             obj = bpy.data.objects.new(objName, me)
-            if bpy.context.view_layer.active_layer_collection:
-                bpy.context.view_layer.active_layer_collection.collection.objects.link(
-                    obj
-                )
-            else:
-                print(
-                    "Error: Active layer collection is not set or invalid. Object could not be linked."
-                )
+
+        self._ensure_object_in_view_layer(obj, objName)
 
         # Clear and update mesh geometry
         if bpy.app.version >= (3, 6, 0):
@@ -99,6 +125,7 @@ class GoB_OT_import(Operator):
         me.validate(verbose=utils.prefs().debug_output)
 
         # Set object as active and update view layer
+        self._ensure_object_in_view_layer(obj, objName)
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
         bpy.context.view_layer.update()
