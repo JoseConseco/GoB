@@ -18,6 +18,7 @@
 
 import os
 import random
+import re
 import string
 import time
 from struct import unpack
@@ -47,6 +48,67 @@ class GoB_OT_import(Operator):
             ("AUTO", "toggle automatic import", "toggle automatic import"),
         ]
     )
+
+    def _resolve_import_object(self, obj_name: str):
+        """Map ZBrush _low2 / _low3 names onto the canonical Blender _low object."""
+        obj = bpy.data.objects.get(obj_name)
+        if obj is not None:
+            return obj, obj_name
+
+        match = re.match(r"^(?P<base>.+)_low\d+$", obj_name)
+        if match:
+            canonical = f"{match.group('base')}_low"
+            obj = bpy.data.objects.get(canonical)
+            if obj is not None and obj.type == "MESH":
+                if utils.prefs().debug_output:
+                    print(f"GoB: resolved import name {obj_name} → {canonical}")
+                return obj, canonical
+
+        return None, obj_name
+
+    def _high_name_for_low(self, low_name: str) -> str | None:
+        if not low_name.lower().endswith("_low"):
+            return None
+        high_name = re.sub(r"_low$", "_high", low_name, flags=re.IGNORECASE)
+        high_obj = bpy.data.objects.get(high_name)
+        if high_obj is not None and high_obj.type == "MESH":
+            return high_name
+        return None
+
+    def _sync_low_collections_from_high(self, obj: bpy.types.Object, low_name: str) -> None:
+        high_name = self._high_name_for_low(low_name)
+        if high_name is None:
+            return
+        high_obj = bpy.data.objects.get(high_name)
+        if high_obj is None:
+            return
+
+        scene_root = bpy.context.scene.collection
+        for coll in high_obj.users_collection:
+            if obj.name not in coll.objects:
+                coll.objects.link(obj)
+
+        if scene_root not in high_obj.users_collection and obj.name in scene_root.objects:
+            try:
+                scene_root.objects.unlink(obj)
+            except RuntimeError:
+                pass
+
+    def _remove_stale_low_variants(self, canonical_obj: bpy.types.Object, low_name: str) -> None:
+        if not low_name.lower().endswith("_low"):
+            return
+        base = low_name[: -len("_low")]
+        prefix = f"{base}_low"
+        for other in list(bpy.data.objects):
+            if other == canonical_obj or other.type != "MESH":
+                continue
+            if not other.name.startswith(prefix):
+                continue
+            suffix = other.name[len(prefix) :]
+            if suffix.isdigit() or suffix.startswith("."):
+                if utils.prefs().debug_output:
+                    print(f"GoB: removing stale low variant {other.name}")
+                bpy.data.objects.remove(other, do_unlink=True)
 
     def _ensure_object_in_view_layer(self, obj: bpy.types.Object, obj_name: str) -> None:
         """Link obj into the active view layer if it only exists as orphan/excluded data."""
@@ -95,7 +157,8 @@ class GoB_OT_import(Operator):
         if utils.prefs().debug_output:
             print(f"\nGoB Object Name: {objName}")
 
-        obj = bpy.data.objects.get(objName)
+        goz_name = objName
+        obj, objName = self._resolve_import_object(objName)
         if obj:
             if utils.prefs().debug_output:
                 print(f"\nGoB Object already exists: {objName}")
@@ -126,6 +189,9 @@ class GoB_OT_import(Operator):
 
         # Set object as active and update view layer
         self._ensure_object_in_view_layer(obj, objName)
+        self._sync_low_collections_from_high(obj, objName)
+        if goz_name != objName:
+            self._remove_stale_low_variants(obj, objName)
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
         bpy.context.view_layer.update()
@@ -576,8 +642,12 @@ class GoB_OT_import(Operator):
                             obj.data.attributes.new(".sculpt_face_set", "INT", "FACE")
                         face_set_index_storage = [int(pgmat) for pgmat in polyGroupData]
 
+                    face_count = len(obj.data.polygons)
+
                     # Assign data to polygons
                     for i, pgmat in enumerate(polyGroupData):
+                        if i >= face_count:
+                            break
                         if utils.prefs().import_material == "POLYGROUPS":
                             obj.data.polygons[i].material_index = obj.material_slots[
                                 str(pgmat)
@@ -591,6 +661,21 @@ class GoB_OT_import(Operator):
 
                     # Apply face sets
                     if utils.prefs().import_polygroups_to_facesets:
+                        if len(face_set_index_storage) != face_count:
+                            if utils.prefs().debug_output:
+                                print(
+                                    "GoB: polygroup count",
+                                    len(face_set_index_storage),
+                                    "!= face count",
+                                    face_count,
+                                    "- adjusting face sets",
+                                )
+                            if len(face_set_index_storage) > face_count:
+                                face_set_index_storage = face_set_index_storage[:face_count]
+                            else:
+                                face_set_index_storage.extend(
+                                    [0] * (face_count - len(face_set_index_storage))
+                                )
                         obj.data.attributes[".sculpt_face_set"].data.foreach_set(
                             "value", face_set_index_storage
                         )
