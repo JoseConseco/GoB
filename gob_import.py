@@ -82,6 +82,29 @@ class GoB_OT_import(Operator):
                     "Error: Active layer collection is not set or invalid. Object could not be linked."
                 )
 
+        # Snapshot existing vertex-group weights before modifying geometry
+        saved_groups = {}
+        original_vert_count = len(me.vertices) if me is not None else 0
+        if obj and original_vert_count and obj.vertex_groups:
+            try:
+                for g in obj.vertex_groups:
+                    # Skip mask and numeric polygroups (they will be recreated/managed by the importer)
+                    try:
+                        gname = g.name
+                    except Exception:
+                        continue
+                    if gname.lower() == 'mask' or gname.isdigit():
+                        continue
+                    weights = [0.0] * original_vert_count
+                    for i in range(original_vert_count):
+                        try:
+                            weights[i] = g.weight(i)
+                        except Exception:
+                            weights[i] = 0.0
+                    saved_groups[gname] = weights
+            except Exception:
+                saved_groups = {}
+
         # Clear and update mesh geometry
         if bpy.app.version >= (3, 6, 0):
             me.clear_geometry()
@@ -91,6 +114,27 @@ class GoB_OT_import(Operator):
             me.polygons.clear()
 
         me.from_pydata(vertsData, [], facesData)
+
+        # Reapply saved vertex-group weights if vertex count still matches
+        try:
+            if saved_groups and len(me.vertices) == original_vert_count:
+                for name, weights in saved_groups.items():
+                    existing = obj.vertex_groups.get(name)
+                    if existing:
+                        try:
+                            obj.vertex_groups.remove(existing)
+                        except Exception:
+                            pass
+                    g = obj.vertex_groups.new(name=name)
+                    for idx, w in enumerate(weights):
+                        if w and w > 0.0:
+                            try:
+                                g.add([idx], w, 'REPLACE')
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
         me.update(calc_edges=True, calc_edges_loose=True)
 
         # Apply transformations and validate mesh
