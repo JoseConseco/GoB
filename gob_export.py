@@ -313,7 +313,14 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<Q', numVertices))
 
                     mask_data = np.zeros(numVertices, dtype=np.float32)
-                    mesh_tmp.attributes['.sculpt_mask'].data.foreach_get('value', mask_data)
+                    mask_attr = mesh_tmp.attributes.get(".sculpt_mask")
+
+                    if mask_attr and len(mask_attr.data) == len(mask_data):
+                        mask_attr.data.foreach_get('value', mask_data)
+                    else:
+                        mask_data[:] = [0.0] * len(mask_data)
+
+                    mask_data = np.where(mask_data < 0, 0.0, mask_data)
                     mask_values = ((1.0 - mask_data) * 65535).astype(np.uint16)
 
                     goz_file.write(pack(f'<{numVertices}H', *mask_values))
@@ -397,7 +404,7 @@ class GoB_OT_export(Operator):
                             vgData.append([])
                             for vert in face.vertices:
                                 for vg in mesh_tmp.vertices[vert].groups:
-                                    if vg.weight >= utils.prefs().export_weight_threshold and obj.vertex_groups[vg.group].name.lower() != 'mask':
+                                    if vg.weight >= prefs().export_weight_threshold and vg.group < len(obj.vertex_groups) and obj.vertex_groups[vg.group].name.lower() != 'mask':
                                         vgData[face.index].append(vg.group)
 
                             if vgData[face.index]:

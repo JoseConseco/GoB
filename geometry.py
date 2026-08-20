@@ -229,7 +229,6 @@ def apply_modifiers(obj:Object) -> Mesh:
 
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
         mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
-        obj_tmp = obj.evaluated_get(depsgraph)
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh to_mesh")
 
