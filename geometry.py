@@ -27,6 +27,55 @@ from bpy.types import Object, Mesh
 from . import utils
 
 
+SCULPT_FACE_SET_ATTRIBUTE = '.sculpt_face_set'
+LEGACY_SCULPT_FACE_SET_ATTRIBUTE = 'sculpt_face_set'
+SCULPT_FACE_SET_ATTRIBUTE_NAMES = (
+    SCULPT_FACE_SET_ATTRIBUTE,
+    LEGACY_SCULPT_FACE_SET_ATTRIBUTE,
+)
+
+
+def get_sculpt_face_set_attribute(mesh: Mesh):
+    """Return a valid face-set attribute, preferring Blender's native name."""
+    for name in SCULPT_FACE_SET_ATTRIBUTE_NAMES:
+        attribute = mesh.attributes.get(name)
+        if (
+            attribute is not None
+            and attribute.domain == 'FACE'
+            and attribute.data_type == 'INT'
+        ):
+            return attribute
+    return None
+
+
+def set_sculpt_face_set_attribute(mesh: Mesh, values):
+    """Store face-set values under Blender's native attribute name.
+
+    Both the native and legacy undotted names are removed so an export mesh
+    cannot contain two competing face-set attributes.
+    """
+    values = list(values)
+    if len(values) != len(mesh.polygons):
+        return None
+
+    attribute = mesh.attributes.get(SCULPT_FACE_SET_ATTRIBUTE)
+    if attribute is not None and (
+        attribute.domain != 'FACE' or attribute.data_type != 'INT'
+    ):
+        mesh.attributes.remove(attribute)
+        mesh.update()
+        attribute = None
+
+    legacy_attribute = mesh.attributes.get(LEGACY_SCULPT_FACE_SET_ATTRIBUTE)
+    if legacy_attribute is not None:
+        mesh.attributes.remove(legacy_attribute)
+
+    if attribute is None:
+        attribute = mesh.attributes.new(SCULPT_FACE_SET_ATTRIBUTE, 'INT', 'FACE')
+    attribute.data.foreach_set('value', values)
+    return attribute
+
+
 def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
 
     if obj.data.color_attributes:
@@ -54,101 +103,143 @@ def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
     return vcolArray
 
 
+_IMPORT_AXIS_MATRIX = mathutils.Matrix(
+    (
+        (1.0, 0.0, 0.0, 0.0),
+        (0.0, 0.0, 1.0, 0.0),
+        (0.0, -1.0, 0.0, 0.0),
+        (0.0, 0.0, 0.0, 1.0),
+    )
+)
+_EXPORT_AXIS_MATRIX = _IMPORT_AXIS_MATRIX.inverted()
+_MIN_SCALE = 1.0e-8
+
+
+def _positive_finite(value, label):
+    """Return a usable positive float, or None after reporting bad input."""
+
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        value = 0.0
+
+    if not math.isfinite(value) or value <= _MIN_SCALE:
+        print(f"GoB: Invalid {label} {value!r}; using unit scale instead.")
+        return None
+    return value
+
+
+def _import_scale_factor() -> float:
+    """Return the single scale multiplier used when importing from GoZ."""
+
+    prefs = utils.prefs()
+    if prefs.use_scale == "BUNITS":
+        unit_scale = _positive_finite(
+            bpy.context.scene.unit_settings.scale_length, "Blender unit scale"
+        )
+        return 1.0 / unit_scale if unit_scale is not None else 1.0
+
+    if prefs.use_scale == "MANUAL":
+        manual_scale = _positive_finite(prefs.manual_scale, "manual scale")
+        return 1.0 / manual_scale if manual_scale is not None else 1.0
+
+    if prefs.use_scale == "ZUNITS":
+        target_scale = _positive_finite(prefs.zbrush_scale, "ZBrush scale")
+        obj = bpy.context.active_object
+        if obj is None:
+            print("GoB: ZBrush Units requires an active object; using unit scale.")
+            return 1.0
+
+        max_dimension = _positive_finite(
+            max(abs(float(dimension)) for dimension in obj.dimensions),
+            "active object dimension",
+        )
+        if target_scale is None or max_dimension is None:
+            return 1.0
+
+        scale = max_dimension / target_scale
+        if prefs.debug_output:
+            print(
+                "GoB ZBrush Units:",
+                obj.dimensions,
+                "target:",
+                target_scale,
+                "import scale:",
+                scale,
+            )
+        return scale
+
+    print(f"GoB: Unknown scale mode {prefs.use_scale!r}; using unit scale.")
+    return 1.0
+
+
+def _axis_remap_matrix():
+    """Build a validated local-space axis permutation and flip matrix."""
+
+    prefs = utils.prefs()
+    axis_names = (
+        prefs.remap_x_axis,
+        prefs.remap_y_axis,
+        prefs.remap_z_axis,
+    )
+    flip_values = (
+        -1.0 if prefs.flip_x_axis else 1.0,
+        -1.0 if prefs.flip_y_axis else 1.0,
+        -1.0 if prefs.flip_z_axis else 1.0,
+    )
+
+    # Preference callbacks normally enforce a permutation. Fall back to the
+    # identity mapping if persisted or programmatic values are invalid, while
+    # still honoring the explicitly requested axis flips.
+    if set(axis_names) != {"X", "Y", "Z"}:
+        print(
+            f"GoB: Invalid axis remapping {axis_names!r}; "
+            "using identity remapping."
+        )
+        axis_names = ("X", "Y", "Z")
+
+    axis_indices = {"X": 0, "Y": 1, "Z": 2}
+    matrix = mathutils.Matrix.Identity(4)
+    for row in range(3):
+        for column in range(3):
+            matrix[row][column] = 0.0
+        matrix[row][axis_indices[axis_names[row]]] = flip_values[row]
+
+    return matrix
+
+
 def apply_transformation(me, is_import=True):
-    mat_transform = None
-    scale = 1.0
+    """Apply reciprocal GoZ axis, unit-scale, remapping, and flip transforms."""
 
-    if utils.prefs().use_scale == 'BUNITS':
-        scale = 1 / bpy.context.scene.unit_settings.scale_length
-
-    if utils.prefs().use_scale == 'MANUAL':
-        scale =  1 / utils.prefs().manual_scale
-
-    if utils.prefs().use_scale == 'ZUNITS' and (obj := bpy.context.active_object):
-        i, max = utils.max_list_value(obj.dimensions)
-        scale =  1 / utils.prefs().zbrush_scale * max
-        if utils.prefs().debug_output:
-            print("unit scale 2: ", obj.dimensions, i, max, scale, obj.dimensions * scale)
+    import_scale = _import_scale_factor()
+    remap_matrix = _axis_remap_matrix()
 
     if is_import:
-        #import
-        me.transform(mathutils.Matrix([
-            (1.0, 0.0, 0.0, 0.0),
-            (0.0, 0.0, 1.0, 0.0),
-            (0.0, -1.0, 0.0, 0.0),
-            (0.0, 0.0, 0.0, 1.0)]) * scale
+        # This is the inverse of the export sequence: unit scale is applied
+        # exactly once, followed by GoZ axis conversion and local remapping.
+        import_matrix = (
+            remap_matrix
+            @ _IMPORT_AXIS_MATRIX
+            @ mathutils.Matrix.Scale(import_scale, 4)
         )
+        me.transform(import_matrix)
     else:
-        #export
-        mat_transform = mathutils.Matrix([
-            (1.0, 0.0, 0.0, 0.0),
-            (0.0, 0.0, -1.0, 0.0),
-            (0.0, 1.0, 0.0, 0.0),
-            (0.0, 0.0, 0.0, 1.0)]) * (1/scale)
+        # Remap world-space coordinates, not the temporary mesh around each
+        # object's local origin. The exporter applies this returned matrix
+        # after obj.matrix_world, preserving relative placement when objects
+        # have different origins or unapplied transforms.
+        mat_transform = (
+            _EXPORT_AXIS_MATRIX
+            @ mathutils.Matrix.Scale(1.0 / import_scale, 4)
+            @ remap_matrix.inverted()
+        )
 
-    # Apply axis remapping
-    if (utils.prefs().remap_x_axis != 'NONE' or
-        utils.prefs().remap_y_axis != 'NONE' or
-        utils.prefs().remap_z_axis != 'NONE'):
+    # A reflection reverses winding in either direction. Positive unit scales
+    # do not affect this determinant, so normals are handled only once here.
+    if remap_matrix.determinant() < 0.0:
+        me.flip_normals()
 
-        # Initialize a 4x4 identity matrix
-        remap_matrix = mathutils.Matrix.Identity(4)
-
-        # Reset the 3x3 portion to zero (this prevents interference from previous operations)
-        for i in range(3):
-            for j in range(3):
-                remap_matrix[i][j] = 0.0
-
-        # Set values to be used in the remap matrix
-        x_value = 1.0
-        y_value = 1.0
-        z_value = 1.0
-
-        # Flip values if axes are flipped
-        if utils.prefs().flip_x_axis:
-            x_value = -1.0
-        if utils.prefs().flip_y_axis:
-            y_value = -1.0
-        if utils.prefs().flip_z_axis:
-            z_value = -1.0
-
-        # Set up how new X comes from original coordinates
-        if utils.prefs().remap_x_axis == 'X':
-            remap_matrix[0][0] = x_value
-        elif utils.prefs().remap_x_axis == 'Y':
-            remap_matrix[0][1] = x_value
-        elif utils.prefs().remap_x_axis == 'Z':
-            remap_matrix[0][2] = x_value
-
-        # Set up how new Y comes from original coordinates
-        if utils.prefs().remap_y_axis == 'X':
-            remap_matrix[1][0] = y_value
-        elif utils.prefs().remap_y_axis == 'Y':
-            remap_matrix[1][1] = y_value
-        elif utils.prefs().remap_y_axis == 'Z':
-            remap_matrix[1][2] = y_value
-
-        # Set up how new Z comes from original coordinates
-        if utils.prefs().remap_z_axis == 'X':
-            remap_matrix[2][0] = z_value
-        elif utils.prefs().remap_z_axis == 'Y':
-            remap_matrix[2][1] = z_value
-        elif utils.prefs().remap_z_axis == 'Z':
-            remap_matrix[2][2] = z_value
-
-        # Apply the remapping transformation
-        if is_import:
-            me.transform(remap_matrix * scale)
-        else:
-            remap_matrix = remap_matrix.inverted()
-            me.transform(remap_matrix * scale)
-
-        # Flip normals if they have been inverted by the transform
-        det = remap_matrix.determinant()
-        if det < 0:
-            me.flip_normals()
-
-    return me, mat_transform
+    return me, None if is_import else mat_transform
 
 
 def mesh_welder(obj, d = 0.0001):
@@ -235,13 +326,24 @@ def apply_modifiers(obj:Object) -> Mesh:
     else:
         mesh_tmp = obj.data
 
-    # Read face set values from original_mesh BEFORE the bmesh round-trip,
-    # while face indices still correspond 1:1 with mesh_tmp faces.
+    # Prefer face sets propagated through the evaluated mesh. This preserves
+    # their mapping when a modifier changes topology. Fall back to the source
+    # mesh only when its polygons still correspond 1:1 with the export mesh.
     face_set_values = None
-    face_set_attr = original_mesh.attributes.get('sculpt_face_set')
+    face_set_attr = get_sculpt_face_set_attribute(mesh_tmp)
+    face_set_source = 'evaluated mesh'
+    if face_set_attr is None or len(face_set_attr.data) != len(mesh_tmp.polygons):
+        face_set_attr = get_sculpt_face_set_attribute(original_mesh)
+        face_set_source = 'source mesh'
+        if (
+            face_set_attr is not None
+            and len(face_set_attr.data) != len(mesh_tmp.polygons)
+        ):
+            face_set_attr = None
+
     if utils.prefs().debug_output:
-        print("Face sets found: ", face_set_attr)
-    if face_set_attr and len(face_set_attr.data) == len(mesh_tmp.polygons):
+        print(f"Face sets found on {face_set_source}: ", face_set_attr)
+    if face_set_attr is not None:
         face_set_values = [d.value for d in face_set_attr.data]
 
     # Read sculpt mask values from original_mesh — these are per-vertex so
@@ -264,11 +366,15 @@ def apply_modifiers(obj:Object) -> Mesh:
     # triangulation and join_triangles — bmesh propagates custom face int
     # layers onto new faces created during triangulation automatically.
     face_set_layer = None
+    face_set_layer_name = None
     if utils.prefs().debug_output:
         print("Face set values: ", face_set_values)
         print("Face set layer: ", face_set_layer)
     if face_set_values is not None:
-        face_set_layer = bm.faces.layers.int.new('face_set_tmp')
+        face_set_layer_name = '__gob_face_set_tmp__'
+        while bm.faces.layers.int.get(face_set_layer_name) is not None:
+            face_set_layer_name += '_'
+        face_set_layer = bm.faces.layers.int.new(face_set_layer_name)
         bm.faces.ensure_lookup_table()
         for i, face in enumerate(bm.faces):
             if i < len(face_set_values):
@@ -305,24 +411,18 @@ def apply_modifiers(obj:Object) -> Mesh:
     # Write face set values from the bmesh layer onto mesh_out now that
     # face count is final. We read back via the named attribute that
     # bm.to_mesh() wrote out for us.
-    if face_set_layer is not None:
-        face_set_out = mesh_out.attributes.get('face_set_tmp')
+    if face_set_layer_name is not None:
+        face_set_out = mesh_out.attributes.get(face_set_layer_name)
         if utils.prefs().debug_output:
-            print(f"face_set_out is: {face_set_out}") # Add this
-        if face_set_out:
-            # Create the real sculpt face set attribute and populate it
-            sculpt_fs = mesh_out.attributes.get('sculpt_face_set')
-            if sculpt_fs:
-                mesh_out.attributes.remove(sculpt_fs)
-            sculpt_fs = mesh_out.attributes.new('sculpt_face_set', 'INT', 'FACE')
+            print(f"face_set_out is: {face_set_out}")
+        if face_set_out is not None:
             src_values = [d.value for d in face_set_out.data]
-            for i, d in enumerate(sculpt_fs.data):
-                d.value = src_values[i]
-            # Remove the temporary layer
-            mesh_out.attributes.remove(face_set_out)
+            sculpt_fs = set_sculpt_face_set_attribute(mesh_out, src_values)
+            if sculpt_fs is not None:
+                mesh_out.attributes.remove(face_set_out)
             if utils.prefs().debug_output:
                 print("Attributes:", mesh_out.attributes.keys())
-                if mesh_out.attributes.get('sculpt_face_set'):
+                if get_sculpt_face_set_attribute(mesh_out):
                     print("true")
                 else:
                     print("false")

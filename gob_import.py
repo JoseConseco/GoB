@@ -20,7 +20,7 @@ import os
 import random
 import string
 import time
-from struct import unpack
+from struct import unpack, unpack_from
 
 import bmesh
 import bpy
@@ -36,6 +36,61 @@ cached_last_edition_time = time.perf_counter()
 start_time = None
 
 
+def _report_import_warning(operator, message):
+    """Show recoverable GoZ import problems in Blender and the console."""
+
+    message = f"GoB: {message}"
+    print(message)
+    try:
+        operator.report({"WARNING"}, message)
+    except (AttributeError, RuntimeError):
+        # Imports can also be triggered by the background timer, where an
+        # operator report may not have a valid UI destination.
+        pass
+
+
+def _read_goz_section(goz_file, operator, section_name):
+    """Read one GoZ section without allowing it to consume the next tag.
+
+    The section tag has already been read by the caller. GoZ's stored section
+    length includes that four-byte tag, the four-byte length, and the
+    eight-byte element count, leaving ``length - 16`` payload bytes.
+    """
+
+    header = goz_file.read(12)
+    if len(header) != 12:
+        _report_import_warning(
+            operator,
+            f"{section_name} section has a truncated header; the section was ignored.",
+        )
+        return 0, b""
+
+    section_length = unpack_from("<I", header, 0)[0]
+    element_count = unpack_from("<Q", header, 4)[0]
+    if section_length < 16:
+        _report_import_warning(
+            operator,
+            f"{section_name} section has an invalid length ({section_length}); "
+            "the section was ignored.",
+        )
+        return element_count, b""
+
+    payload_length = section_length - 16
+    payload_start = goz_file.tell()
+    goz_file.seek(0, 2)
+    available_bytes = max(0, goz_file.tell() - payload_start)
+    goz_file.seek(payload_start, 0)
+    payload = goz_file.read(min(payload_length, available_bytes))
+    if len(payload) != payload_length:
+        _report_import_warning(
+            operator,
+            f"{section_name} section is truncated: expected {payload_length} "
+            f"payload bytes, found {len(payload)}.",
+        )
+
+    return element_count, payload
+
+
 class GoB_OT_import(Operator):
     bl_idname = "scene.gob_import"
     bl_label = "Import from GOZ"
@@ -47,6 +102,23 @@ class GoB_OT_import(Operator):
             ("AUTO", "toggle automatic import", "toggle automatic import"),
         ]
     )
+
+    @staticmethod
+    def mesh_topology_matches(me, vertsData, facesData) -> bool:
+        """Return whether imported geometry uses the mesh's existing indices."""
+
+        if len(me.vertices) != len(vertsData) or len(me.polygons) != len(facesData):
+            return False
+
+        # GoZ does not carry loose edges. Keeping one would make this an
+        # inexact topology match even if all imported faces compare equal.
+        if any(edge.is_loose for edge in me.edges):
+            return False
+
+        return all(
+            tuple(polygon.vertices) == tuple(face)
+            for polygon, face in zip(me.polygons, facesData)
+        )
 
     def make_mesh(self, objName, vertsData, facesData) -> tuple:
         """Create or update a mesh object from the given vertices and faces data.
@@ -64,7 +136,8 @@ class GoB_OT_import(Operator):
             print(f"\nGoB Object Name: {objName}")
 
         obj = bpy.data.objects.get(objName)
-        if obj:
+        object_exists = obj is not None
+        if object_exists:
             if utils.prefs().debug_output:
                 print(f"\nGoB Object already exists: {objName}")
             me = obj.data
@@ -82,15 +155,28 @@ class GoB_OT_import(Operator):
                     "Error: Active layer collection is not set or invalid. Object could not be linked."
                 )
 
-        # Clear and update mesh geometry
-        if bpy.app.version >= (3, 6, 0):
-            me.clear_geometry()
-        else:
-            me.vertices.clear()
-            me.edges.clear()
-            me.polygons.clear()
+        topology_matches = object_exists and self.mesh_topology_matches(
+            me, vertsData, facesData
+        )
 
-        me.from_pydata(vertsData, [], facesData)
+        if topology_matches:
+            # Keep the existing vertices so Blender's per-vertex deform data
+            # (including rigging vertex groups) remains attached to the same
+            # indices. Exact face matching ensures changed connectivity still
+            # takes the full rebuild path introduced in GoB 4.1.8.
+            coordinates = [component for vertex in vertsData for component in vertex]
+            me.vertices.foreach_set("co", coordinates)
+        else:
+            # Rebuild whenever topology differs. Preserving weights by index in
+            # this case could silently attach them to different vertices.
+            if bpy.app.version >= (3, 6, 0):
+                me.clear_geometry()
+            else:
+                me.vertices.clear()
+                me.edges.clear()
+                me.polygons.clear()
+
+            me.from_pydata(vertsData, [], facesData)
         me.update(calc_edges=True, calc_edges_loose=True)
 
         # Apply transformations and validate mesh
@@ -258,32 +344,59 @@ class GoB_OT_import(Operator):
                     if utils.prefs().debug_output:
                         print("Import UV: ", utils.prefs().import_uv)
 
-                    goz_file.seek(4, 1)  # Always skip the header
-                    cnt = unpack("<Q", goz_file.read(8))[0]  # Read the face count
+                    cnt, uv_payload = _read_goz_section(goz_file, self, "UV")
 
                     if utils.prefs().import_uv:
+                        uv_record_size = 4 * 2 * 4
+                        payload_face_count = len(uv_payload) // uv_record_size
+                        trailing_byte_count = len(uv_payload) % uv_record_size
+                        import_face_count = min(
+                            cnt, payload_face_count, len(me.polygons)
+                        )
+
+                        if (
+                            cnt != len(me.polygons)
+                            or payload_face_count != cnt
+                            or trailing_byte_count
+                        ):
+                            trailing_note = (
+                                f"; ignored {trailing_byte_count} trailing bytes"
+                                if trailing_byte_count
+                                else ""
+                            )
+                            _report_import_warning(
+                                self,
+                                "UV data is partial or inconsistent: "
+                                f"mesh has {len(me.polygons)} faces, the section "
+                                f"declares {cnt}, and its payload contains "
+                                f"{payload_face_count} complete face records. "
+                                f"Imported UVs for the first {import_face_count} faces"
+                                f"{trailing_note}.",
+                            )
+
                         bm = bmesh.new()
                         bm.from_mesh(me)
                         bm.faces.ensure_lookup_table()
 
-                        if me.uv_layers:
-                            if utils.prefs().import_uv_name in me.uv_layers:
-                                uv_layer = bm.loops.layers.uv.get(
-                                    utils.prefs().import_uv_name
-                                )
-                            else:
-                                uv_layer = bm.loops.layers.uv.new(
-                                    utils.prefs().import_uv_name
-                                )
-                        else:
+                        uv_layer = bm.loops.layers.uv.get(
+                            utils.prefs().import_uv_name
+                        )
+                        if uv_layer is None:
                             uv_layer = bm.loops.layers.uv.new(
                                 utils.prefs().import_uv_name
                             )
-                        uv_layer = bm.loops.layers.uv.verify()
 
-                        for face in bm.faces:
-                            for index, loop in enumerate(face.loops):
-                                x, y = unpack("<2f", goz_file.read(8))
+                        for face_index in range(import_face_count):
+                            face = bm.faces[face_index]
+                            record_offset = face_index * uv_record_size
+                            for loop_index, loop in enumerate(face.loops):
+                                if loop_index >= 4:
+                                    break
+                                x, y = unpack_from(
+                                    "<2f",
+                                    uv_payload,
+                                    record_offset + loop_index * 8,
+                                )
                                 if utils.prefs().import_uv_flip_x:
                                     x = 1.0 - x
                                 if utils.prefs().import_uv_flip_y:
@@ -291,77 +404,55 @@ class GoB_OT_import(Operator):
 
                                 loop[uv_layer].uv = x, y
 
-                            # uv's always have 4 coords so its required to read one more if a trinalge is in the mesh
-                            # zbrush seems to always write out 4 coords
-                            if index < 3:
-                                x, y = unpack("<2f", goz_file.read(8))
-
                         bm.to_mesh(me)
                         bm.free()
                         me.update(calc_edges=True, calc_edges_loose=True)
 
                         if utils.prefs().performance_profiling:
                             start_time = utils.profiler(start_time, "UV Map")
-                    else:
-                        # Skip over the UV data if not importing
-                        # Skip over the UV data if not importing
-                        # Each face has 4 UV coordinates, so multiply by 4
-                        goz_file.seek(cnt * 4 * 8, 1)  # Skip the UV weights
 
                 # Polypainting
                 elif tag == b"\xb9\x88\x00\x00":
                     if utils.prefs().debug_output:
                         print("Import Polypaint: ", utils.prefs().import_polypaint)
 
-                    goz_file.seek(4, 1)  # Always skip the header
-                    cnt = unpack("<Q", goz_file.read(8))[0]
-
-                    # Buffer-based polypaint parsing for performance and robustness.
-                    tag_set = {
-                        b"\x32\x75\x00\x00",
-                        b"\x41\x9c\x00\x00",
-                        b"\x00\x00\x00\x00",
-                    }
-                    polypaintData = []
-
-                    try:
-                        pos = goz_file.tell()
-                        file_size = os.fstat(goz_file.fileno()).st_size
-                        remaining_bytes = max(0, file_size - pos)
-                    except Exception:
-                        remaining_bytes = None
+                    cnt, polypaint_payload = _read_goz_section(
+                        goz_file, self, "Polypaint"
+                    )
 
                     if utils.prefs().import_polypaint:
-                        if remaining_bytes is None:
-                            # Fallback to incremental read if we can't determine remaining bytes
-                            while True:
-                                entry = goz_file.read(4)
-                                if len(entry) < 4:
-                                    break
-                                if entry in tag_set:
-                                    goz_file.seek(-4, 1)
-                                    break
-                                col = entry[:3]
-                                polypaintData.append(
-                                    tuple([x / 255.0 for x in reversed(col)] + [1])
-                                )
-                        else:
-                            data = goz_file.read(remaining_bytes)
-                            found_at = None
-                            for idx in range(0, len(data) - 3, 4):
-                                chunk = data[idx : idx + 4]
-                                if chunk in tag_set:
-                                    found_at = idx
-                                    break
-                                col = chunk[:3]
-                                polypaintData.append(
-                                    tuple([x / 255.0 for x in reversed(col)] + [1])
-                                )
+                        payload_vertex_count = len(polypaint_payload) // 4
+                        trailing_byte_count = len(polypaint_payload) % 4
+                        import_vertex_count = min(
+                            cnt, payload_vertex_count, len(me.vertices)
+                        )
+                        if (
+                            cnt != len(me.vertices)
+                            or payload_vertex_count != cnt
+                            or trailing_byte_count
+                        ):
+                            trailing_note = (
+                                f"; ignored {trailing_byte_count} trailing bytes"
+                                if trailing_byte_count
+                                else ""
+                            )
+                            _report_import_warning(
+                                self,
+                                "Polypaint data is partial or inconsistent: "
+                                f"mesh has {len(me.vertices)} vertices, the section "
+                                f"declares {cnt}, and its payload contains "
+                                f"{payload_vertex_count} complete color records. "
+                                f"Imported colors for the first {import_vertex_count} "
+                                f"vertices{trailing_note}.",
+                            )
 
-                            if found_at is None:
-                                goz_file.seek(pos + len(data), 0)
-                            else:
-                                goz_file.seek(pos + found_at, 0)
+                        polypaintData = []
+                        for index in range(import_vertex_count):
+                            entry = polypaint_payload[index * 4 : index * 4 + 3]
+                            polypaintData.append(
+                                tuple(channel / 255.0 for channel in reversed(entry))
+                                + (1.0,)
+                            )
 
                         # Assign colors
                         if polypaintData:
@@ -397,43 +488,21 @@ class GoB_OT_import(Operator):
                                 bm.free()
                                 me.update(calc_edges=True, calc_edges_loose=True)
                             else:
-                                if not me.color_attributes:
-                                    me.color_attributes.new(
+                                color_attribute = me.color_attributes.get(
+                                    utils.prefs().import_polypaint_name
+                                )
+                                if color_attribute is None:
+                                    color_attribute = me.color_attributes.new(
                                         utils.prefs().import_polypaint_name,
                                         "BYTE_COLOR",
                                         "POINT",
                                     )
                                 for i, rgba in enumerate(polypaintData):
-                                    if i < len(me.attributes.active_color.data):
-                                        me.attributes.active_color.data[
-                                            i
-                                        ].color_srgb = rgba
+                                    if i < len(color_attribute.data):
+                                        color_attribute.data[i].color_srgb = rgba
 
                         if utils.prefs().performance_profiling:
                             start_time = utils.profiler(start_time, "Polypaint Assign")
-                    else:
-                        # Not importing polypaint: skip to next tag by scanning remaining bytes
-                        if remaining_bytes is None:
-                            # step-scan
-                            while True:
-                                peek = goz_file.read(4)
-                                if len(peek) < 4:
-                                    break
-                                if peek in tag_set:
-                                    goz_file.seek(-4, 1)
-                                    break
-                                goz_file.seek(-3, 1)
-                        else:
-                            data = goz_file.read(remaining_bytes)
-                            found_at = None
-                            for idx in range(0, len(data) - 3, 4):
-                                if data[idx : idx + 4] in tag_set:
-                                    found_at = idx
-                                    break
-                            if found_at is None:
-                                goz_file.seek(pos + len(data), 0)
-                            else:
-                                goz_file.seek(pos + found_at, 0)
 
                 # Mask
                 elif tag == b"\x32\x75\x00\x00":
@@ -534,9 +603,11 @@ class GoB_OT_import(Operator):
                     # Import polygroups to vertex groups
                     if utils.prefs().import_polygroups_to_vertexgroups:
                         for group in set(polyGroupData):
-                            obj.vertex_groups.get(str(group)) or obj.vertex_groups.new(
-                                name=str(group)
-                            )
+                            group_name = str(group)
+                            existing_group = obj.vertex_groups.get(group_name)
+                            if existing_group is not None:
+                                obj.vertex_groups.remove(existing_group)
+                            obj.vertex_groups.new(name=group_name)
 
                         if utils.prefs().performance_profiling:
                             start_time = utils.profiler(
@@ -545,8 +616,6 @@ class GoB_OT_import(Operator):
 
                     # Import polygroups to face sets
                     if utils.prefs().import_polygroups_to_facesets:
-                        if ".sculpt_face_set" not in obj.data.attributes:
-                            obj.data.attributes.new(".sculpt_face_set", "INT", "FACE")
                         face_set_index_storage = [0] * len(me.polygons)
 
                     # Assign data to polygons
@@ -565,8 +634,8 @@ class GoB_OT_import(Operator):
 
                     # Apply face sets
                     if utils.prefs().import_polygroups_to_facesets:
-                        obj.data.attributes[".sculpt_face_set"].data.foreach_set(
-                            "value", face_set_index_storage
+                        geometry.set_sculpt_face_set_attribute(
+                            obj.data, face_set_index_storage
                         )
 
                     if utils.prefs().performance_profiling:

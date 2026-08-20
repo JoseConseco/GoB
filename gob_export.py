@@ -353,17 +353,13 @@ class GoB_OT_export(Operator):
                     goz_file.write(pack('<I', numFaces*2+16))
                     goz_file.write(pack('<Q', numFaces))
 
+                    face_attr = geometry.get_sculpt_face_set_attribute(mesh_tmp)
                     if utils.prefs().debug_output:
-                        print("Exporting Face Sets: ", '.sculpt_face_set' in mesh_tmp.attributes)
+                        print("Exporting Face Sets: ", face_attr)
 
-                    if '.sculpt_face_set' in mesh_tmp.attributes:
+                    if face_attr is not None and len(face_attr.data) == numFaces:
                         face_set_data = np.zeros(numFaces, dtype=np.int32)
-                        face_attr = mesh_tmp.attributes.get(".sculpt_face_set")
-
-                        if face_attr and len(face_attr.data) == len(face_set_data):
-                            face_attr.data.foreach_get("value", face_set_data)
-                        else:
-                            face_set_data[:] = [0] * len(face_set_data)
+                        face_attr.data.foreach_get("value", face_set_data)
 
                         face_set_data = np.where(face_set_data < 0, 65504, face_set_data)
                         face_set_data = face_set_data.astype(np.uint16)
@@ -404,7 +400,7 @@ class GoB_OT_export(Operator):
                             vgData.append([])
                             for vert in face.vertices:
                                 for vg in mesh_tmp.vertices[vert].groups:
-                                    if vg.weight >= prefs().export_weight_threshold and vg.group < len(obj.vertex_groups) and obj.vertex_groups[vg.group].name.lower() != 'mask':
+                                    if vg.weight >= utils.prefs().export_weight_threshold and vg.group < len(obj.vertex_groups) and obj.vertex_groups[vg.group].name.lower() != 'mask':
                                         vgData[face.index].append(vg.group)
 
                             if vgData[face.index]:

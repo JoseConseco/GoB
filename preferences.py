@@ -141,7 +141,7 @@ class GoB_Preferences(AddonPreferences):
 
     use_scale: EnumProperty(
         name="Scale",
-        description="Create Material",
+        description="Choose how GoB converts scale between Blender and ZBrush",
         items=[
             ("MANUAL", "Manual", "Use Manual Factor for Scaling"),
             (
@@ -158,7 +158,7 @@ class GoB_Preferences(AddonPreferences):
         description="Target ZBrush Scale",
         default=2.0,
         soft_min=0.01,
-        min=0,
+        min=0.000001,
         soft_max=10,
         step=0.01,
         precision=2,
@@ -169,7 +169,7 @@ class GoB_Preferences(AddonPreferences):
         description="Change Scale in Zbrush",
         default=1.0,
         soft_min=0.01,
-        min=0,
+        min=0.000001,
         soft_max=10,
         step=0.01,
         precision=2,
