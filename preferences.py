@@ -26,7 +26,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
 from bpy.types import AddonPreferences
 
-from . import paths, ui
+from . import paths, ui, utils
 
 preferences_tabs = [
     ("OPTIONS", "Options", ""),
@@ -35,6 +35,13 @@ preferences_tabs = [
     ("DEBUG", "Debug", ""),
     ("HELP", "Troubleshooting", ""),
 ]
+
+MACOS_PIXOLOGIC_PATH = "/Users/Shared/Pixologic"
+WINDOWS_PIXOLOGIC_PATH = os.path.join(
+    os.environ.get("PUBLIC", "C:/Users/Public"), "Pixologic"
+).replace("\\", "/")
+MACOS_PROJECT_PATH = f"{MACOS_PIXOLOGIC_PATH}/GoZProjects/Default/"
+WINDOWS_PROJECT_PATH = f"{WINDOWS_PIXOLOGIC_PATH}/GoZProjects/Default/"
 
 
 class GoB_Preferences(AddonPreferences):
@@ -89,11 +96,35 @@ class GoB_Preferences(AddonPreferences):
     # GLOBAL
     zbrush_exec: StringProperty(
         name="ZBrush Path",
-        description="Select Zbrush executable (C:\Program Files\Pixologic\ZBrush\ZBrush.exe). "
+        description="Select the ZBrush application for the current operating system. "
         "\nIf not specified the system default for Zscript (.zsc) files will be used",
         subtype="FILE_PATH",
         default="",
-    )  # Default: ""
+    )
+
+    zbrush_exec_macos: StringProperty(
+        name="macOS ZBrush Path",
+        description="Select the ZBrush application for macOS",
+        subtype="FILE_PATH",
+        default="",
+    )
+    zbrush_exec_windows: StringProperty(
+        name="Windows ZBrush Path",
+        description="Select the ZBrush executable for Windows",
+        subtype="FILE_PATH",
+        default="",
+    )
+
+    show_macos_paths: BoolProperty(
+        name="Show macOS Paths",
+        default=False,
+        options={"SKIP_SAVE"},
+    )
+    show_windows_paths: BoolProperty(
+        name="Show Windows Paths",
+        default=True,
+        options={"SKIP_SAVE"},
+    )
 
     use_pixologic_path: BoolProperty(
         name="Find Pixologic Version",
@@ -124,6 +155,19 @@ class GoB_Preferences(AddonPreferences):
         default=PATH_GOZ,
     )  # Default: PATH_GOZ
 
+    pixologoc_path_macos: StringProperty(
+        name="macOS Pixologic Public Path",
+        description="Pixologic public folder used by ZBrush on macOS",
+        subtype="DIR_PATH",
+        default=MACOS_PIXOLOGIC_PATH,
+    )
+    pixologoc_path_windows: StringProperty(
+        name="Windows Pixologic Public Path",
+        description="Pixologic public folder used by ZBrush on Windows",
+        subtype="DIR_PATH",
+        default=WINDOWS_PIXOLOGIC_PATH,
+    )
+
     project_path: StringProperty(
         name="Project Path",
         description="Folder where Zbrush and Blender will store the exported content",
@@ -131,6 +175,19 @@ class GoB_Preferences(AddonPreferences):
         default=os.path.join(paths.PATH_GOZ, "GoZProjects", "Default/").replace(
             "\\", "/"
         ),
+    )
+
+    project_path_macos: StringProperty(
+        name="macOS Project Path",
+        description="Folder where ZBrush and Blender exchange files on macOS",
+        subtype="DIR_PATH",
+        default=MACOS_PROJECT_PATH,
+    )
+    project_path_windows: StringProperty(
+        name="Windows Project Path",
+        description="Folder where ZBrush and Blender exchange files on Windows",
+        subtype="DIR_PATH",
+        default=WINDOWS_PROJECT_PATH,
     )
 
     clean_project_path: BoolProperty(
@@ -492,15 +549,76 @@ class GoB_Preferences(AddonPreferences):
         box.use_property_split = True
         box.label(text="GoB General Options", icon="PREFERENCES")
         col = box.column(align=False)
-        col.prop(self, "use_pixologic_path")
-        col.prop(self, "zbrush_exec")
-        col.prop(self, "project_path")
 
-        col.prop(self, "custom_pixologoc_path")
+        utils.migrate_legacy_zbrush_exec(self)
+        utils.migrate_legacy_project_path(self)
         if self.custom_pixologoc_path:
-            col.prop(self, "pixologoc_path")
+            utils.migrate_legacy_pixologic_path(self)
 
-        col.prop(self, "clean_project_path")
+        paths_box = col.box()
+        paths_box.label(text="System Paths", icon="FILE_FOLDER")
+
+        windows_box = paths_box.box()
+        windows_header = windows_box.row(align=True)
+        windows_header.use_property_split = False
+        windows_header.prop(
+            self,
+            "show_windows_paths",
+            text="",
+            icon="TRIA_DOWN" if self.show_windows_paths else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        windows_header.label(text="Windows", translate=False)
+        if self.show_windows_paths:
+            windows_col = windows_box.column(align=True)
+            windows_col.prop(self, "use_pixologic_path", text="Prefer Pixologic Install")
+            windows_col.prop(
+                self, "zbrush_exec_windows", text="ZBrush path", translate=False
+            )
+            windows_col.prop(
+                self, "project_path_windows", text="Project path", translate=False
+            )
+            if self.custom_pixologoc_path:
+                windows_col.prop(
+                    self,
+                    "pixologoc_path_windows",
+                    text="Pixologic Public path",
+                    translate=False,
+                )
+
+        macos_box = paths_box.box()
+        macos_header = macos_box.row(align=True)
+        macos_header.use_property_split = False
+        macos_header.prop(
+            self,
+            "show_macos_paths",
+            text="",
+            icon="TRIA_DOWN" if self.show_macos_paths else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        macos_header.label(text="macOS", translate=False)
+        if self.show_macos_paths:
+            macos_col = macos_box.column(align=True)
+            macos_col.prop(
+                self, "zbrush_exec_macos", text="ZBrush path", translate=False
+            )
+            macos_col.prop(
+                self, "project_path_macos", text="Project path", translate=False
+            )
+            if self.custom_pixologoc_path:
+                macos_col.prop(
+                    self,
+                    "pixologoc_path_macos",
+                    text="Pixologic Public path",
+                    translate=False,
+                )
+
+        paths_box.prop(self, "custom_pixologoc_path")
+        paths_box.prop(self, "clean_project_path")
+
+        col.separator()
         col.prop(self, "remap_x_axis")
         col.prop(self, "flip_x_axis")
         col.prop(self, "remap_y_axis")

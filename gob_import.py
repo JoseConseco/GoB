@@ -781,7 +781,7 @@ class GoB_OT_import(Operator):
     def execute(self, context):
 
         if utils.prefs().custom_pixologoc_path:
-            paths.PATH_GOZ = utils.prefs().pixologoc_path
+            paths.PATH_GOZ = utils.get_pixologic_path()
 
         global gob_import_cache
         goz_obj_paths = []

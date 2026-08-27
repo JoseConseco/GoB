@@ -67,46 +67,54 @@ isMacOS, PATH_GOB, PATH_BLENDER, PATH_GOZ, PATH_OBJLIST, PATH_CONFIG, PATH_SCRIP
 
 def find_zbrush(self, context, isMacOS):
     #get the highest version of zbrush and use it as default zbrush to send to
-    self.is_found = False 
-    if utils.prefs().zbrush_exec:        
+    self.is_found = False
+    zbrush_exec = utils.get_zbrush_exec()
+    if zbrush_exec:
         #OSX .app files are considered packages and cant be recognized with path.isfile and needs a special condition
         if isMacOS:
-            if os.path.isdir(utils.prefs().zbrush_exec) and 'zbrush.app' in str.lower(utils.prefs().zbrush_exec):
+            if os.path.isdir(zbrush_exec) and 'zbrush.app' in str.lower(zbrush_exec):
                 self.is_found = True   
 
         else: #is PC
-            if os.path.isfile(utils.prefs().zbrush_exec):  #validate if working file here    
+            if os.path.isfile(zbrush_exec):  #validate if working file here
                 #check if path contains zbrush, that should identify a zbrush executable
-                if 'zbrush.exe' in str.lower(utils.prefs().zbrush_exec): 
+                if 'zbrush.exe' in str.lower(zbrush_exec):
                     self.is_found = True
 
-            elif os.path.isdir(utils.prefs().zbrush_exec): #search for zbrush files in this folder and its subfolders 
-                for folder in os.listdir(utils.prefs().zbrush_exec): 
+            elif os.path.isdir(zbrush_exec): #search for zbrush files in this folder and its subfolders
+                for folder in os.listdir(zbrush_exec):
                     if "zbrush" in str.lower(folder):     #search for content inside folder that contains zbrush
                         #search subfolders for executables
-                        if os.path.isdir(os.path.join(utils.prefs().zbrush_exec, folder)): 
-                            i,zfolder = utils.max_list_value(os.listdir(os.path.join(utils.prefs().zbrush_exec)))
-                            for file in os.listdir(os.path.join(utils.prefs().zbrush_exec, zfolder)):
-                                if ('zbrush.exe' in str.lower(file) in str.lower(file)):            
-                                    utils.prefs().zbrush_exec = os.path.join(utils.prefs().zbrush_exec, zfolder, file)           
-                                    self.is_found = True   
+                        if os.path.isdir(os.path.join(zbrush_exec, folder)):
+                            i,zfolder = utils.max_list_value(os.listdir(zbrush_exec))
+                            for file in os.listdir(os.path.join(zbrush_exec, zfolder)):
+                                if ('zbrush.exe' in str.lower(file) in str.lower(file)):
+                                    utils.set_zbrush_exec(os.path.join(zbrush_exec, zfolder, file))
+                                    self.is_found = True
 
                         #find executable
-                        if os.path.isfile(os.path.join(utils.prefs().zbrush_exec,folder)) and ('zbrush.exe' in str.lower(folder) in str.lower(folder)):            
-                            utils.prefs().zbrush_exec = os.path.join(utils.prefs().zbrush_exec, folder)           
-                            self.is_found = True  
+                        if os.path.isfile(os.path.join(zbrush_exec,folder)) and ('zbrush.exe' in str.lower(folder) in str.lower(folder)):
+                            utils.set_zbrush_exec(os.path.join(zbrush_exec, folder))
+                            self.is_found = True
 
-    else:    # the  applications default path can try if zbrush is installed in its defaut location  
+    if not self.is_found:  # try the default location when the configured path is empty or invalid
         #look for zbrush in default installation path 
         if isMacOS:
             folder_List = []                 
-            filepath = os.path.join("Applications")
+            filepath = os.path.join(os.sep, "Applications")
             if os.path.isdir(filepath):
                 [folder_List.append(i) for i in os.listdir(filepath) if 'zbrush' in str.lower(i)]
-                i, zfolder = utils.max_list_value(folder_List)
-                utils.prefs().zbrush_exec = os.path.join(filepath, zfolder, "ZBrush.app")
-                ui.ShowReport(self, [utils.prefs().zbrush_exec], "GoB: Zbrush default installation found", 'COLORSET_03_VEC') 
-                self.is_found = True            
+                if folder_List:
+                    i, zfolder = utils.max_list_value(folder_List)
+                    zbrush_folder = os.path.join(filepath, zfolder)
+                    if zfolder.lower().endswith("zbrush.app"):
+                        zbrush_exec_path = zbrush_folder
+                    else:
+                        zbrush_exec_path = os.path.join(zbrush_folder, "ZBrush.app")
+                    if os.path.isdir(zbrush_exec_path):
+                        utils.set_zbrush_exec(zbrush_exec_path)
+                        ui.ShowReport(self, [zbrush_exec_path], "GoB: Zbrush default installation found", 'COLORSET_03_VEC')
+                        self.is_found = True
         else:              
             # Determine the base paths based on the preference setting
             if utils.prefs().use_pixologic_path:
@@ -127,8 +135,8 @@ def find_zbrush(self, context, isMacOS):
                 i, zfolder = utils.max_list_value(folder_list)
                 zbrush_exec_path = os.path.join(base_path, zfolder, "ZBrush.exe")
                 if os.path.isfile(zbrush_exec_path):
-                    utils.prefs().zbrush_exec = zbrush_exec_path
-                    ui.ShowReport(self, [utils.prefs().zbrush_exec], f"GoB: {zfolder} default installation found", 'COLORSET_03_VEC')
+                    utils.set_zbrush_exec(zbrush_exec_path)
+                    ui.ShowReport(self, [zbrush_exec_path], f"GoB: {zfolder} default installation found", 'COLORSET_03_VEC')
                     self.is_found = True
                     break
 
@@ -154,7 +162,7 @@ class GoB_OT_GoZ_Installer(Operator):
     def execute(self, context):
         """Install GoZ for Windows""" 
         if path_exists := find_zbrush(self, context, isMacOS):
-            path = os.path.dirname(utils.prefs().zbrush_exec)
+            path = os.path.dirname(utils.get_zbrush_exec())
             if isMacOS:
                 GOZ_INSTALLER = os.path.join(path, "Troubleshoot Help", "GoZ_for_ZBrush_Installer_OSX.app")
                 Popen(['open', '-a', GOZ_INSTALLER])  
