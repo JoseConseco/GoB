@@ -23,6 +23,7 @@ import bmesh
 import mathutils
 import time
 import math
+import numpy as np
 from bpy.types import Object, Mesh
 from . import utils
 
@@ -54,7 +55,7 @@ def set_sculpt_face_set_attribute(mesh: Mesh, values):
     Both the native and legacy undotted names are removed so an export mesh
     cannot contain two competing face-set attributes.
     """
-    values = list(values)
+    values = np.asarray(values, dtype=np.int32).reshape(-1)
     if len(values) != len(mesh.polygons):
         return None
 
@@ -77,30 +78,54 @@ def set_sculpt_face_set_attribute(mesh: Mesh, values):
 
 
 def get_vertex_colors(mesh: Mesh, obj:Object, numVertices):
+    """Return active mesh colors as an ``(n, 3)`` RGB byte array."""
 
-    if obj.data.color_attributes:
-        #fill vcolArray(vert_idx + rgb_offset) = color_xyz
-        vcolArray = bytearray([0] * numVertices * 3)
-        active_color = obj.data.color_attributes.active_color
-        color_attribute = mesh.attributes.get(active_color.name, None)
-
-        # Pre-calculate vertex base indices for faster access
-        vertex_indices = [i * 3 for i in range(numVertices)]
-
-        for vert, vertex_index in zip(mesh.vertices, vertex_indices):
-            color_data = color_attribute.data[vert.index]
-            color = color_data.color_srgb
-
-            vcolArray[vertex_index] = int(255 * color[0])
-            vcolArray[vertex_index +1] = int(255 * color[1])
-            vcolArray[vertex_index +2] = int(255 * color[2])
-    else:
+    colors = np.zeros((numVertices, 4), dtype=np.float32)
+    active_color = obj.data.color_attributes.active_color
+    if active_color is None:
         print('No vertex colors found')
+        return colors[:, :3].astype(np.uint8)
 
-    # Ensure vcolArray is correctly populated
-    assert len(vcolArray) == numVertices * 3, "GoB vcolArray length mismatch"
+    color_attribute = mesh.color_attributes.get(active_color.name)
+    if color_attribute is None:
+        color_attribute = mesh.color_attributes.active_color
+    if color_attribute is None:
+        print('No vertex colors found')
+        return colors[:, :3].astype(np.uint8)
 
-    return vcolArray
+    source_colors = np.empty(
+        (len(color_attribute.data), 4), dtype=np.float32
+    )
+    color_attribute.data.foreach_get('color_srgb', source_colors.reshape(-1))
+
+    if color_attribute.domain == 'POINT':
+        copy_count = min(numVertices, len(source_colors))
+        colors[:copy_count] = source_colors[:copy_count]
+    elif color_attribute.domain == 'CORNER' and len(mesh.loops):
+        loop_vertices = np.empty(len(mesh.loops), dtype=np.int32)
+        mesh.loops.foreach_get('vertex_index', loop_vertices)
+        usable_count = min(len(loop_vertices), len(source_colors))
+        loop_vertices = loop_vertices[:usable_count]
+        source_colors = source_colors[:usable_count]
+
+        # Match the previous behavior: when a vertex has several corner
+        # colors, the last loop using that vertex wins.
+        reversed_vertices = loop_vertices[::-1]
+        vertex_indices, reversed_positions = np.unique(
+            reversed_vertices, return_index=True
+        )
+        source_indices = usable_count - 1 - reversed_positions
+        valid = vertex_indices < numVertices
+        colors[vertex_indices[valid]] = source_colors[source_indices[valid]]
+    else:
+        print(
+            f"Unsupported color attribute domain {color_attribute.domain!r}; "
+            "exporting black polypaint."
+        )
+
+    np.nan_to_num(colors, copy=False, nan=0.0, posinf=1.0, neginf=0.0)
+    np.clip(colors, 0.0, 1.0, out=colors)
+    return (colors[:, :3] * 255.0).astype(np.uint8)
 
 
 _IMPORT_AXIS_MATRIX = mathutils.Matrix(
@@ -295,156 +320,143 @@ def remove_internal_faces(obj:Object):
         restore_selection(selected, active)
 
 
-def apply_modifiers(obj:Object) -> Mesh:
+def _mesh_has_ngons(mesh: Mesh) -> bool:
+    polygon_count = len(mesh.polygons)
+    if not polygon_count:
+        return False
+    loop_totals = np.empty(polygon_count, dtype=np.int32)
+    mesh.polygons.foreach_get('loop_total', loop_totals)
+    return bool(np.any(loop_totals > 4))
 
-    if utils.prefs().performance_profiling:
+
+def _attribute_values(attribute, data_type):
+    values = np.empty(len(attribute.data), dtype=data_type)
+    attribute.data.foreach_get('value', values)
+    return values
+
+
+def _set_sculpt_mask_attribute(mesh: Mesh, values):
+    values = np.asarray(values, dtype=np.float32).reshape(-1)
+    if len(values) != len(mesh.vertices):
+        return None
+
+    attribute = mesh.attributes.get('.sculpt_mask')
+    if attribute is not None and (
+        attribute.domain != 'POINT' or attribute.data_type != 'FLOAT'
+    ):
+        mesh.attributes.remove(attribute)
+        attribute = None
+    if attribute is None:
+        attribute = mesh.attributes.new('.sculpt_mask', 'FLOAT', 'POINT')
+    attribute.data.foreach_set('value', values)
+    return attribute
+
+
+def apply_modifiers(obj:Object) -> Mesh:
+    """Return an export mesh, triangulating only when n-gons require it."""
+
+    profiling = utils.prefs().performance_profiling
+    if profiling:
         print("\\___")
-        start_time = utils.profiler(time.perf_counter(), f"Export Profiling: {obj.name}")
+        start_time = utils.profiler(
+            time.perf_counter(), f"Export Profiling: {obj.name}"
+        )
         start_total_time = utils.profiler(time.perf_counter(), "")
 
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh depsgraph")
-
     object_eval = obj.evaluated_get(depsgraph)
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh object_eval")
-
     original_mesh = obj.data
+    uses_temporary_evaluated_mesh = False
 
     if utils.prefs().export_modifiers == 'APPLY_EXPORT':
         mesh_tmp = bpy.data.meshes.new_from_object(object_eval)
-        #copy_sculpt_attributes(original_mesh, mesh_tmp)
         obj.data = mesh_tmp
         obj.modifiers.clear()
-
     elif utils.prefs().export_modifiers == 'ONLY_EXPORT':
-        mesh_tmp = object_eval.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
-        if utils.prefs().performance_profiling:
-            start_time = utils.profiler(start_time, "Make Mesh to_mesh")
-
+        mesh_tmp = object_eval.to_mesh(
+            preserve_all_data_layers=True, depsgraph=depsgraph
+        )
+        uses_temporary_evaluated_mesh = True
     else:
-        mesh_tmp = obj.data
+        mesh_tmp = original_mesh
 
-    # Prefer face sets propagated through the evaluated mesh. This preserves
-    # their mapping when a modifier changes topology. Fall back to the source
-    # mesh only when its polygons still correspond 1:1 with the export mesh.
+    # Prefer attributes propagated by modifiers. Use source attributes only
+    # when the relevant element counts still correspond exactly.
     face_set_values = None
     face_set_attr = get_sculpt_face_set_attribute(mesh_tmp)
-    face_set_source = 'evaluated mesh'
     if face_set_attr is None or len(face_set_attr.data) != len(mesh_tmp.polygons):
         face_set_attr = get_sculpt_face_set_attribute(original_mesh)
-        face_set_source = 'source mesh'
-        if (
-            face_set_attr is not None
-            and len(face_set_attr.data) != len(mesh_tmp.polygons)
+        if face_set_attr is not None and (
+            len(face_set_attr.data) != len(mesh_tmp.polygons)
         ):
             face_set_attr = None
-
-    if utils.prefs().debug_output:
-        print(f"Face sets found on {face_set_source}: ", face_set_attr)
     if face_set_attr is not None:
-        face_set_values = [d.value for d in face_set_attr.data]
+        face_set_values = _attribute_values(face_set_attr, np.int32)
 
-    # Read sculpt mask values from original_mesh — these are per-vertex so
-    # triangulation does not affect them, but to_mesh() drops them.
     sculpt_mask_values = None
     mask_attr = original_mesh.attributes.get('.sculpt_mask')
-    if mask_attr and len(mask_attr.data) == len(mesh_tmp.vertices):
-        sculpt_mask_values = [d.value for d in mask_attr.data]
+    if mask_attr is not None and len(mask_attr.data) == len(mesh_tmp.vertices):
+        sculpt_mask_values = _attribute_values(mask_attr, np.float32)
 
-    #DO the triangulation of Ngons only, but do not write it to original object.
+    # ZBrush accepts triangles and quads directly. Mesh.copy() is copy-on-write
+    # in modern Blender, preserves UV/color/deform layers, and avoids a full
+    # BMesh conversion for the overwhelmingly common tri/quad case.
+    if not _mesh_has_ngons(mesh_tmp):
+        mesh_out = mesh_tmp.copy()
+        mesh_out.name = f'{obj.name}_goz'
+        if face_set_values is not None:
+            set_sculpt_face_set_attribute(mesh_out, face_set_values)
+        if sculpt_mask_values is not None:
+            _set_sculpt_mask_attribute(mesh_out, sculpt_mask_values)
+        if uses_temporary_evaluated_mesh:
+            obj.to_mesh_clear()
+        if profiling:
+            utils.profiler(start_total_time, "Make Mesh fast path\n _____/")
+        return mesh_out
+
+    # N-gons still use the established BMesh path so triangulation and face-set
+    # propagation retain their prior behavior.
     bm = bmesh.new()
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh bmesh new")
-
     bm.from_mesh(mesh_tmp)
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh bmesh")
-
-    # Store face set values on a bmesh custom layer so they survive
-    # triangulation and join_triangles — bmesh propagates custom face int
-    # layers onto new faces created during triangulation automatically.
-    face_set_layer = None
     face_set_layer_name = None
-    if utils.prefs().debug_output:
-        print("Face set values: ", face_set_values)
-        print("Face set layer: ", face_set_layer)
     if face_set_values is not None:
         face_set_layer_name = '__gob_face_set_tmp__'
         while bm.faces.layers.int.get(face_set_layer_name) is not None:
             face_set_layer_name += '_'
         face_set_layer = bm.faces.layers.int.new(face_set_layer_name)
         bm.faces.ensure_lookup_table()
-        for i, face in enumerate(bm.faces):
-            if i < len(face_set_values):
-                face[face_set_layer] = face_set_values[i]
+        for index, face in enumerate(bm.faces):
+            face[face_set_layer] = int(face_set_values[index])
 
-    if utils.prefs().debug_output:
-        print("Face set layer: ", face_set_layer)
-
-    if facesTotTriangulate := [f for f in bm.faces if len(f.edges) > 4]:
-        bmesh.ops.triangulate(bm, faces=facesTotTriangulate)
-        if utils.prefs().performance_profiling:
-            start_time = utils.profiler(start_time, "Make Mesh triangulate1")
-
-    bm.normal_update(   )
-
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh triangulate2")
+    ngon_faces = [face for face in bm.faces if len(face.edges) > 4]
+    if ngon_faces:
+        bmesh.ops.triangulate(bm, faces=ngon_faces)
+    bm.normal_update()
 
     mesh_out = bpy.data.meshes.new(name=f'{obj.name}_goz')
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh export_mesh")
-
     bm.to_mesh(mesh_out)
+    bm.free()
     mesh_out.validate(verbose=utils.prefs().debug_output)
     mesh_out.update(calc_edges=True, calc_edges_loose=True)
 
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh to_mesh")
-
-    bm.free()
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh bm free")
-
-    # Write face set values from the bmesh layer onto mesh_out now that
-    # face count is final. We read back via the named attribute that
-    # bm.to_mesh() wrote out for us.
     if face_set_layer_name is not None:
         face_set_out = mesh_out.attributes.get(face_set_layer_name)
-        if utils.prefs().debug_output:
-            print(f"face_set_out is: {face_set_out}")
         if face_set_out is not None:
-            src_values = [d.value for d in face_set_out.data]
-            sculpt_fs = set_sculpt_face_set_attribute(mesh_out, src_values)
-            if sculpt_fs is not None:
+            values = _attribute_values(face_set_out, np.int32)
+            sculpt_face_sets = set_sculpt_face_set_attribute(mesh_out, values)
+            # Adding/removing attributes can invalidate older Blender RNA
+            # references, so reacquire the temporary layer by name.
+            face_set_out = mesh_out.attributes.get(face_set_layer_name)
+            if sculpt_face_sets is not None and face_set_out is not None:
                 mesh_out.attributes.remove(face_set_out)
-            if utils.prefs().debug_output:
-                print("Attributes:", mesh_out.attributes.keys())
-                if get_sculpt_face_set_attribute(mesh_out):
-                    print("true")
-                else:
-                    print("false")
 
-    # Restore sculpt mask — per-vertex so unaffected by triangulation,
-    # but still needs explicit copy as bmesh drops it.
     if sculpt_mask_values is not None:
-        sculpt_mask = mesh_out.attributes.get('.sculpt_mask')
-        if sculpt_mask:
-            mesh_out.attributes.remove(sculpt_mask)
-        sculpt_mask = mesh_out.attributes.new('.sculpt_mask', 'FLOAT', 'POINT')
-        for i, d in enumerate(sculpt_mask.data):
-            if i < len(sculpt_mask_values):
-                d.value = sculpt_mask_values[i]
+        _set_sculpt_mask_attribute(mesh_out, sculpt_mask_values)
 
-    obj.to_mesh_clear()
-    if utils.prefs().performance_profiling:
-        start_time = utils.profiler(start_time, "Make Mesh to_mesh_clear")
-
-    if utils.prefs().performance_profiling:
-        utils.profiler(start_total_time, "Make Mesh return\n _____/")
-
+    if uses_temporary_evaluated_mesh:
+        obj.to_mesh_clear()
+    if profiling:
+        utils.profiler(start_total_time, "Make Mesh BMesh path\n _____/")
     return mesh_out
 
 

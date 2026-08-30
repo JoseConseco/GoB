@@ -28,6 +28,21 @@ from bpy.props import BoolProperty
 from . import paths, utils, geometry, ui, gob_import
 
 
+_EXPORT_VERTEX_CHUNK = 1_000_000
+_EXPORT_FACE_CHUNK = 500_000
+
+
+def _mesh_topology_arrays(mesh):
+    face_count = len(mesh.polygons)
+    loop_starts = np.empty(face_count, dtype=np.int32)
+    loop_totals = np.empty(face_count, dtype=np.int32)
+    loop_vertices = np.empty(len(mesh.loops), dtype=np.int32)
+    mesh.polygons.foreach_get('loop_start', loop_starts)
+    mesh.polygons.foreach_get('loop_total', loop_totals)
+    mesh.loops.foreach_get('vertex_index', loop_vertices)
+    return loop_starts, loop_totals, loop_vertices
+
+
 class GoB_OT_export(Operator):
     bl_idname = "scene.gob_export"
     bl_label = "Export to ZBrush"
@@ -53,10 +68,6 @@ class GoB_OT_export(Operator):
         mesh_tmp = geometry.apply_modifiers(obj)
         if utils.prefs().performance_profiling:
             start_time = utils.profiler(start_time, "Make Mesh apply_modifiers")
-
-        mesh_tmp.calc_loop_triangles()
-        if utils.prefs().performance_profiling:
-            start_time = utils.profiler(start_time, "Make Mesh calc_loop_triangles")
 
         mesh_tmp, mat_transform = geometry.apply_transformation(mesh_tmp, is_import=False)
         if utils.prefs().performance_profiling:
@@ -135,6 +146,9 @@ class GoB_OT_export(Operator):
         with open(os.path.join(path_export + '/{0}.GoZ'.format(obj.name)), 'wb') as goz_file:
             numFaces = len(mesh_tmp.polygons)
             numVertices = len(mesh_tmp.vertices)
+            loop_starts, loop_totals, loop_vertices = _mesh_topology_arrays(
+                mesh_tmp
+            )
 
             # --File Header--
             goz_file.write(b"GoZb 1.0 ZBrush GoZ Binary")
@@ -159,23 +173,24 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<I', numVertices*3*4+16))
             goz_file.write(pack('<Q', numVertices))
 
-            vertex_coords = np.zeros(numVertices * 3, dtype=np.float32)
-            mesh_tmp.vertices.foreach_get('co', vertex_coords)
-            vertex_coords = vertex_coords.reshape(-1, 3)
+            vertex_coords = np.empty((numVertices, 3), dtype=np.float32)
+            mesh_tmp.vertices.foreach_get('co', vertex_coords.reshape(-1))
+            matrix_world_np = np.asarray(obj.matrix_world, dtype=np.float32)
+            mat_transform_np = np.asarray(mat_transform, dtype=np.float32)
+            combined_transform = mat_transform_np @ matrix_world_np
+            rotation_scale = combined_transform[:3, :3].T
+            translation = combined_transform[:3, 3]
 
-            matrix_world_np = np.array(obj.matrix_world, dtype=np.float32)
-            mat_transform_np = np.array(mat_transform, dtype=np.float32)
-
-            homogeneous_coords = np.column_stack([vertex_coords, np.ones(numVertices)])
-
-            # matrix_world
-            transformed_coords = (matrix_world_np @ homogeneous_coords.T).T[:, :3]
-
-            # mat_transform
-            homogeneous_transformed = np.column_stack([transformed_coords, np.ones(numVertices)])
-            final_coords = (mat_transform_np @ homogeneous_transformed.T).T[:, :3]
-
-            goz_file.write(pack(f'<{numVertices * 3}f', *final_coords.flatten()))
+            for chunk_start in range(0, numVertices, _EXPORT_VERTEX_CHUNK):
+                chunk_end = min(
+                    chunk_start + _EXPORT_VERTEX_CHUNK, numVertices
+                )
+                final_coords = vertex_coords[chunk_start:chunk_end] @ rotation_scale
+                final_coords += translation
+                goz_file.write(
+                    final_coords.astype('<f4', copy=False).tobytes()
+                )
+            del vertex_coords
 
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Write Vertices")
@@ -185,28 +200,28 @@ class GoB_OT_export(Operator):
             goz_file.write(pack('<I', numFaces*4*4+16))
             goz_file.write(pack('<Q', numFaces))
 
-            face_data = bytearray()
-
-            for face in mesh_tmp.polygons:
-                if len(face.vertices) == 4:
-                    face_data.extend(pack('<4I', face.vertices[0],
-                                face.vertices[1],
-                                face.vertices[2],
-                                face.vertices[3]))
-                elif len(face.vertices) == 3:
-                    face_data.extend(pack('<3I4B', face.vertices[0],
-                                face.vertices[1],
-                                face.vertices[2],
-                                0xFF, 0xFF, 0xFF, 0xFF))
-
-            goz_file.write(face_data)
+            for chunk_start in range(0, numFaces, _EXPORT_FACE_CHUNK):
+                chunk_end = min(chunk_start + _EXPORT_FACE_CHUNK, numFaces)
+                starts = loop_starts[chunk_start:chunk_end]
+                totals = loop_totals[chunk_start:chunk_end]
+                face_data = np.full(
+                    (chunk_end - chunk_start, 4),
+                    np.uint32(0xFFFFFFFF),
+                    dtype=np.uint32,
+                )
+                for corner in range(4):
+                    valid = totals > corner
+                    face_data[valid, corner] = loop_vertices[
+                        starts[valid] + corner
+                    ]
+                goz_file.write(face_data.astype('<u4', copy=False).tobytes())
 
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Write Faces")
 
             # --UVs--
             if mesh_tmp.uv_layers.active:
-                uv_layer = mesh_tmp.uv_layers[0]
+                uv_layer = mesh_tmp.uv_layers.active
                 goz_file.write(pack('<4B', 0xA9, 0x61, 0x00, 0x00))
                 goz_file.write(pack('<I', len(mesh_tmp.polygons)*4*2*4+16))
                 goz_file.write(pack('<Q', len(mesh_tmp.polygons)))
@@ -214,25 +229,32 @@ class GoB_OT_export(Operator):
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    UV: polygones")
 
-                uv_coords = np.zeros(len(uv_layer.data) * 2, dtype=np.float32)
-
-                uv_layer.data.foreach_get('uv', uv_coords)
-                uv_coords = uv_coords.reshape(-1, 2)
+                uv_coords = np.empty(
+                    (len(uv_layer.data), 2), dtype=np.float32
+                )
+                uv_layer.data.foreach_get('uv', uv_coords.reshape(-1))
                 if utils.prefs().export_uv_flip_x:
                     uv_coords[:, 0] = 1.0 - uv_coords[:, 0]
                 if utils.prefs().export_uv_flip_y:
                     uv_coords[:, 1] = 1.0 - uv_coords[:, 1]
 
-                uv_data = []
-                for face in mesh_tmp.polygons:
-                    for loop_index in face.loop_indices:
-                        x, y = uv_coords[loop_index]
-                        uv_data.extend([x, y])
-
-                    if len(face.loop_indices) == 3:
-                        uv_data.extend([0.0, 1.0])
-
-                goz_file.write(pack(f'<{len(uv_data)}f', *uv_data))
+                for chunk_start in range(0, numFaces, _EXPORT_FACE_CHUNK):
+                    chunk_end = min(chunk_start + _EXPORT_FACE_CHUNK, numFaces)
+                    starts = loop_starts[chunk_start:chunk_end]
+                    totals = loop_totals[chunk_start:chunk_end]
+                    uv_data = np.empty(
+                        (chunk_end - chunk_start, 4, 2), dtype=np.float32
+                    )
+                    uv_data[:, :, 0] = 0.0
+                    uv_data[:, :, 1] = 1.0
+                    for corner in range(4):
+                        valid = totals > corner
+                        uv_data[valid, corner] = uv_coords[
+                            starts[valid] + corner
+                        ]
+                    goz_file.write(
+                        uv_data.astype('<f4', copy=False).tobytes()
+                    )
 
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    UV: write uvs")
@@ -287,16 +309,23 @@ class GoB_OT_export(Operator):
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    Polypaint:  write numVertices")
 
-                vcol_data = bytearray()
-                for i in range(0, len(vcolArray), 3):
-                    vcol_data.extend(pack('<4B', vcolArray[i+2], vcolArray[i+1], vcolArray[i], 0))
-
-                goz_file.write(vcol_data)
+                for chunk_start in range(0, numVertices, _EXPORT_VERTEX_CHUNK):
+                    chunk_end = min(
+                        chunk_start + _EXPORT_VERTEX_CHUNK, numVertices
+                    )
+                    colors = vcolArray[chunk_start:chunk_end]
+                    vcol_data = np.zeros(
+                        (chunk_end - chunk_start, 4), dtype=np.uint8
+                    )
+                    vcol_data[:, 0] = colors[:, 2]
+                    vcol_data[:, 1] = colors[:, 1]
+                    vcol_data[:, 2] = colors[:, 0]
+                    goz_file.write(vcol_data.tobytes())
 
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    Polypaint: write color")
 
-                vcolArray.clear()
+                del vcolArray
                 if utils.prefs().performance_profiling:
                     start_time = utils.profiler(start_time, "    Polypaint:  vcolArray.clear")
 
@@ -320,10 +349,9 @@ class GoB_OT_export(Operator):
                     else:
                         mask_data[:] = [0.0] * len(mask_data)
 
-                    mask_data = np.where(mask_data < 0, 0.0, mask_data)
-                    mask_values = ((1.0 - mask_data) * 65535).astype(np.uint16)
-
-                    goz_file.write(pack(f'<{numVertices}H', *mask_values))
+                    np.maximum(mask_data, 0.0, out=mask_data)
+                    mask_values = ((1.0 - mask_data) * 65535).astype('<u2')
+                    goz_file.write(mask_values.tobytes())
 
                 else:
                     for vertexGroup in obj.vertex_groups:
@@ -331,12 +359,19 @@ class GoB_OT_export(Operator):
                             goz_file.write(pack('<4B', 0x32, 0x75, 0x00, 0x00))
                             goz_file.write(pack('<I', numVertices*2+16))
                             goz_file.write(pack('<Q', numVertices))
+                            mask_values = np.full(
+                                numVertices, 65535, dtype=np.uint16
+                            )
                             for i in range(numVertices):
                                 try:
-                                    goz_file.write(pack('<H', int((1.0 - vertexGroup.weight(i)) * 65535)))
-                                except Exception as e:
-                                    # print("no vertex group: ", e)
-                                    goz_file.write(pack('<H', 65535))
+                                    mask_values[i] = int(
+                                        (1.0 - vertexGroup.weight(i)) * 65535
+                                    )
+                                except RuntimeError:
+                                    pass
+                            goz_file.write(
+                                mask_values.astype('<u2', copy=False).tobytes()
+                            )
 
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "Write Mask")
@@ -361,9 +396,9 @@ class GoB_OT_export(Operator):
                         face_set_data = np.zeros(numFaces, dtype=np.int32)
                         face_attr.data.foreach_get("value", face_set_data)
 
-                        face_set_data = np.where(face_set_data < 0, 65504, face_set_data)
-                        face_set_data = face_set_data.astype(np.uint16)
-                        goz_file.write(pack(f'<{numFaces}H', *face_set_data))
+                        face_set_data[face_set_data < 0] = 65504
+                        face_set_data = face_set_data.astype('<u2')
+                        goz_file.write(face_set_data.tobytes())
 
                         if utils.prefs().debug_output:
                             print(f"Face sets exported: {numFaces} faces")
@@ -371,8 +406,10 @@ class GoB_OT_export(Operator):
                             print(f"Unique face set values: {unique_values}")
 
                     else:   #assign empty when no face sets are found
-                        default_face_set_data = np.full(numFaces, 65504, dtype=np.uint16)
-                        goz_file.write(pack(f'<{numFaces}H', *default_face_set_data))
+                        default_face_set_data = np.full(
+                            numFaces, 65504, dtype='<u2'
+                        )
+                        goz_file.write(default_face_set_data.tobytes())
 
                         if utils.prefs().debug_output:
                             print(f"Default face sets written: {numFaces} faces")
@@ -394,27 +431,40 @@ class GoB_OT_export(Operator):
                     # add a color for elements that are not part of a vertex group
                     groupColor.append(0)
 
+                    polygroup_values = np.full(
+                        numFaces, 65504, dtype=np.uint16
+                    )
                     if len(obj.vertex_groups) > 0:
-                        vgData = []
                         for face in mesh_tmp.polygons:
-                            vgData.append([])
+                            face_groups = []
                             for vert in face.vertices:
                                 for vg in mesh_tmp.vertices[vert].groups:
-                                    if vg.weight >= utils.prefs().export_weight_threshold and vg.group < len(obj.vertex_groups) and obj.vertex_groups[vg.group].name.lower() != 'mask':
-                                        vgData[face.index].append(vg.group)
+                                    if (
+                                        vg.weight
+                                        >= utils.prefs().export_weight_threshold
+                                        and vg.group < len(obj.vertex_groups)
+                                        and obj.vertex_groups[
+                                            vg.group
+                                        ].name.lower()
+                                        != 'mask'
+                                    ):
+                                        face_groups.append(vg.group)
 
-                            if vgData[face.index]:
-                                group =  max(vgData[face.index], key = vgData[face.index].count)
-                                count = vgData[face.index].count(group)
-                                if len(face.vertices) == count:
-                                    goz_file.write(pack('<H', groupColor[group]))
-                                else:
-                                    goz_file.write(pack('<H', 65504))
-                            else:
-                                goz_file.write(pack('<H', 65504))
+                            if face_groups:
+                                group = max(
+                                    face_groups, key=face_groups.count
+                                )
+                                if face_groups.count(group) == len(face.vertices):
+                                    polygroup_values[face.index] = groupColor[group]
 
-                        if utils.prefs().performance_profiling:
-                            start_time = utils.profiler(start_time, "Write Polygroup Vertex groups")
+                    goz_file.write(
+                        polygroup_values.astype('<u2', copy=False).tobytes()
+                    )
+
+                    if utils.prefs().performance_profiling:
+                        start_time = utils.profiler(
+                            start_time, "Write Polygroup Vertex groups"
+                        )
 
                 # Polygroups from materials
                 if utils.prefs().export_polygroups == 'MATERIALS':
@@ -431,8 +481,25 @@ class GoB_OT_export(Operator):
                             else:
                                 groupColor.append(65504)
 
-                        for f in mesh_tmp.polygons:
-                            goz_file.write(pack('<H', groupColor[f.material_index]))
+                        material_indices = np.empty(
+                            numFaces, dtype=np.int32
+                        )
+                        mesh_tmp.polygons.foreach_get(
+                            'material_index', material_indices
+                        )
+                        colors = np.asarray(groupColor, dtype=np.uint16)
+                        valid = material_indices < len(colors)
+                        polygroup_values = np.full(
+                            numFaces, 65504, dtype=np.uint16
+                        )
+                        polygroup_values[valid] = colors[
+                            material_indices[valid]
+                        ]
+                        goz_file.write(
+                            polygroup_values.astype(
+                                '<u2', copy=False
+                            ).tobytes()
+                        )
 
                     if utils.prefs().performance_profiling:
                         start_time = utils.profiler(start_time, "Write Polygroup materials")
