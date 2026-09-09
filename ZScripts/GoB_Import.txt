@@ -433,6 +433,13 @@ author: Daniel Grauer
         //[VarDef, subtoolCount, objectMemIndex]       // TODO: this needs to be set to the correct index, find it in the subtool List the object name
         [SubToolSelect,subtoolCount]
         [If,[FileExists,objectPath],
+            // Base-mesh imports must target the lowest subdivision level or
+            // ZBrush can replace the active level and discard the hierarchy.
+            [If,[IExists,Tool:Geometry:SDiv],
+                [If,[IsEnabled,Tool:Geometry:SDiv],
+                    [ISet,Tool:Geometry:SDiv,1]
+                ]
+            ]
             [FileNameSetNext,objectPath] 
             [IPress,Tool:Import]                        
             [RoutineCall, LoadTextures]    
