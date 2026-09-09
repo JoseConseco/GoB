@@ -59,7 +59,7 @@ class GoB_OT_export(Operator):
         return geometry.export_poll(cls, context)
 
     def exportGoZ(self, scn, obj, path_export):
-        PATH_PROJECT = utils.prefs().project_path
+        PATH_PROJECT = utils.get_project_path()
         if utils.prefs().performance_profiling:
             print("\n", 100*"=")
             start_time = utils.profiler(time.perf_counter(), "Export Profiling: " + obj.name)
@@ -128,7 +128,7 @@ class GoB_OT_export(Operator):
 
             # 6: Project Path
             GoBVars.write(pack('<2B',0x00, 0x53))   #.S
-            name = utils.prefs().project_path
+            name = utils.get_project_path()
             GoBVars.write(name.encode('utf-8'))
             if utils.prefs().performance_profiling:
                 start_time = utils.profiler(start_time, "    variablesFile: Write Project Path")
@@ -588,9 +588,9 @@ class GoB_OT_export(Operator):
     def execute(self, context):
 
         if utils.prefs().custom_pixologoc_path:
-            paths.PATH_GOZ =  utils.prefs().pixologoc_path
+            paths.PATH_GOZ = utils.get_pixologic_path()
 
-        PATH_PROJECT = utils.prefs().project_path
+        PATH_PROJECT = utils.get_project_path()
 
         try:
             source_GoZ_Info = os.path.join(paths.PATH_GOB, "Blender")
@@ -714,12 +714,13 @@ class GoB_OT_export(Operator):
                 if not path_exists:
                     bpy.ops.gob.search_zbrush('INVOKE_DEFAULT')
                 else:
+                    zbrush_exec = utils.get_zbrush_exec()
                     if paths.isMacOS:
-                        print("OSX Popen: ", utils.prefs().zbrush_exec)
-                        Popen(['open', '-a', utils.prefs().zbrush_exec, paths.PATH_SCRIPT])
+                        print("OSX Popen: ", zbrush_exec)
+                        Popen(['open', '-a', zbrush_exec, paths.PATH_SCRIPT])
                     else:
-                        print("Windows Popen: ", utils.prefs().zbrush_exec)
-                        Popen([utils.prefs().zbrush_exec, paths.PATH_SCRIPT], shell=True)
+                        print("Windows Popen: ", zbrush_exec)
+                        Popen([zbrush_exec, paths.PATH_SCRIPT], shell=True)
 
         if context.object and currentContext:
             bpy.ops.object.mode_set(mode=currentContext)
